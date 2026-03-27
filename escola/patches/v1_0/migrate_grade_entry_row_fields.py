@@ -4,7 +4,7 @@ and set `trimester_average` from the old value.
 
 Safe to run multiple times (idempotent): skips rows where scores_json is
 already populated.
-"""
+
 import json
 
 import frappe
@@ -47,3 +47,4 @@ def execute():
         )
 
     frappe.db.commit()
+"""
