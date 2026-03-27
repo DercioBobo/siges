@@ -1,0 +1,147 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sb_identificacao",
+  "structure_name",
+  "academic_year",
+  "school_class",
+  "is_active",
+  "sb_regras",
+  "billing_frequency",
+  "start_date",
+  "end_date",
+  "sb_linhas",
+  "fee_lines",
+  "sb_observacoes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Naming Series",
+   "options": "FST-.YYYY.-.####"
+  },
+  {
+   "fieldname": "sb_identificacao",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "structure_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Plano",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Classe",
+   "options": "School Class"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1,
+   "label": "Activo"
+  },
+  {
+   "fieldname": "sb_regras",
+   "fieldtype": "Section Break",
+   "label": "Regras"
+  },
+  {
+   "fieldname": "billing_frequency",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Frequência de Facturação",
+   "options": "\nÚnica\nMensal\nTrimestral\nAnual",
+   "reqd": 1
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Data de Início"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "Data de Fim"
+  },
+  {
+   "fieldname": "sb_linhas",
+   "fieldtype": "Section Break",
+   "label": "Componentes de Cobrança"
+  },
+  {
+   "fieldname": "fee_lines",
+   "fieldtype": "Table",
+   "label": "Componentes de Cobrança",
+   "options": "Fee Structure Line",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_observacoes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Fee Structure",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "structure_name"
+}

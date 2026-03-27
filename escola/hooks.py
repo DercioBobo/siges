@@ -19,22 +19,29 @@ app_version = app_version
 # -----------------------------------------------------------------
 
 # -----------------------------------------------------------------
-# App includes — kept minimal for phase 1
+# Post-install and post-migrate hooks
+# Creates custom fields on ERPNext standard DocTypes for billing linkage.
+# -----------------------------------------------------------------
+after_install = "escola.escola.setup.after_install"
+after_migrate = ["escola.escola.setup.after_migrate"]
+
+# -----------------------------------------------------------------
+# App includes — kept minimal
 # -----------------------------------------------------------------
 # app_include_css = []
 # app_include_js = []
 
 # -----------------------------------------------------------------
-# Website — not used in phase 1
+# Website — not used yet
 # -----------------------------------------------------------------
 # website_route_rules = []
 
 # -----------------------------------------------------------------
-# Scheduled tasks — not used in phase 1
+# Scheduled tasks — not used yet
 # -----------------------------------------------------------------
 # scheduler_events = {}
 
 # -----------------------------------------------------------------
-# Jinja customizations — not used in phase 1
+# Jinja customizations — not used yet
 # -----------------------------------------------------------------
 # jinja = {}

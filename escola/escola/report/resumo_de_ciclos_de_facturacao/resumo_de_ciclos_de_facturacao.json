@@ -1,0 +1,41 @@
+{
+ "add_total_row": 0,
+ "creation": "2024-01-01 00:00:00.000000",
+ "disabled": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year"
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "label": "Classe",
+   "options": "School Class"
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "label": "Turma",
+   "options": "Class Group"
+  },
+  {
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "label": "Modo de Cobrança",
+   "options": "\nÚnica\nMensal\nTrimestral\nAnual"
+  }
+ ],
+ "is_standard": "Yes",
+ "modified": "2024-01-01 00:00:00.000000",
+ "module": "Escola",
+ "name": "Resumo de Ciclos de Facturação",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Billing Cycle",
+ "report_name": "Resumo de Ciclos de Facturação",
+ "report_type": "Script Report"
+}

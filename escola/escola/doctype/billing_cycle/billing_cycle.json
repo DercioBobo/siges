@@ -1,0 +1,180 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sb_identificacao",
+  "cycle_name",
+  "academic_year",
+  "school_class",
+  "class_group",
+  "posting_date",
+  "due_date",
+  "sb_contexto",
+  "billing_period_label",
+  "billing_mode",
+  "sb_resultado",
+  "total_students",
+  "total_invoices_created",
+  "cb_resultado",
+  "total_amount",
+  "sb_observacoes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Naming Series",
+   "options": "BIL-.YYYY.-.####"
+  },
+  {
+   "fieldname": "sb_identificacao",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "cycle_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Ciclo",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Classe",
+   "options": "School Class"
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Turma",
+   "options": "Class Group"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data de Facturação",
+   "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data de Vencimento",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_contexto",
+   "fieldtype": "Section Break",
+   "label": "Contexto de Cobrança"
+  },
+  {
+   "fieldname": "billing_period_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Período de Cobrança",
+   "reqd": 1
+  },
+  {
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Modo de Cobrança",
+   "options": "\nÚnica\nMensal\nTrimestral\nAnual",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_resultado",
+   "fieldtype": "Section Break",
+   "label": "Resultado"
+  },
+  {
+   "fieldname": "total_students",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total de Alunos",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_invoices_created",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Facturas Criadas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_resultado",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor Total Facturado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_observacoes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Billing Cycle",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "cycle_name"
+}
