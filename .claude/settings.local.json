@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/doctype/student/student.json''\\)\\)\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/doctype/class_group/class_group.json''\\)\\)\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/workspace/escola/escola.json''\\)\\)\")",
+      "Bash(node:*)"
+    ]
+  }
+}

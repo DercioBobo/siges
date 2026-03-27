@@ -1,0 +1,2 @@
+include requirements.txt
+recursive-include escola *.json *.js *.css *.html *.png *.svg

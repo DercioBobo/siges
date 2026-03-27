@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:class_name",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "class_name",
+  "column_break_1",
+  "is_active",
+  "section_break_level",
+  "class_level",
+  "column_break_2",
+  "education_level",
+  "section_break_model",
+  "teaching_model",
+  "column_break_3",
+  "minimum_passing_grade",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "class_name",
+   "fieldtype": "Data",
+   "label": "Nome da Classe",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "description": "Ex.: 1ª Classe, 2ª Classe, 8ª Classe"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Activa",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_level",
+   "fieldtype": "Section Break",
+   "label": "Classificação"
+  },
+  {
+   "fieldname": "class_level",
+   "fieldtype": "Int",
+   "label": "Nível",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Número ordinal da classe (ex.: 1, 2, 8, 12)"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "education_level",
+   "fieldtype": "Select",
+   "label": "Nível de Ensino",
+   "reqd": 1,
+   "options": "\nPré-Primário\nPrimário\nSecundário",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_model",
+   "fieldtype": "Section Break",
+   "label": "Modelo Pedagógico"
+  },
+  {
+   "fieldname": "teaching_model",
+   "fieldtype": "Select",
+   "label": "Modelo de Ensino",
+   "reqd": 1,
+   "options": "\nProfessor Único\nProfessores por Disciplina",
+   "in_list_view": 1,
+   "description": "Define se a turma tem um único professor ou um professor por disciplina."
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "minimum_passing_grade",
+   "fieldtype": "Float",
+   "label": "Nota Mínima de Aprovação",
+   "default": "10",
+   "description": "Nota mínima para aprovação nesta classe."
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "School Class",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Professor",
+   "write": 0
+  }
+ ],
+ "sort_field": "class_level",
+ "sort_order": "ASC",
+ "title_field": "class_name",
+ "track_changes": 1
+}
