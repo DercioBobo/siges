@@ -1,0 +1,279 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_identification",
+  "school_name",
+  "school_logo",
+  "column_break_id",
+  "director_name",
+  "school_nif",
+  "school_phone",
+  "school_email",
+  "school_website",
+  "section_address",
+  "school_address",
+  "section_academic",
+  "current_academic_year",
+  "column_break_academic",
+  "current_academic_term",
+  "section_grading",
+  "minimum_passing_grade",
+  "grading_scale_max",
+  "column_break_grading",
+  "recurso_threshold",
+  "section_enrollment",
+  "enrollment_requires_guardian",
+  "default_max_students_per_class",
+  "section_billing",
+  "default_company",
+  "default_income_account",
+  "column_break_billing",
+  "default_customer_group",
+  "default_territory",
+  "invoice_due_days",
+  "section_reports",
+  "report_card_footer",
+  "column_break_reports",
+  "show_averages_on_report_card",
+  "section_portal",
+  "guardian_portal_enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_identification",
+   "fieldtype": "Section Break",
+   "label": "Identificação da Escola"
+  },
+  {
+   "fieldname": "school_name",
+   "fieldtype": "Data",
+   "label": "Nome da Escola",
+   "reqd": 1
+  },
+  {
+   "fieldname": "school_logo",
+   "fieldtype": "Attach Image",
+   "label": "Logótipo"
+  },
+  {
+   "fieldname": "column_break_id",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "director_name",
+   "fieldtype": "Data",
+   "label": "Nome do Director"
+  },
+  {
+   "fieldname": "school_nif",
+   "fieldtype": "Data",
+   "label": "NIF / NUIT",
+   "description": "Número de Identificação Fiscal da escola (para facturas)."
+  },
+  {
+   "fieldname": "school_phone",
+   "fieldtype": "Data",
+   "label": "Telefone"
+  },
+  {
+   "fieldname": "school_email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "school_website",
+   "fieldtype": "Data",
+   "label": "Website",
+   "options": "URL"
+  },
+  {
+   "fieldname": "section_address",
+   "fieldtype": "Section Break",
+   "label": "Morada"
+  },
+  {
+   "fieldname": "school_address",
+   "fieldtype": "Small Text",
+   "label": "Morada Completa"
+  },
+  {
+   "fieldname": "section_academic",
+   "fieldtype": "Section Break",
+   "label": "Ano Lectivo Actual"
+  },
+  {
+   "fieldname": "current_academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo Actual",
+   "options": "Academic Year"
+  },
+  {
+   "fieldname": "column_break_academic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_academic_term",
+   "fieldtype": "Link",
+   "label": "Período Actual",
+   "options": "Academic Term"
+  },
+  {
+   "fieldname": "section_grading",
+   "fieldtype": "Section Break",
+   "label": "Avaliação"
+  },
+  {
+   "fieldname": "minimum_passing_grade",
+   "fieldtype": "Float",
+   "label": "Nota Mínima de Aprovação",
+   "default": "10",
+   "description": "Nota mínima global para aprovação. Cada Classe pode definir a sua própria."
+  },
+  {
+   "fieldname": "grading_scale_max",
+   "fieldtype": "Float",
+   "label": "Nota Máxima (Escala)",
+   "default": "20",
+   "description": "Valor máximo da escala de avaliação (normalmente 20)."
+  },
+  {
+   "fieldname": "column_break_grading",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recurso_threshold",
+   "fieldtype": "Float",
+   "label": "Limiar de Recurso",
+   "default": "8",
+   "description": "Média mínima para qualificar para exame de recurso (abaixo deste valor = Retido directamente)."
+  },
+  {
+   "fieldname": "section_enrollment",
+   "fieldtype": "Section Break",
+   "label": "Matrículas"
+  },
+  {
+   "fieldname": "enrollment_requires_guardian",
+   "fieldtype": "Check",
+   "label": "Encarregado obrigatório na matrícula",
+   "default": "0",
+   "description": "Se activo, o aluno deve ter pelo menos um Encarregado de Educação antes de ser matriculado."
+  },
+  {
+   "fieldname": "default_max_students_per_class",
+   "fieldtype": "Int",
+   "label": "Capacidade Padrão por Turma",
+   "default": "0",
+   "description": "Capacidade máxima padrão ao criar novas turmas. 0 = sem limite."
+  },
+  {
+   "fieldname": "section_billing",
+   "fieldtype": "Section Break",
+   "label": "Facturação"
+  },
+  {
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Empresa ERPNext",
+   "options": "Company",
+   "description": "Empresa usada ao criar facturas e clientes."
+  },
+  {
+   "fieldname": "default_income_account",
+   "fieldtype": "Link",
+   "label": "Conta de Receitas",
+   "options": "Account",
+   "description": "Conta de receitas padrão para itens de propinas nas facturas."
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_customer_group",
+   "fieldtype": "Link",
+   "label": "Grupo de Cliente Padrão",
+   "options": "Customer Group",
+   "description": "Grupo atribuído ao criar um cliente a partir de um aluno."
+  },
+  {
+   "fieldname": "default_territory",
+   "fieldtype": "Link",
+   "label": "Território Padrão",
+   "options": "Territory",
+   "description": "Território atribuído ao criar um cliente a partir de um aluno."
+  },
+  {
+   "fieldname": "invoice_due_days",
+   "fieldtype": "Int",
+   "label": "Prazo Padrão de Vencimento (dias)",
+   "default": "30",
+   "description": "Número de dias a partir da data de facturação para calcular o vencimento."
+  },
+  {
+   "fieldname": "section_reports",
+   "fieldtype": "Section Break",
+   "label": "Boletins e Relatórios"
+  },
+  {
+   "fieldname": "report_card_footer",
+   "fieldtype": "Small Text",
+   "label": "Rodapé do Boletim",
+   "description": "Mensagem impressa no rodapé de cada boletim (ex.: assinatura do director, declaração)."
+  },
+  {
+   "fieldname": "column_break_reports",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "show_averages_on_report_card",
+   "fieldtype": "Check",
+   "label": "Mostrar Médias no Boletim",
+   "default": "1"
+  },
+  {
+   "fieldname": "section_portal",
+   "fieldtype": "Section Break",
+   "label": "Portal do Encarregado"
+  },
+  {
+   "fieldname": "guardian_portal_enabled",
+   "fieldtype": "Check",
+   "label": "Portal Activo",
+   "default": "0"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "School Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Secretaria Escolar",
+   "write": 0
+  }
+ ],
+ "track_changes": 1
+}

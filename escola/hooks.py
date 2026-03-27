@@ -26,6 +26,14 @@ after_install = "escola.escola.setup.after_install"
 after_migrate = ["escola.escola.setup.after_migrate"]
 
 # -----------------------------------------------------------------
+# Fixtures — export School Settings with the app so configuration
+# is version-controlled alongside the code.
+# -----------------------------------------------------------------
+fixtures = [
+    {"dt": "School Settings"},
+]
+
+# -----------------------------------------------------------------
 # App includes — kept minimal
 # -----------------------------------------------------------------
 # app_include_css = []

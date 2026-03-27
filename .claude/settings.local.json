@@ -10,7 +10,8 @@
       "Bash(touch /c/Users/DBobo/PhpstormProjects/siges/escola/escola/doctype/$d/__init__.py)",
       "Bash(done)",
       "Bash(for dir:*)",
-      "Bash(touch \"C:/Users/DBobo/PhpstormProjects/siges/escola/escola/report/$dir/__init__.py\")"
+      "Bash(touch \"C:/Users/DBobo/PhpstormProjects/siges/escola/escola/report/$dir/__init__.py\")",
+      "Bash(grep -r \"term_number\\\\|term_start_date\\\\|term_end_date\" /c/Users/DBobo/PhpstormProjects/siges/escola --include=*.json -l)"
     ]
   }
 }

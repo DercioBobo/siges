@@ -6,100 +6,104 @@ from frappe.model.document import Document
 @frappe.whitelist()
 def calculate_assessment(doc_name):
     """
-    Compute final grades for all students in a class group.
+    Compute final grades for all students in a class group using trimester averages.
 
     Algorithm:
-    1. Load Assessment Scheme weight map: {evaluation_type: weight}
-    2. Collect all Grade Entry rows for (academic_year, class_group)
-       grouped as grade_data[student][subject][evaluation_type] = [grades]
-    3. For each student+subject:
-       a. Average grades per evaluation_type
-       b. Build weighted sum using only components that have data
-          (normalized so missing components don't penalise the student)
-    4. Compare final_grade against School Class minimum_passing_grade
-    5. Return list of row dicts for the client to populate the table
+    1. Fetch all Academic Terms for the year, ordered by term_start_date — this
+       gives us the T1/T2/T3 positional mapping without relying on a term_number field.
+    2. Collect all Grade Entry rows for (academic_year, class_group), keyed by
+       (student, subject, term_position).  Multiple Grade Entries in the same term
+       (e.g. two pautas) are averaged together.
+    3. Per student+subject: populate term_1/2/3_average from whichever terms have data,
+       then compute final_grade as the simple average of the present term averages.
+    4. Compare against School Class minimum_passing_grade (or School Settings fallback).
     """
     doc = frappe.get_doc("Annual Assessment", doc_name)
 
-    # --- scheme weights --------------------------------------------------
-    scheme = frappe.get_doc("Assessment Scheme", doc.assessment_scheme)
-    weight_map = {c.evaluation_type: float(c.weight) for c in scheme.components}
+    # --- ordered term positions: T1, T2, T3 … ----------------------------
+    terms = frappe.get_all(
+        "Academic Term",
+        filters={"academic_year": doc.academic_year},
+        fields=["name", "term_start_date"],
+        order_by="term_start_date asc, name asc",
+    )
+    if not terms:
+        return {"error": "no_terms"}
+
+    term_position = {t.name: idx + 1 for idx, t in enumerate(terms)}  # 1-based
 
     # --- minimum passing grade -------------------------------------------
-    min_passing = (
-        frappe.db.get_value(
-            "School Class", doc.school_class, "minimum_passing_grade"
-        )
+    min_passing = float(
+        frappe.db.get_value("School Class", doc.school_class, "minimum_passing_grade")
+        or frappe.db.get_single_value("School Settings", "minimum_passing_grade")
         or 10
     )
 
-    # --- collect grade rows from all Grade Entry documents ---------------
+    # --- collect Grade Entry documents for this class group ---------------
     grade_entries = frappe.get_all(
         "Grade Entry",
         filters={
             "academic_year": doc.academic_year,
             "class_group": doc.class_group,
+            "docstatus": ("!=", 2),  # exclude cancelled
         },
-        fields=["name", "evaluation_type"],
+        fields=["name", "academic_term"],
     )
-
     if not grade_entries:
         return {"error": "no_grade_entries"}
 
-    # grade_data[student][subject][evaluation_type] = [grade, ...]
-    grade_data: dict = {}
+    # data[student][subject][term_pos] = [trimester_average, …]
+    data: dict = {}
     for entry in grade_entries:
+        pos = term_position.get(entry.academic_term)
+        if pos is None:
+            continue  # term doesn't belong to the year — skip
         rows = frappe.get_all(
             "Grade Entry Row",
-            filters={"parent": entry.name},
-            fields=["student", "subject", "grade"],
+            filters={"parent": entry.name, "is_absent": 0},
+            fields=["student", "subject", "trimester_average"],
         )
         for row in rows:
-            if row.grade is None:
+            if row.trimester_average is None:
                 continue
             (
-                grade_data
+                data
                 .setdefault(row.student, {})
                 .setdefault(row.subject, {})
-                .setdefault(entry.evaluation_type, [])
-                .append(float(row.grade))
+                .setdefault(pos, [])
+                .append(float(row.trimester_average))
             )
 
-    if not grade_data:
+    if not data:
         return {"error": "no_grades"}
 
-    # --- compute weighted final grade per student+subject ----------------
+    # --- build result rows -----------------------------------------------
     result_rows = []
-    for student in sorted(grade_data):
-        for subject in sorted(grade_data[student]):
-            eval_grades = grade_data[student][subject]
+    max_terms = len(terms)
 
-            # Average within each evaluation type
-            component_avgs = {
-                et: sum(grades) / len(grades)
-                for et, grades in eval_grades.items()
-            }
+    for student in sorted(data):
+        for subject in sorted(data[student]):
+            term_avgs = {}  # {pos: average}
+            for pos, values in data[student][subject].items():
+                term_avgs[pos] = round(sum(values) / len(values), 2)
 
-            # Weights for present components only, then normalize to 100
-            present_weight_sum = sum(
-                weight_map.get(et, 0) for et in component_avgs
-            )
+            # fill T1/T2/T3 slots (up to 3 for the UI columns)
+            t1 = term_avgs.get(1)
+            t2 = term_avgs.get(2) if max_terms >= 2 else None
+            t3 = term_avgs.get(3) if max_terms >= 3 else None
 
-            if present_weight_sum == 0:
-                final_grade = 0.0
-            else:
-                final_grade = sum(
-                    avg * (weight_map.get(et, 0) / present_weight_sum)
-                    for et, avg in component_avgs.items()
-                )
+            present = [v for v in term_avgs.values()]
+            final_grade = round(sum(present) / len(present), 2) if present else 0.0
 
-            final_grade = round(final_grade, 2)
-            result = "Aprovado" if final_grade >= float(min_passing) else "Reprovado"
+            result = "Aprovado" if final_grade >= min_passing else "Reprovado"
 
             result_rows.append(
                 {
                     "student": student,
                     "subject": subject,
+                    "term_1_average": t1,
+                    "term_2_average": t2,
+                    "term_3_average": t3,
                     "final_grade": final_grade,
                     "result": result,
                     "remarks": "",
@@ -163,15 +167,18 @@ class AnnualAssessment(Document):
             )
 
     def _validate_row_integrity(self):
+        max_grade = float(
+            frappe.db.get_single_value("School Settings", "grading_scale_max") or 20
+        )
         seen = set()
         for row in self.assessment_rows:
             if row.final_grade is not None and (
-                row.final_grade < 0 or row.final_grade > 20
+                row.final_grade < 0 or row.final_grade > max_grade
             ):
                 frappe.throw(
                     _("A nota final <b>{0}</b> para o aluno <b>{1}</b> / "
-                      "disciplina <b>{2}</b> está fora do intervalo 0–20.").format(
-                        row.final_grade, row.student, row.subject
+                      "disciplina <b>{2}</b> está fora do intervalo 0–{3}.").format(
+                        row.final_grade, row.student, row.subject, max_grade
                     ),
                     title=_("Nota fora do intervalo"),
                 )

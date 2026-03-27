@@ -5,9 +5,11 @@ frappe.ui.form.on("Annual Assessment", {
 	refresh(frm) {
 		set_queries(frm);
 
-		frm.add_custom_button(__("Calcular Avaliação"), () => {
-			maybe_calculate(frm);
-		});
+		frm.add_custom_button(
+			__("Calcular Avaliação"),
+			() => maybe_calculate(frm),
+			__("Acções")
+		);
 	},
 
 	academic_year(frm) {
@@ -31,9 +33,9 @@ function set_queries(frm) {
 }
 
 function maybe_calculate(frm) {
-	if (!frm.doc.academic_year || !frm.doc.class_group || !frm.doc.assessment_scheme) {
+	if (!frm.doc.academic_year || !frm.doc.class_group) {
 		frappe.msgprint(
-			__("Por favor, seleccione o Ano Lectivo, a Turma e o Modelo de Avaliação antes de calcular.")
+			__("Por favor, seleccione o Ano Lectivo e a Turma antes de calcular.")
 		);
 		return;
 	}
@@ -66,6 +68,14 @@ async function do_calculate(frm) {
 
 	if (!r.message) return;
 
+	if (r.message.error === "no_terms") {
+		frappe.msgprint(
+			__("Não existem Períodos Académicos configurados para o Ano Lectivo <b>{0}</b>. "
+				+ "Crie os períodos antes de calcular a avaliação anual.",
+				[frm.doc.academic_year])
+		);
+		return;
+	}
 	if (r.message.error === "no_grade_entries") {
 		frappe.msgprint(
 			__("Não foram encontradas Pautas de Notas para a Turma <b>{0}</b> "

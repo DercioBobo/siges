@@ -7,6 +7,7 @@
  "field_order": [
   "naming_series",
   "section_break_identification",
+  "transfer_type",
   "transfer_date",
   "student",
   "column_break_1",
@@ -22,11 +23,26 @@
   "to_school_class",
   "column_break_3",
   "to_class_group",
+  "section_break_exit",
+  "destination_school",
+  "destination_city",
+  "exit_reason",
+  "exit_reason_detail",
+  "section_break_entry",
+  "origin_school",
+  "origin_city",
+  "origin_class",
+  "origin_grades",
+  "entry_class_group",
+  "section_break_documents",
+  "transfer_document",
+  "approved_by",
   "section_break_justification",
   "reason",
   "notes",
   "section_break_system",
-  "new_assignment"
+  "new_assignment",
+  "new_enrollment"
  ],
  "fields": [
   {
@@ -42,6 +58,15 @@
    "fieldname": "section_break_identification",
    "fieldtype": "Section Break",
    "label": "Identificação"
+  },
+  {
+   "fieldname": "transfer_type",
+   "fieldtype": "Select",
+   "label": "Tipo de Transferência",
+   "options": "Interna (Entre Turmas)\nEntrada (Outra Escola)\nSaída (Para Outra Escola)",
+   "default": "Interna (Entre Turmas)",
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "transfer_date",
@@ -85,7 +110,8 @@
   {
    "fieldname": "section_break_origin",
    "fieldtype": "Section Break",
-   "label": "Origem"
+   "label": "Origem",
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
    "fieldname": "from_enrollment",
@@ -93,6 +119,7 @@
    "label": "Inscrição de Origem",
    "options": "Student Enrollment",
    "reqd": 1,
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'",
    "description": "Inscrição activa do aluno no ano lectivo seleccionado."
   },
   {
@@ -101,7 +128,8 @@
    "label": "Classe de Origem",
    "options": "School Class",
    "reqd": 1,
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
    "fieldname": "column_break_2",
@@ -114,7 +142,8 @@
    "options": "Class Group",
    "reqd": 1,
    "read_only": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
    "fieldname": "from_assignment",
@@ -128,14 +157,16 @@
   {
    "fieldname": "section_break_destination",
    "fieldtype": "Section Break",
-   "label": "Destino"
+   "label": "Destino",
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
    "fieldname": "to_school_class",
    "fieldtype": "Link",
    "label": "Classe de Destino",
    "options": "School Class",
-   "reqd": 1
+   "reqd": 1,
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
    "fieldname": "column_break_3",
@@ -147,7 +178,84 @@
    "label": "Turma de Destino",
    "options": "Class Group",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
+  },
+  {
+   "fieldname": "section_break_exit",
+   "fieldtype": "Section Break",
+   "label": "Saída — Dados da Escola de Destino",
+   "depends_on": "eval:doc.transfer_type=='Saída (Para Outra Escola)'"
+  },
+  {
+   "fieldname": "destination_school",
+   "fieldtype": "Data",
+   "label": "Escola de Destino"
+  },
+  {
+   "fieldname": "destination_city",
+   "fieldtype": "Data",
+   "label": "Cidade/Distrito"
+  },
+  {
+   "fieldname": "exit_reason",
+   "fieldtype": "Select",
+   "label": "Motivo de Saída",
+   "options": "\nMudança de Residência\nMotivos Familiares\nMotivos Económicos\nReprovação\nOutro"
+  },
+  {
+   "fieldname": "exit_reason_detail",
+   "fieldtype": "Small Text",
+   "label": "Detalhe do Motivo",
+   "depends_on": "eval:doc.exit_reason=='Outro'"
+  },
+  {
+   "fieldname": "section_break_entry",
+   "fieldtype": "Section Break",
+   "label": "Entrada — Dados da Escola de Origem",
+   "depends_on": "eval:doc.transfer_type=='Entrada (Outra Escola)'"
+  },
+  {
+   "fieldname": "origin_school",
+   "fieldtype": "Data",
+   "label": "Escola de Origem"
+  },
+  {
+   "fieldname": "origin_city",
+   "fieldtype": "Data",
+   "label": "Cidade/Distrito de Origem"
+  },
+  {
+   "fieldname": "origin_class",
+   "fieldtype": "Data",
+   "label": "Classe na Escola de Origem"
+  },
+  {
+   "fieldname": "origin_grades",
+   "fieldtype": "Small Text",
+   "label": "Notas Anteriores (resumo)"
+  },
+  {
+   "fieldname": "entry_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Destino",
+   "options": "Class Group"
+  },
+  {
+   "fieldname": "section_break_documents",
+   "fieldtype": "Section Break",
+   "label": "Documentos"
+  },
+  {
+   "fieldname": "transfer_document",
+   "fieldtype": "Attach",
+   "label": "Carta/Documento de Transferência"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Autorizado por",
+   "options": "User"
   },
   {
    "fieldname": "section_break_justification",
@@ -169,7 +277,7 @@
    "fieldtype": "Section Break",
    "label": "Sistema",
    "collapsible": 1,
-   "collapsible_depends_on": "new_assignment"
+   "collapsible_depends_on": "eval:doc.new_assignment || doc.new_enrollment || doc.from_assignment"
   },
   {
    "fieldname": "new_assignment",
@@ -177,6 +285,15 @@
    "label": "Nova Alocação Criada",
    "options": "Student Group Assignment",
    "read_only": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "new_enrollment",
+   "fieldtype": "Link",
+   "label": "Nova Inscrição Criada",
+   "options": "Student Enrollment",
+   "read_only": 1,
+   "hidden": 1,
    "print_hide": 1
   }
  ],
