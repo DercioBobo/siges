@@ -199,7 +199,6 @@ def generate_next_year_enrollments(promotion_name):
                 "doctype": "Student Group Assignment",
                 "student": row.student,
                 "academic_year": doc.next_academic_year,
-                "enrollment": enrol.name,
                 "school_class": row.next_school_class,
                 "class_group": row.next_class_group,
                 "assignment_date": frappe.utils.today(),

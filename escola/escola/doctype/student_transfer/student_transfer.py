@@ -298,7 +298,6 @@ class StudentTransfer(Document):
         new_doc.academic_year = self.academic_year
         new_doc.school_class = self.to_school_class
         new_doc.class_group = self.to_class_group
-        new_doc.enrollment = self.from_enrollment
         new_doc.assignment_date = self.transfer_date
         new_doc.status = "Activa"
         new_doc.notes = _("Criado automaticamente pela Transferência {0}.").format(self.name)
@@ -375,7 +374,6 @@ class StudentTransfer(Document):
             "doctype": "Student Group Assignment",
             "student": self.student,
             "academic_year": self.academic_year,
-            "enrollment": enrol.name,
             "school_class": entry_class,
             "class_group": self.entry_class_group,
             "assignment_date": self.transfer_date,

@@ -8,14 +8,12 @@
   "naming_series",
   "section_break_identification",
   "student",
-  "enrollment",
+  "class_group",
   "column_break_1",
   "academic_year",
   "school_class",
   "column_break_2",
-  "class_group",
   "assignment_date",
-  "section_break_status",
   "status",
   "section_break_notes",
   "notes"
@@ -45,12 +43,12 @@
    "search_index": 1
   },
   {
-   "fieldname": "enrollment",
+   "fieldname": "class_group",
    "fieldtype": "Link",
-   "label": "Inscrição",
-   "options": "Student Enrollment",
+   "label": "Turma",
+   "options": "Class Group",
    "reqd": 1,
-   "description": "A inscrição deve estar activa e pertencer ao mesmo aluno e ano lectivo."
+   "in_list_view": 1
   },
   {
    "fieldname": "column_break_1",
@@ -62,7 +60,9 @@
    "label": "Ano Lectivo",
    "options": "Academic Year",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "fetch_from": "class_group.academic_year",
+   "fetch_if_empty": 1
   },
   {
    "fieldname": "school_class",
@@ -70,19 +70,13 @@
    "label": "Classe",
    "options": "School Class",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "fetch_from": "class_group.school_class",
+   "fetch_if_empty": 1
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "class_group",
-   "fieldtype": "Link",
-   "label": "Turma",
-   "options": "Class Group",
-   "reqd": 1,
-   "in_list_view": 1
   },
   {
    "fieldname": "assignment_date",
@@ -91,11 +85,6 @@
    "reqd": 1,
    "default": "Today",
    "in_list_view": 1
-  },
-  {
-   "fieldname": "section_break_status",
-   "fieldtype": "Section Break",
-   "label": "Estado"
   },
   {
    "fieldname": "status",

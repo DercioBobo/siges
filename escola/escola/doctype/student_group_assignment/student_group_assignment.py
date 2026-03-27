@@ -5,55 +5,9 @@ from frappe.model.document import Document
 
 class StudentGroupAssignment(Document):
     def validate(self):
-        self._validate_enrollment_match()
         self._validate_class_group_belongs()
         self._validate_duplicate_active_assignment()
         self._validate_class_group_capacity()
-
-    def _validate_enrollment_match(self):
-        if not self.enrollment:
-            return
-        enr = frappe.db.get_value(
-            "Student Enrollment",
-            self.enrollment,
-            ["student", "academic_year", "school_class", "enrollment_status"],
-            as_dict=True,
-        )
-        if not enr:
-            frappe.throw(
-                _("A Inscrição <b>{0}</b> não foi encontrada.").format(self.enrollment),
-                title=_("Inscrição inválida"),
-            )
-        if enr.student != self.student:
-            frappe.throw(
-                _("A Inscrição <b>{0}</b> não pertence ao aluno seleccionado.").format(
-                    self.enrollment
-                ),
-                title=_("Inscrição incompatível"),
-            )
-        if enr.academic_year != self.academic_year:
-            frappe.throw(
-                _("O Ano Lectivo da inscrição (<b>{0}</b>) não coincide com o "
-                  "Ano Lectivo seleccionado (<b>{1}</b>).").format(
-                    enr.academic_year, self.academic_year
-                ),
-                title=_("Ano Lectivo incompatível"),
-            )
-        if self.school_class and enr.school_class != self.school_class:
-            frappe.throw(
-                _("A Classe da inscrição (<b>{0}</b>) não coincide com a Classe "
-                  "seleccionada (<b>{1}</b>).").format(
-                    enr.school_class, self.school_class
-                ),
-                title=_("Classe incompatível"),
-            )
-        if enr.enrollment_status != "Activa":
-            frappe.throw(
-                _("A Inscrição <b>{0}</b> não está activa (estado actual: "
-                  "<b>{1}</b>). Apenas inscrições activas podem receber "
-                  "alocação de turma.").format(self.enrollment, enr.enrollment_status),
-                title=_("Inscrição inactiva"),
-            )
 
     def _validate_class_group_belongs(self):
         if not self.class_group:
