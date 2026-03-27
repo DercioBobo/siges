@@ -96,7 +96,7 @@
    "fieldname": "enrollment_type",
    "fieldtype": "Select",
    "label": "Tipo de Inscrição",
-   "options": "\nNovo\nTransferido\nReadmitido"
+   "options": "\nNovo\nTransferido\nReadmitido\nTransitou"
   },
   {
    "fieldname": "previous_school",

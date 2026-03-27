@@ -8,65 +8,216 @@ def generate_promotion(doc_name):
     """
     Derive promotion decisions from the Annual Assessment for a class group.
 
-    Decision rules:
-    - 0 failed subjects + final class → Concluído
-    - 0 failed subjects + non-final class → Promovido
-    - ≥1 failed subjects → Retido
+    Decision rules (evaluated in order):
+    - 0 failed subjects + final class  → Concluído
+    - 0 failed subjects + non-final    → Promovido
+    - avg ≥ 8.0 and avg < min_grade    → Recurso  (borderline — remedial exam)
+    - otherwise                         → Retido
 
+    A "failed" subject is one whose final_grade < school_class.minimum_passing_grade.
     A "final class" is one with no higher class_level in the same education_level.
+    Manual overrides (decision_override == 1) are preserved across regenerations.
     """
     doc = frappe.get_doc("Student Promotion", doc_name)
 
-    # Locate the Annual Assessment for this turma + year
     ann_name = frappe.db.get_value(
         "Annual Assessment",
-        {
-            "academic_year": doc.academic_year,
-            "class_group": doc.class_group,
-        },
+        {"academic_year": doc.academic_year, "class_group": doc.class_group},
         "name",
     )
     if not ann_name:
         return {"error": "no_annual_assessment"}
 
-    rows = frappe.get_all(
+    ann_rows = frappe.get_all(
         "Annual Assessment Row",
         filters={"parent": ann_name},
-        fields=["student", "result"],
+        fields=["student", "final_grade", "result"],
     )
-    if not rows:
+    if not ann_rows:
         return {"error": "no_rows"}
 
-    # Count failed subjects per student
-    student_failed: dict = {}
-    for row in rows:
-        student_failed.setdefault(row.student, 0)
-        if row.result == "Reprovado":
-            student_failed[row.student] += 1
-
+    # School class configuration
+    sc = frappe.db.get_value(
+        "School Class",
+        doc.school_class,
+        ["class_level", "education_level", "minimum_passing_grade"],
+        as_dict=True,
+    ) or {}
+    min_grade = sc.get("minimum_passing_grade") or 10.0
     is_final = _is_final_class(doc.school_class)
+    next_sc_name = _get_next_school_class(
+        sc.get("class_level", 0), sc.get("education_level", "")
+    )
+
+    # Per-student grade aggregation
+    student_data: dict = {}
+    for row in ann_rows:
+        d = student_data.setdefault(row.student, {"grades": [], "failed": 0})
+        grade = row.final_grade
+        if grade is not None:
+            d["grades"].append(grade)
+            if grade < min_grade:
+                d["failed"] += 1
+        elif row.result == "Reprovado":
+            # result set manually without a grade value
+            d["failed"] += 1
+
+    # Preserve existing manual overrides (saved to DB)
+    overrides = {}
+    for existing_row in doc.promotion_rows:
+        if existing_row.decision_override:
+            overrides[existing_row.student] = {
+                "decision": existing_row.decision,
+                "override_reason": existing_row.override_reason,
+                "next_school_class": existing_row.next_school_class,
+                "next_class_group": existing_row.next_class_group,
+            }
+
+    def _suggest_next_cg(next_sc):
+        """Return the first active Class Group for next_sc in next_academic_year."""
+        if not next_sc or not doc.next_academic_year:
+            return None
+        candidates = frappe.get_all(
+            "Class Group",
+            filters={
+                "school_class": next_sc,
+                "academic_year": doc.next_academic_year,
+                "is_active": 1,
+            },
+            fields=["name"],
+            limit=1,
+        )
+        return candidates[0].name if candidates else None
 
     result_rows = []
-    for student in sorted(student_failed):
-        failed_count = student_failed[student]
+    for student in sorted(student_data):
+        d = student_data[student]
+        failed_count = d["failed"]
+        grades = d["grades"]
+        avg = round(sum(grades) / len(grades), 2) if grades else 0.0
+
+        # Decision logic
         if failed_count == 0 and is_final:
             decision = "Concluído"
         elif failed_count == 0:
             decision = "Promovido"
+        elif avg >= 8.0 and avg < min_grade:
+            decision = "Recurso"
         else:
             decision = "Retido"
 
-        result_rows.append(
-            {
-                "student": student,
-                "total_failed_subjects": failed_count,
-                "decision": decision,
-                "remarks": "",
-            }
-        )
+        # Suggest next-year placement only for students moving forward
+        if decision == "Promovido":
+            next_sc = next_sc_name
+            next_cg = _suggest_next_cg(next_sc)
+        else:
+            next_sc = None
+            next_cg = None
+
+        row_data = {
+            "student": student,
+            "total_failed_subjects": failed_count,
+            "decision": decision,
+            "next_school_class": next_sc,
+            "next_class_group": next_cg,
+            "decision_override": 0,
+            "override_reason": "",
+            "remarks": "",
+        }
+
+        # Restore manual override if one was saved
+        if student in overrides:
+            override = overrides[student]
+            row_data.update({
+                "decision": override["decision"],
+                "override_reason": override["override_reason"] or "",
+                "next_school_class": override["next_school_class"],
+                "next_class_group": override["next_class_group"],
+                "decision_override": 1,
+            })
+
+        result_rows.append(row_data)
 
     return result_rows
 
+
+@frappe.whitelist()
+def generate_next_year_enrollments(promotion_name):
+    """
+    Create Student Enrollment + Student Group Assignment for every Promovido student.
+    Requires status == "Finalizado" and next_academic_year to be set.
+    Idempotent: skips students who already have an enrollment for next_academic_year.
+    """
+    doc = frappe.get_doc("Student Promotion", promotion_name)
+
+    if not doc.next_academic_year:
+        frappe.throw(_("Defina o Ano Lectivo Seguinte antes de gerar inscrições."))
+
+    if doc.status != "Finalizado":
+        frappe.throw(
+            _("A Promoção de Alunos deve estar com estado <b>Finalizado</b> "
+              "antes de gerar inscrições. Estado actual: <b>{0}</b>.").format(
+                doc.status or "Rascunho"
+            ),
+            title=_("Estado incorrecto"),
+        )
+
+    created, skipped, errors = 0, 0, []
+
+    for row in doc.promotion_rows:
+        if row.decision not in ("Promovido", "Concluído"):
+            skipped += 1
+            continue
+
+        if not row.next_class_group:
+            errors.append(
+                _("{0}: sem Nova Turma definida — linha ignorada.").format(row.student)
+            )
+            continue
+
+        # Idempotency check
+        if frappe.db.exists(
+            "Student Enrollment",
+            {"student": row.student, "academic_year": doc.next_academic_year},
+        ):
+            skipped += 1
+            continue
+
+        try:
+            enrol = frappe.get_doc({
+                "doctype": "Student Enrollment",
+                "student": row.student,
+                "academic_year": doc.next_academic_year,
+                "school_class": row.next_school_class,
+                "enrollment_date": frappe.utils.today(),
+                "enrollment_status": "Activa",
+                "enrollment_type": "Transitou",
+            })
+            enrol.insert(ignore_permissions=True)
+
+            assign = frappe.get_doc({
+                "doctype": "Student Group Assignment",
+                "student": row.student,
+                "academic_year": doc.next_academic_year,
+                "enrollment": enrol.name,
+                "school_class": row.next_school_class,
+                "class_group": row.next_class_group,
+                "assignment_date": frappe.utils.today(),
+                "status": "Activa",
+            })
+            assign.insert(ignore_permissions=True)
+            created += 1
+
+        except Exception as e:
+            errors.append(f"{row.student}: {str(e)}")
+
+    frappe.db.commit()
+    return {"created": created, "skipped": skipped, "errors": errors}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _is_final_class(school_class_name):
     """Return True when no higher class_level exists within the same education_level."""
@@ -88,6 +239,25 @@ def _is_final_class(school_class_name):
     )
     return not higher
 
+
+def _get_next_school_class(class_level, education_level):
+    """Return the name of the School Class at class_level + 1 in the same education_level."""
+    if not class_level or not education_level:
+        return None
+    return frappe.db.get_value(
+        "School Class",
+        {
+            "education_level": education_level,
+            "class_level": class_level + 1,
+            "is_active": 1,
+        },
+        "name",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Document class
+# ---------------------------------------------------------------------------
 
 class StudentPromotion(Document):
     def validate(self):

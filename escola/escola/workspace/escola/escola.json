@@ -70,6 +70,13 @@
  "public": 1,
  "roles": [],
  "sequence_id": 1,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "color": "#0EA5E9",
+   "doc_type": "Academic Term",
+   "label": "Períodos Académicos",
+   "type": "DocType"
+  }
+ ],
  "title": "Escola"
 }

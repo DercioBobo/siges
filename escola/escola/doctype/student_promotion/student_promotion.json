@@ -11,6 +11,9 @@
   "school_class",
   "column_break_1",
   "class_group",
+  "next_academic_year",
+  "column_break_2",
+  "status",
   "section_break_rows",
   "promotion_rows"
  ],
@@ -55,6 +58,24 @@
    "label": "Turma",
    "options": "Class Group",
    "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "next_academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo Seguinte",
+   "options": "Academic Year"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "Rascunho\nFinalizado\nBloqueado",
+   "default": "Rascunho",
    "in_list_view": 1
   },
   {

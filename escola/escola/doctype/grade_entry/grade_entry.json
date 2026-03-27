@@ -14,8 +14,16 @@
   "class_group",
   "column_break_2",
   "evaluation_type",
+  "section_break_components",
+  "evaluation_components",
   "section_break_rows",
   "grade_rows",
+  "section_break_summary",
+  "class_average",
+  "column_break_summary_1",
+  "total_approved",
+  "column_break_summary_2",
+  "total_failed",
   "section_break_notes",
   "notes"
  ],
@@ -83,6 +91,18 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "section_break_components",
+   "fieldtype": "Section Break",
+   "label": "Componentes de Avaliação",
+   "description": "Defina os componentes e os seus pesos. A soma dos pesos deve ser 100%."
+  },
+  {
+   "fieldname": "evaluation_components",
+   "fieldtype": "Table",
+   "label": "Componentes",
+   "options": "Grade Evaluation Component"
+  },
+  {
    "fieldname": "section_break_rows",
    "fieldtype": "Section Break",
    "label": "Notas"
@@ -93,6 +113,38 @@
    "label": "Notas",
    "options": "Grade Entry Row",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_summary",
+   "fieldtype": "Section Break",
+   "label": "Resumo da Turma"
+  },
+  {
+   "fieldname": "class_average",
+   "fieldtype": "Float",
+   "label": "Média da Turma",
+   "read_only": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_summary_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_approved",
+   "fieldtype": "Int",
+   "label": "Total Aprovados",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_summary_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_failed",
+   "fieldtype": "Int",
+   "label": "Total Reprovados",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_notes",

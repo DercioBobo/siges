@@ -10,9 +10,10 @@
   "column_break_2",
   "teacher",
   "column_break_3",
-  "grade",
-  "column_break_4",
-  "remarks"
+  "is_absent",
+  "trimester_average",
+  "is_approved",
+  "scores_json"
  ],
  "fields": [
   {
@@ -55,23 +56,34 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "grade",
+   "fieldname": "is_absent",
+   "fieldtype": "Check",
+   "label": "S/Nota",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "trimester_average",
    "fieldtype": "Float",
-   "label": "Nota",
+   "label": "Média",
+   "read_only": 1,
    "in_list_view": 1,
-   "columns": 1,
-   "description": "Intervalo: 0 – 20"
+   "columns": 1
   },
   {
-   "fieldname": "column_break_4",
-   "fieldtype": "Column Break"
+   "fieldname": "is_approved",
+   "fieldtype": "Check",
+   "label": "Aprovado",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
   },
   {
-   "fieldname": "remarks",
-   "fieldtype": "Data",
-   "label": "Observação",
-   "in_list_view": 1,
-   "columns": 3
+   "fieldname": "scores_json",
+   "fieldtype": "Small Text",
+   "label": "Notas (JSON)",
+   "hidden": 1,
+   "print_hide": 1
   }
  ],
  "istable": 1,

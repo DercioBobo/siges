@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -57,7 +59,10 @@ class GradeEntry(Document):
         self._validate_uniqueness()
         self._validate_rows_not_empty()
         self._validate_no_duplicate_rows()
-        self._validate_grade_range()
+        self._validate_components()
+        self._validate_score_ranges()
+        self._calculate_row_averages()
+        self._calculate_class_summary()
         self._validate_subjects_assigned()
 
     # ------------------------------------------------------------------
@@ -131,6 +136,24 @@ class GradeEntry(Document):
             )
 
     # ------------------------------------------------------------------
+    # Component validations
+    # ------------------------------------------------------------------
+
+    def _validate_components(self):
+        if not self.evaluation_components:
+            return
+        total_weight = sum(c.weight or 0 for c in self.evaluation_components)
+        if total_weight and abs(total_weight - 100) > 0.01:
+            frappe.msgprint(
+                _("A soma dos pesos das componentes é <b>{0}%</b>. "
+                  "Recomenda-se que a soma seja exactamente 100%.").format(
+                    round(total_weight, 2)
+                ),
+                indicator="orange",
+                alert=True,
+            )
+
+    # ------------------------------------------------------------------
     # Row validations
     # ------------------------------------------------------------------
 
@@ -157,17 +180,103 @@ class GradeEntry(Document):
                 )
             seen.add(key)
 
-    def _validate_grade_range(self):
+    def _validate_score_ranges(self):
+        """Validate each component score is within 0 – max_score."""
+        if not self.evaluation_components:
+            return
+        max_scores = {c.component_name: (c.max_score or 20) for c in self.evaluation_components}
         for row in self.grade_rows:
-            if row.grade is None:
+            if not row.scores_json:
                 continue
-            if row.grade < 0 or row.grade > 20:
-                frappe.throw(
-                    _("A nota <b>{0}</b> na linha do aluno <b>{1}</b> "
-                      "/ disciplina <b>{2}</b> está fora do intervalo permitido "
-                      "(0 – 20).").format(row.grade, row.student, row.subject),
-                    title=_("Nota fora do intervalo"),
-                )
+            try:
+                scores = json.loads(row.scores_json)
+            except (ValueError, TypeError):
+                continue
+            for comp_name, score in scores.items():
+                if score is None:
+                    continue
+                max_s = max_scores.get(comp_name, 20)
+                if score < 0 or score > max_s:
+                    frappe.throw(
+                        _("A nota <b>{0}</b> na componente <b>{1}</b> "
+                          "do aluno <b>{2}</b> / disciplina <b>{3}</b> "
+                          "está fora do intervalo permitido "
+                          "(0 – {4}).").format(
+                            score, comp_name, row.student, row.subject, max_s
+                        ),
+                        title=_("Nota fora do intervalo"),
+                    )
+
+    # ------------------------------------------------------------------
+    # Calculations
+    # ------------------------------------------------------------------
+
+    def _calculate_row_averages(self):
+        """Compute weighted trimester_average from scores_json + evaluation_components."""
+        if not self.evaluation_components:
+            # No components defined — clear derived fields
+            for row in self.grade_rows:
+                row.trimester_average = None
+                row.is_approved = 0
+            return
+
+        total_weight = sum(c.weight or 0 for c in self.evaluation_components)
+        components = {c.component_name: c for c in self.evaluation_components}
+
+        for row in self.grade_rows:
+            if row.is_absent:
+                row.trimester_average = 0.0
+                row.is_approved = 0
+                continue
+
+            if not row.scores_json:
+                row.trimester_average = None
+                row.is_approved = 0
+                continue
+
+            try:
+                scores = json.loads(row.scores_json)
+            except (ValueError, TypeError):
+                row.trimester_average = None
+                row.is_approved = 0
+                continue
+
+            weighted_sum = 0.0
+            used_weight = 0.0
+            for comp_name, comp in components.items():
+                score = scores.get(comp_name)
+                if score is None:
+                    continue
+                max_s = comp.max_score or 20
+                # Normalise to 0-20 scale then apply weight
+                normalised = (score / max_s) * 20 if max_s else 0
+                weighted_sum += normalised * (comp.weight or 0)
+                used_weight += comp.weight or 0
+
+            if used_weight > 0:
+                avg = round(weighted_sum / used_weight, 2) if total_weight else 0
+                row.trimester_average = avg
+                row.is_approved = 1 if avg >= 10 else 0
+            else:
+                row.trimester_average = None
+                row.is_approved = 0
+
+    def _calculate_class_summary(self):
+        averages = [
+            row.trimester_average
+            for row in self.grade_rows
+            if row.trimester_average is not None and not row.is_absent
+        ]
+        if averages:
+            self.class_average = round(sum(averages) / len(averages), 2)
+        else:
+            self.class_average = 0
+
+        self.total_approved = sum(1 for row in self.grade_rows if row.is_approved)
+        self.total_failed = sum(
+            1 for row in self.grade_rows
+            if not row.is_approved and not row.is_absent and row.trimester_average is not None
+        )
 
     def _validate_subjects_assigned(self):
         if not self.class_group or not self.academic_year:

@@ -10,7 +10,14 @@
   "column_break_2",
   "decision",
   "column_break_3",
-  "remarks"
+  "remarks",
+  "column_break_4",
+  "next_school_class",
+  "column_break_5",
+  "next_class_group",
+  "section_break_override",
+  "decision_override",
+  "override_reason"
  ],
  "fields": [
   {
@@ -29,7 +36,7 @@
   {
    "fieldname": "total_failed_subjects",
    "fieldtype": "Int",
-   "label": "Disciplinas Reprovadas",
+   "label": "Reprovadas",
    "in_list_view": 1,
    "columns": 2
   },
@@ -41,7 +48,7 @@
    "fieldname": "decision",
    "fieldtype": "Select",
    "label": "Decisão",
-   "options": "\nPromovido\nRetido\nConcluído",
+   "options": "\nPromovido\nRetido\nConcluído\nRecurso",
    "in_list_view": 1,
    "columns": 2
   },
@@ -55,6 +62,42 @@
    "label": "Observação",
    "in_list_view": 1,
    "columns": 4
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_school_class",
+   "fieldtype": "Link",
+   "label": "Classe do Próximo Ano",
+   "options": "School Class"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_class_group",
+   "fieldtype": "Link",
+   "label": "Nova Turma (Próximo Ano)",
+   "options": "Class Group"
+  },
+  {
+   "fieldname": "section_break_override",
+   "fieldtype": "Section Break",
+   "label": "Decisão Manual"
+  },
+  {
+   "fieldname": "decision_override",
+   "fieldtype": "Check",
+   "label": "Decisão Manual"
+  },
+  {
+   "fieldname": "override_reason",
+   "fieldtype": "Small Text",
+   "label": "Motivo da Alteração",
+   "depends_on": "eval:doc.decision_override"
   }
  ],
  "istable": 1,

@@ -1,1 +1,2 @@
 # Patches are applied in order — add new entries at the bottom
+escola.patches.v1_0.migrate_grade_entry_row_fields
