@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "column_break_1",
+  "attendance_status",
+  "column_break_2",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "attendance_status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "reqd": 1,
+   "options": "\nPresente\nAusente\nAtrasado\nJustificado",
+   "default": "Presente",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "label": "Observação",
+   "in_list_view": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Student Attendance Entry",
+ "owner": "Administrator",
+ "permissions": []
+}

@@ -1,0 +1,154 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "section_break_header",
+  "attendance_date",
+  "academic_year",
+  "column_break_1",
+  "school_class",
+  "class_group",
+  "column_break_2",
+  "teacher",
+  "section_break_entries",
+  "attendance_entries",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "ATT-.YYYY.-.####",
+   "default": "ATT-.YYYY.-.####",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_header",
+   "fieldtype": "Section Break",
+   "label": "Cabeçalho"
+  },
+  {
+   "fieldname": "attendance_date",
+   "fieldtype": "Date",
+   "label": "Data",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "label": "Classe",
+   "options": "School Class",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "label": "Turma",
+   "options": "Class Group",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "teacher",
+   "fieldtype": "Link",
+   "label": "Professor",
+   "options": "Teacher",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_entries",
+   "fieldtype": "Section Break",
+   "label": "Lista de Presença"
+  },
+  {
+   "fieldname": "attendance_entries",
+   "fieldtype": "Table",
+   "label": "Lista de Presença",
+   "options": "Student Attendance Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Student Attendance",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Professor",
+   "write": 1
+  }
+ ],
+ "sort_field": "attendance_date",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

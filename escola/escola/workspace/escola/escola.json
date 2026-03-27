@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"wYjIXriI6X\",\"type\":\"onboarding\",\"data\":{\"onboarding_name\":\"Escola\",\"col\":12}},{\"id\":\"shortcuts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Escola Shortcuts\",\"col\":12}},{\"id\":\"links\",\"type\":\"card\",\"data\":{\"card_name\":\"Dados Mestres\",\"col\":12}}]",
+ "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "hide_custom": 0,
@@ -10,7 +10,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Dados Mestres",
+   "label": "Cadastros",
    "link_count": 0,
    "onboard": 0,
    "type": "Card Break"
@@ -48,27 +48,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Pessoas",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Professor",
    "link_count": 0,
    "link_to": "Teacher",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Aluno",
-   "link_count": 0,
-   "link_to": "Student",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -86,10 +68,12 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Turmas",
+   "label": "Aluno",
    "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
+   "link_to": "Student",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
   },
   {
    "hidden": 0,
@@ -97,6 +81,44 @@
    "label": "Turma",
    "link_count": 0,
    "link_to": "Class Group",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Operações Académicas",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Inscrição do Aluno",
+   "link_count": 0,
+   "link_to": "Student Enrollment",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Alocação de Turma",
+   "link_count": 0,
+   "link_to": "Student Group Assignment",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Presença de Alunos",
+   "link_count": 0,
+   "link_to": "Student Attendance",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
