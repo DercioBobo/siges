@@ -19,6 +19,9 @@
   "is_active",
   "section_break_capacity",
   "max_students",
+  "student_count",
+  "section_break_students",
+  "students",
   "section_break_notes",
   "notes"
  ],
@@ -110,6 +113,26 @@
    "fieldtype": "Int",
    "label": "Capacidade Máxima",
    "description": "Número máximo de alunos permitido nesta turma."
+  },
+  {
+   "fieldname": "student_count",
+   "fieldtype": "Int",
+   "label": "Alunos Inscritos",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_students",
+   "fieldtype": "Section Break",
+   "label": "Lista de Alunos"
+  },
+  {
+   "fieldname": "students",
+   "fieldtype": "Table",
+   "label": "Alunos",
+   "options": "Class Group Student",
+   "read_only": 1,
+   "description": "Gerido automaticamente pelas Alocações de Turma. Use o botão 'Reconstruir Pauta' se necessário."
   },
   {
    "fieldname": "section_break_notes",

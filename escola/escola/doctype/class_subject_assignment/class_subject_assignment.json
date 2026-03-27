@@ -7,9 +7,8 @@
  "field_order": [
   "naming_series",
   "section_break_identification",
-  "class_group",
-  "academic_year",
   "school_class",
+  "academic_year",
   "column_break_1",
   "subject",
   "teacher",
@@ -34,33 +33,20 @@
    "label": "Identificação"
   },
   {
-   "fieldname": "academic_year",
-   "fieldtype": "Link",
-   "label": "Ano Lectivo",
-   "options": "Academic Year",
-   "reqd": 1,
-   "in_list_view": 1,
-   "fetch_from": "class_group.academic_year",
-   "fetch_if_empty": 1
-  },
-  {
    "fieldname": "school_class",
    "fieldtype": "Link",
    "label": "Classe",
    "options": "School Class",
    "reqd": 1,
-   "in_list_view": 1,
-   "fetch_from": "class_group.school_class",
-   "fetch_if_empty": 1
+   "in_list_view": 1
   },
   {
-   "fieldname": "class_group",
+   "fieldname": "academic_year",
    "fieldtype": "Link",
-   "label": "Turma",
-   "options": "Class Group",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
    "reqd": 1,
-   "in_list_view": 1,
-   "description": "A turma deve pertencer ao Ano Lectivo e à Classe seleccionados."
+   "in_list_view": 1
   },
   {
    "fieldname": "column_break_1",
@@ -143,7 +129,7 @@
    "write": 0
   }
  ],
- "sort_field": "class_group",
+ "sort_field": "school_class",
  "sort_order": "ASC",
  "track_changes": 1
 }

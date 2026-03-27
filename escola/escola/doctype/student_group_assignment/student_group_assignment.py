@@ -9,6 +9,18 @@ class StudentGroupAssignment(Document):
         self._validate_duplicate_active_assignment()
         self._validate_class_group_capacity()
 
+    def after_insert(self):
+        _roster_sync(self)
+
+    def on_update(self):
+        _roster_sync(self)
+
+    def on_trash(self):
+        _roster_remove(self.name)
+        _update_student_count(self.class_group)
+
+    # ------------------------------------------------------------------
+
     def _validate_class_group_belongs(self):
         if not self.class_group:
             return
@@ -88,3 +100,49 @@ class StudentGroupAssignment(Document):
                   "<b>{1}</b> alunos.").format(self.class_group, max_students),
                 title=_("Capacidade esgotada"),
             )
+
+
+# ------------------------------------------------------------------
+# Roster sync helpers (called from lifecycle hooks and rebuild_roster)
+# ------------------------------------------------------------------
+
+def _roster_sync(sga):
+    """Remove any existing roster row for this assignment, then re-add if still active."""
+    # Find the class_group this row currently lives in (may differ from sga.class_group
+    # if the assignment was just moved to a different group)
+    old_parents = frappe.db.get_all(
+        "Class Group Student",
+        filters={"assignment": sga.name},
+        fields=["name", "parent"],
+        ignore_permissions=True,
+    )
+
+    affected_groups = {row.parent for row in old_parents}
+    _roster_remove(sga.name)
+
+    if sga.status == "Activa":
+        frappe.get_doc({
+            "doctype": "Class Group Student",
+            "parent": sga.class_group,
+            "parentfield": "students",
+            "parenttype": "Class Group",
+            "student": sga.student,
+            "assignment": sga.name,
+        }).insert(ignore_permissions=True)
+        affected_groups.add(sga.class_group)
+
+    for cg_name in affected_groups:
+        _update_student_count(cg_name)
+
+
+def _roster_remove(assignment_name):
+    frappe.db.delete("Class Group Student", {"assignment": assignment_name})
+
+
+def _update_student_count(class_group_name):
+    if not class_group_name:
+        return
+    count = frappe.db.count("Class Group Student", {"parent": class_group_name})
+    frappe.db.set_value(
+        "Class Group", class_group_name, "student_count", count, update_modified=False
+    )

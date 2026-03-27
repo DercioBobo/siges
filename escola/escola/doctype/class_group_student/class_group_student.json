@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "assignment"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 4,
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "fetch_from": "student.student_name",
+   "fetch_if_empty": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "assignment",
+   "fieldtype": "Link",
+   "label": "Alocação",
+   "options": "Student Group Assignment",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Class Group Student",
+ "owner": "Administrator",
+ "permissions": []
+}

@@ -23,10 +23,11 @@ def get_students_and_subjects(class_group, academic_year):
         order_by="student asc",
     )
 
+    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
     subject_assignments = frappe.get_all(
         "Class Subject Assignment",
         filters={
-            "class_group": class_group,
+            "school_class": school_class,
             "academic_year": academic_year,
             "is_active": 1,
         },
@@ -279,13 +280,13 @@ class GradeEntry(Document):
         )
 
     def _validate_subjects_assigned(self):
-        if not self.class_group or not self.academic_year:
+        if not self.school_class or not self.academic_year:
             return
         assigned = set(
             frappe.get_all(
                 "Class Subject Assignment",
                 filters={
-                    "class_group": self.class_group,
+                    "school_class": self.school_class,
                     "academic_year": self.academic_year,
                     "is_active": 1,
                 },
@@ -298,9 +299,9 @@ class GradeEntry(Document):
             if row.subject and row.subject not in assigned:
                 frappe.throw(
                     _("A disciplina <b>{0}</b> não tem uma Atribuição de "
-                      "Disciplina activa para a Turma <b>{1}</b>. "
+                      "Disciplina activa para a Classe <b>{1}</b>. "
                       "Crie a atribuição antes de lançar notas.").format(
-                        row.subject, self.class_group
+                        row.subject, self.school_class
                     ),
                     title=_("Disciplina não atribuída"),
                 )

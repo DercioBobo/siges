@@ -26,6 +26,16 @@ after_install = "escola.escola.setup.after_install"
 after_migrate = ["escola.escola.setup.after_migrate"]
 
 # -----------------------------------------------------------------
+# Document event hooks
+# -----------------------------------------------------------------
+doc_events = {
+    "Student": {
+        # Keep student_name in sync on every Class Group roster row
+        "on_update": "escola.escola.doctype.class_group.class_group.sync_student_in_rosters",
+    },
+}
+
+# -----------------------------------------------------------------
 # Fixtures — export School Settings with the app so configuration
 # is version-controlled alongside the code.
 # -----------------------------------------------------------------
