@@ -4,7 +4,13 @@
       "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/doctype/student/student.json''\\)\\)\")",
       "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/doctype/class_group/class_group.json''\\)\\)\")",
       "Bash(python3 -c \"import json; json.load\\(open\\(''/c/Users/DBobo/PhpstormProjects/siges/escola/escola/escola/workspace/escola/escola.json''\\)\\)\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(for d:*)",
+      "Bash(do)",
+      "Bash(touch /c/Users/DBobo/PhpstormProjects/siges/escola/escola/doctype/$d/__init__.py)",
+      "Bash(done)",
+      "Bash(for dir:*)",
+      "Bash(touch \"C:/Users/DBobo/PhpstormProjects/siges/escola/escola/report/$dir/__init__.py\")"
     ]
   }
 }

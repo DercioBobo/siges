@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "column_break_1",
+  "total_failed_subjects",
+  "column_break_2",
+  "decision",
+  "column_break_3",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_failed_subjects",
+   "fieldtype": "Int",
+   "label": "Disciplinas Reprovadas",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "label": "Decisão",
+   "options": "\nPromovido\nRetido\nConcluído",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "label": "Observação",
+   "in_list_view": 1,
+   "columns": 4
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Student Promotion Row",
+ "owner": "Administrator",
+ "permissions": []
+}

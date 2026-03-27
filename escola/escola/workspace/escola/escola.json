@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}}]",
+ "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_resultados\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Académicos\",\"col\":12}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "hide_custom": 0,
@@ -161,6 +161,94 @@
    "link_to": "Student Transfer",
    "link_type": "DocType",
    "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Resultados Académicos",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Modelo de Avaliação",
+   "link_count": 0,
+   "link_to": "Assessment Scheme",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Avaliação Anual",
+   "link_count": 0,
+   "link_to": "Annual Assessment",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Promoção de Alunos",
+   "link_count": 0,
+   "link_to": "Student Promotion",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Lista da Turma",
+   "link_count": 0,
+   "link_to": "Lista da Turma",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo de Presenças",
+   "link_count": 0,
+   "link_to": "Resumo de Presenças",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo de Notas",
+   "link_count": 0,
+   "link_to": "Resumo de Notas",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo de Avaliação Anual",
+   "link_count": 0,
+   "link_to": "Resumo de Avaliação Anual",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo de Promoção",
+   "link_count": 0,
+   "link_to": "Resumo de Promoção",
+   "link_type": "Report",
+   "onboard": 0,
    "type": "Link"
   }
  ],
