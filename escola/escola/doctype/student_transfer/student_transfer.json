@@ -1,0 +1,230 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "section_break_identification",
+  "transfer_date",
+  "student",
+  "column_break_1",
+  "academic_year",
+  "status",
+  "section_break_origin",
+  "from_enrollment",
+  "from_school_class",
+  "column_break_2",
+  "from_class_group",
+  "from_assignment",
+  "section_break_destination",
+  "to_school_class",
+  "column_break_3",
+  "to_class_group",
+  "section_break_justification",
+  "reason",
+  "notes",
+  "section_break_system",
+  "new_assignment"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "TRF-.YYYY.-.####",
+   "default": "TRF-.YYYY.-.####",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_identification",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "transfer_date",
+   "fieldtype": "Date",
+   "label": "Data da Transferência",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "reqd": 1,
+   "options": "\nRascunho\nConcluída\nCancelada",
+   "default": "Rascunho",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_origin",
+   "fieldtype": "Section Break",
+   "label": "Origem"
+  },
+  {
+   "fieldname": "from_enrollment",
+   "fieldtype": "Link",
+   "label": "Inscrição de Origem",
+   "options": "Student Enrollment",
+   "reqd": 1,
+   "description": "Inscrição activa do aluno no ano lectivo seleccionado."
+  },
+  {
+   "fieldname": "from_school_class",
+   "fieldtype": "Link",
+   "label": "Classe de Origem",
+   "options": "School Class",
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Origem",
+   "options": "Class Group",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "from_assignment",
+   "fieldtype": "Link",
+   "label": "Alocação de Origem",
+   "options": "Student Group Assignment",
+   "read_only": 1,
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_destination",
+   "fieldtype": "Section Break",
+   "label": "Destino"
+  },
+  {
+   "fieldname": "to_school_class",
+   "fieldtype": "Link",
+   "label": "Classe de Destino",
+   "options": "School Class",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Destino",
+   "options": "Class Group",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_justification",
+   "fieldtype": "Section Break",
+   "label": "Justificação"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Motivo"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "section_break_system",
+   "fieldtype": "Section Break",
+   "label": "Sistema",
+   "collapsible": 1,
+   "collapsible_depends_on": "new_assignment"
+  },
+  {
+   "fieldname": "new_assignment",
+   "fieldtype": "Link",
+   "label": "Nova Alocação Criada",
+   "options": "Student Group Assignment",
+   "read_only": 1,
+   "print_hide": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Student Transfer",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "submit": 1,
+   "cancel": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Professor",
+   "write": 0
+  }
+ ],
+ "sort_field": "transfer_date",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
