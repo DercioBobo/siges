@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_resultados\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Académicos\",\"col\":12}}]",
+ "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_resultados\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Académicos\",\"col\":12}},{\"id\":\"card_finais\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Finais\",\"col\":12}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "hide_custom": 0,
@@ -247,6 +247,64 @@
    "label": "Resumo de Promoção",
    "link_count": 0,
    "link_to": "Resumo de Promoção",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Resultados Finais",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Boletim",
+   "link_count": 0,
+   "link_to": "Report Card",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fecho Académico",
+   "link_count": 0,
+   "link_to": "Academic Closure",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo de Boletins",
+   "link_count": 0,
+   "link_to": "Resumo de Boletins",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Resumo Final da Turma",
+   "link_count": 0,
+   "link_to": "Resumo Final da Turma",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Desempenho Final por Disciplina",
+   "link_count": 0,
+   "link_to": "Desempenho Final por Disciplina",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"

@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "final_decision",
+  "total_failed_subjects",
+  "overall_average",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "final_decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Decisão Final",
+   "options": "Promovido\nRetido\nConcluído",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_failed_subjects",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Disciplinas Reprovadas"
+  },
+  {
+   "fieldname": "overall_average",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Média Final",
+   "precision": "1"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "label": "Observação"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Academic Closure Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

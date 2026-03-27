@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "subject",
+  "final_grade",
+  "result",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "subject",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Disciplina",
+   "options": "Subject",
+   "reqd": 1
+  },
+  {
+   "fieldname": "final_grade",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Nota Final",
+   "precision": "1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Resultado",
+   "options": "Aprovado\nReprovado",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Observação"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Report Card Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

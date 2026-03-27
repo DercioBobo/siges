@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sb_identificacao",
+  "student",
+  "academic_year",
+  "school_class",
+  "class_group",
+  "sb_dados_gerais",
+  "primary_guardian",
+  "cb_dados_gerais",
+  "overall_average",
+  "total_subjects",
+  "passed_subjects",
+  "failed_subjects",
+  "final_decision",
+  "sb_tabela",
+  "report_card_rows",
+  "sb_observacoes",
+  "teacher_comment",
+  "management_comment",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Naming Series",
+   "options": "RPC-.YYYY.-.####"
+  },
+  {
+   "fieldname": "sb_identificacao",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Classe",
+   "options": "School Class",
+   "reqd": 1
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Turma",
+   "options": "Class Group",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_dados_gerais",
+   "fieldtype": "Section Break",
+   "label": "Dados Gerais"
+  },
+  {
+   "fieldname": "primary_guardian",
+   "fieldtype": "Link",
+   "label": "Encarregado Principal",
+   "options": "Guardian"
+  },
+  {
+   "fieldname": "cb_dados_gerais",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "overall_average",
+   "fieldtype": "Float",
+   "label": "Média Final",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_subjects",
+   "fieldtype": "Int",
+   "label": "Total de Disciplinas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "passed_subjects",
+   "fieldtype": "Int",
+   "label": "Disciplinas Aprovadas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "failed_subjects",
+   "fieldtype": "Int",
+   "label": "Disciplinas Reprovadas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_decision",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Decisão Final",
+   "options": "\nPromovido\nRetido\nConcluído",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_tabela",
+   "fieldtype": "Section Break",
+   "label": "Tabela de Disciplinas"
+  },
+  {
+   "fieldname": "report_card_rows",
+   "fieldtype": "Table",
+   "label": "Disciplinas",
+   "options": "Report Card Row",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_observacoes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "teacher_comment",
+   "fieldtype": "Small Text",
+   "label": "Comentário do Professor"
+  },
+  {
+   "fieldname": "management_comment",
+   "fieldtype": "Small Text",
+   "label": "Comentário da Direcção"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Report Card",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Professor"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "student"
+}
