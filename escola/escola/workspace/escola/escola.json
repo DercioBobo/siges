@@ -1,392 +1,65 @@
 {
  "charts": [],
- "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_resultados\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Académicos\",\"col\":12}},{\"id\":\"card_finais\",\"type\":\"card\",\"data\":{\"card_name\":\"Resultados Finais\",\"col\":12}},{\"id\":\"card_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Facturação Escolar\",\"col\":12}}]",
+ "content": "[{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_avaliacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Avaliação e Resultados\",\"col\":12}},{\"id\":\"card_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Facturação\",\"col\":12}},{\"id\":\"card_rel_academicos\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios Académicos\",\"col\":12}},{\"id\":\"card_rel_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios de Facturação\",\"col\":12}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "hide_custom": 0,
  "is_hidden": 0,
  "label": "Escola",
  "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Cadastros",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Ano Lectivo",
-   "link_count": 0,
-   "link_to": "Academic Year",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Período Académico",
-   "link_count": 0,
-   "link_to": "Academic Term",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Classe",
-   "link_count": 0,
-   "link_to": "School Class",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Disciplina",
-   "link_count": 0,
-   "link_to": "Subject",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Professor",
-   "link_count": 0,
-   "link_to": "Teacher",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Encarregado de Educação",
-   "link_count": 0,
-   "link_to": "Guardian",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Aluno",
-   "link_count": 0,
-   "link_to": "Student",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Turma",
-   "link_count": 0,
-   "link_to": "Class Group",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Operações Académicas",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Inscrição do Aluno",
-   "link_count": 0,
-   "link_to": "Student Enrollment",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Alocação de Turma",
-   "link_count": 0,
-   "link_to": "Student Group Assignment",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Atribuição de Disciplina à Turma",
-   "link_count": 0,
-   "link_to": "Class Subject Assignment",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Presença de Alunos",
-   "link_count": 0,
-   "link_to": "Student Attendance",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Pauta de Notas",
-   "link_count": 0,
-   "link_to": "Grade Entry",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Transferência de Aluno",
-   "link_count": 0,
-   "link_to": "Student Transfer",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Resultados Académicos",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Modelo de Avaliação",
-   "link_count": 0,
-   "link_to": "Assessment Scheme",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Avaliação Anual",
-   "link_count": 0,
-   "link_to": "Annual Assessment",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Promoção de Alunos",
-   "link_count": 0,
-   "link_to": "Student Promotion",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Lista da Turma",
-   "link_count": 0,
-   "link_to": "Lista da Turma",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Presenças",
-   "link_count": 0,
-   "link_to": "Resumo de Presenças",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Notas",
-   "link_count": 0,
-   "link_to": "Resumo de Notas",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Avaliação Anual",
-   "link_count": 0,
-   "link_to": "Resumo de Avaliação Anual",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Promoção",
-   "link_count": 0,
-   "link_to": "Resumo de Promoção",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Resultados Finais",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Boletim",
-   "link_count": 0,
-   "link_to": "Report Card",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Fecho Académico",
-   "link_count": 0,
-   "link_to": "Academic Closure",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Boletins",
-   "link_count": 0,
-   "link_to": "Resumo de Boletins",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo Final da Turma",
-   "link_count": 0,
-   "link_to": "Resumo Final da Turma",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Desempenho Final por Disciplina",
-   "link_count": 0,
-   "link_to": "Desempenho Final por Disciplina",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Facturação Escolar",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Categoria de Propina",
-   "link_count": 0,
-   "link_to": "Fee Category",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plano de Propinas",
-   "link_count": 0,
-   "link_to": "Fee Structure",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Atribuição de Propinas ao Aluno",
-   "link_count": 0,
-   "link_to": "Student Fee Assignment",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Ciclo de Facturação",
-   "link_count": 0,
-   "link_to": "Billing Cycle",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Facturação do Aluno",
-   "link_count": 0,
-   "link_to": "Resumo de Facturação do Aluno",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Resumo de Ciclos de Facturação",
-   "link_count": 0,
-   "link_to": "Resumo de Ciclos de Facturação",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "Lista de Facturas por Aluno",
-   "link_count": 0,
-   "link_to": "Lista de Facturas por Aluno",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  }
+
+  {"hidden": 0, "is_query_report": 0, "label": "Cadastros", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Ano Lectivo",               "link_count": 0, "link_to": "Academic Year",          "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Período Académico",         "link_count": 0, "link_to": "Academic Term",           "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Classe",                    "link_count": 0, "link_to": "School Class",            "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Disciplina",                "link_count": 0, "link_to": "Subject",                 "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Professor",                 "link_count": 0, "link_to": "Teacher",                 "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Encarregado de Educação",   "link_count": 0, "link_to": "Guardian",                "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Aluno",                     "link_count": 0, "link_to": "Student",                 "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Turma",                     "link_count": 0, "link_to": "Class Group",             "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Modelo de Avaliação",       "link_count": 0, "link_to": "Assessment Scheme",       "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Categoria de Propina",      "link_count": 0, "link_to": "Fee Category",            "link_type": "DocType", "onboard": 1, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Operações Académicas", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Inscrição do Aluno",              "link_count": 0, "link_to": "Student Enrollment",       "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Alocação de Turma",               "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Atribuição de Disciplina à Turma","link_count": 0, "link_to": "Class Subject Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Presença de Alunos",              "link_count": 0, "link_to": "Student Attendance",        "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Pauta de Notas",                  "link_count": 0, "link_to": "Grade Entry",               "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Transferência de Aluno",          "link_count": 0, "link_to": "Student Transfer",          "link_type": "DocType", "onboard": 1, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Avaliação e Resultados", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Avaliação Anual",    "link_count": 0, "link_to": "Annual Assessment", "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Promoção de Alunos", "link_count": 0, "link_to": "Student Promotion", "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Boletim",            "link_count": 0, "link_to": "Report Card",       "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Fecho Académico",    "link_count": 0, "link_to": "Academic Closure",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",               "link_count": 0, "link_to": "Fee Structure",           "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Atribuição de Propinas ao Aluno", "link_count": 0, "link_to": "Student Fee Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação",             "link_count": 0, "link_to": "Billing Cycle",           "link_type": "DocType", "onboard": 1, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 1, "label": "Lista da Turma",                "link_count": 0, "link_to": "Lista da Turma",                "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",           "link_count": 0, "link_to": "Resumo de Presenças",           "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Notas",               "link_count": 0, "link_to": "Resumo de Notas",               "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual",     "link_count": 0, "link_to": "Resumo de Avaliação Anual",     "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Promoção",            "link_count": 0, "link_to": "Resumo de Promoção",            "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Boletins",            "link_count": 0, "link_to": "Resumo de Boletins",            "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo Final da Turma",         "link_count": 0, "link_to": "Resumo Final da Turma",         "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Desempenho Final por Disciplina","link_count": 0, "link_to": "Desempenho Final por Disciplina","link_type": "Report", "onboard": 0, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Relatórios de Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Facturação do Aluno",  "link_count": 0, "link_to": "Resumo de Facturação do Aluno",  "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Ciclos de Facturação", "link_count": 0, "link_to": "Resumo de Ciclos de Facturação", "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Lista de Facturas por Aluno",    "link_count": 0, "link_to": "Lista de Facturas por Aluno",    "link_type": "Report", "onboard": 0, "type": "Link"}
+
  ],
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",
