@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 
 class FeeStructure(Document):
@@ -15,7 +16,7 @@ class FeeStructure(Document):
             frappe.throw(_("O Plano de Propinas deve ter pelo menos um componente de cobrança."))
 
     def _validate_dates(self):
-        if self.start_date and self.end_date and self.end_date <= self.start_date:
+        if self.start_date and self.end_date and getdate(self.end_date) <= getdate(self.start_date):
             frappe.throw(_("A Data de Fim deve ser posterior à Data de Início."))
 
     def _validate_line_amounts(self):

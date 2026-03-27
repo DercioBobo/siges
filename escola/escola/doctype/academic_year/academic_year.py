@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 
 class AcademicYear(Document):
@@ -11,7 +12,7 @@ class AcademicYear(Document):
 
     def _validate_dates(self):
         if self.start_date and self.end_date:
-            if self.end_date <= self.start_date:
+            if getdate(self.end_date) <= getdate(self.start_date):
                 frappe.throw(
                     _("A Data de Fim deve ser posterior à Data de Início."),
                     title=_("Datas inválidas"),

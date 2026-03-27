@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 
 class StudentFeeAssignment(Document):
@@ -35,7 +36,7 @@ class StudentFeeAssignment(Document):
             frappe.throw(_("A Atribuição de Propinas deve ter pelo menos um item de cobrança."))
 
     def _validate_dates(self):
-        if self.start_date and self.end_date and self.end_date <= self.start_date:
+        if self.start_date and self.end_date and getdate(self.end_date) <= getdate(self.start_date):
             frappe.throw(_("A Data de Fim de Cobrança deve ser posterior ao Início."))
 
     def _validate_line_amounts(self):

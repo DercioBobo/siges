@@ -1,12 +1,13 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 from escola.escola.doctype.student_fee_assignment.student_fee_assignment import _ensure_customer
 
 
 class BillingCycle(Document):
     def validate(self):
-        if self.due_date and self.posting_date and self.due_date < self.posting_date:
+        if self.due_date and self.posting_date and getdate(self.due_date) < getdate(self.posting_date):
             frappe.throw(_("A Data de Vencimento não pode ser anterior à Data de Facturação."))
 
 
@@ -54,9 +55,9 @@ def generate_invoices(doc_name):
 
     for asgn in assignments:
         # Date range guard — skip assignments whose validity doesn't cover posting_date
-        if asgn.end_date and asgn.end_date < cycle.posting_date:
+        if asgn.end_date and getdate(asgn.end_date) < getdate(cycle.posting_date):
             continue
-        if asgn.start_date and asgn.start_date > cycle.posting_date:
+        if asgn.start_date and getdate(asgn.start_date) > getdate(cycle.posting_date):
             continue
 
         # Duplicate prevention: invoice already created for this student + cycle?
