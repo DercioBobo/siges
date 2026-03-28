@@ -4,6 +4,7 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "is_submittable": 1,
  "field_order": [
   "naming_series",
   "section_break_identification",
@@ -14,7 +15,6 @@
   "academic_year",
   "status",
   "section_break_origin",
-  "from_enrollment",
   "from_school_class",
   "column_break_2",
   "from_class_group",
@@ -41,8 +41,7 @@
   "reason",
   "notes",
   "section_break_system",
-  "new_assignment",
-  "new_enrollment"
+  "new_assignment"
  ],
  "fields": [
   {
@@ -114,21 +113,14 @@
    "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
-   "fieldname": "from_enrollment",
-   "fieldtype": "Link",
-   "label": "Inscrição de Origem",
-   "options": "Student Enrollment",
-   "reqd": 1,
-   "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'",
-   "description": "Inscrição activa do aluno no ano lectivo seleccionado."
-  },
-  {
    "fieldname": "from_school_class",
    "fieldtype": "Link",
    "label": "Classe de Origem",
    "options": "School Class",
    "reqd": 1,
    "read_only": 1,
+   "fetch_from": "from_class_group.school_class",
+   "fetch_if_empty": 1,
    "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
   {
@@ -141,7 +133,6 @@
    "label": "Turma de Origem",
    "options": "Class Group",
    "reqd": 1,
-   "read_only": 1,
    "in_list_view": 1,
    "depends_on": "eval:!doc.transfer_type || doc.transfer_type=='Interna (Entre Turmas)'"
   },
@@ -277,7 +268,7 @@
    "fieldtype": "Section Break",
    "label": "Sistema",
    "collapsible": 1,
-   "collapsible_depends_on": "eval:doc.new_assignment || doc.new_enrollment || doc.from_assignment"
+   "collapsible_depends_on": "eval:doc.new_assignment || doc.from_assignment"
   },
   {
    "fieldname": "new_assignment",
@@ -286,18 +277,8 @@
    "options": "Student Group Assignment",
    "read_only": 1,
    "print_hide": 1
-  },
-  {
-   "fieldname": "new_enrollment",
-   "fieldtype": "Link",
-   "label": "Nova Inscrição Criada",
-   "options": "Student Enrollment",
-   "read_only": 1,
-   "hidden": 1,
-   "print_hide": 1
   }
  ],
- "is_submittable": 1,
  "links": [],
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",

@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "naming_series",
+  "section_break_student",
+  "student",
+  "student_name",
+  "column_break_1",
+  "enrollment_date",
+  "academic_year",
+  "section_break_type",
+  "enrollment_type",
+  "previous_school",
+  "section_break_turma",
+  "school_class",
+  "class_group",
+  "turma_picker_html",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "INS-.YYYY.-.####",
+   "default": "INS-.YYYY.-.####",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_student",
+   "fieldtype": "Section Break",
+   "label": "Aluno"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "fetch_from": "student.full_name",
+   "fetch_if_empty": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enrollment_date",
+   "fieldtype": "Date",
+   "label": "Data de Inscrição",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_type",
+   "fieldtype": "Section Break",
+   "label": "Tipo de Inscrição"
+  },
+  {
+   "fieldname": "enrollment_type",
+   "fieldtype": "Select",
+   "label": "Tipo",
+   "options": "\nNovo\nTransferido\nReadmitido\nTransitou",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "previous_school",
+   "fieldtype": "Data",
+   "label": "Escola Anterior",
+   "depends_on": "eval:doc.enrollment_type=='Transferido'",
+   "mandatory_depends_on": "eval:doc.enrollment_type=='Transferido'",
+   "description": "Nome da escola de onde o aluno foi transferido."
+  },
+  {
+   "fieldname": "section_break_turma",
+   "fieldtype": "Section Break",
+   "label": "Turma"
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "label": "Classe",
+   "options": "School Class",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "label": "Turma",
+   "options": "Class Group",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "turma_picker_html",
+   "fieldtype": "HTML",
+   "label": "Turma Picker"
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Inscricao",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "submit": 1,
+   "cancel": 0,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Professor"
+  }
+ ],
+ "sort_field": "enrollment_date",
+ "sort_order": "DESC",
+ "title_field": "student_name",
+ "track_changes": 1
+}
