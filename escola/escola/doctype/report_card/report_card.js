@@ -1,5 +1,6 @@
 frappe.ui.form.on("Report Card", {
     refresh(frm) {
+        set_queries(frm);
         frm.add_custom_button(__("Carregar Avaliação"), () => {
             if (!frm.doc.student || !frm.doc.academic_year || !frm.doc.class_group) {
                 frappe.msgprint(__(
@@ -35,6 +36,24 @@ frappe.ui.form.on("Report Card", {
         });
     },
 
+    academic_year(frm) {
+        frm.set_value("school_class", null);
+        frm.set_value("class_group", null);
+        set_queries(frm);
+    },
+
+    school_class(frm) {
+        frm.set_value("class_group", null);
+        set_queries(frm);
+    },
+
+    class_group(frm) {
+        // Clear fetched fields so fetch_from can repopulate from new class_group
+        frm.set_value("academic_year", null);
+        frm.set_value("school_class", null);
+        set_queries(frm);
+    },
+
     student(frm) {
         if (frm.doc.student) {
             frappe.db.get_value("Student", frm.doc.student, "primary_guardian", (r) => {
@@ -45,6 +64,14 @@ frappe.ui.form.on("Report Card", {
         }
     },
 });
+
+function set_queries(frm) {
+    const cg_filters = { is_active: 1 };
+    if (frm.doc.academic_year) cg_filters.academic_year = frm.doc.academic_year;
+    if (frm.doc.school_class) cg_filters.school_class = frm.doc.school_class;
+    frm.set_query("class_group", () => ({ filters: cg_filters }));
+    frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
+}
 
 function _apply_assessment_data(frm, data) {
     if (!data) return;

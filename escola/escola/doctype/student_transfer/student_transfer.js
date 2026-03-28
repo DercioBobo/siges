@@ -110,6 +110,12 @@ function set_queries(frm) {
 	if (frm.doc.to_school_class) dest_filters.school_class = frm.doc.to_school_class;
 	frm.set_query("to_class_group", () => ({ filters: dest_filters }));
 
+	// from_class_group: filtered by year + from_school_class
+	const from_filters = { is_active: 1 };
+	if (frm.doc.academic_year) from_filters.academic_year = frm.doc.academic_year;
+	if (frm.doc.from_school_class) from_filters.school_class = frm.doc.from_school_class;
+	frm.set_query("from_class_group", () => ({ filters: from_filters }));
+
 	// entry_class_group: filtered by year
 	const entry_filters = { is_active: 1 };
 	if (frm.doc.academic_year) entry_filters.academic_year = frm.doc.academic_year;
