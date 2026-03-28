@@ -15,6 +15,7 @@
   "education_level",
   "section_break_model",
   "teaching_model",
+  "default_teacher",
   "column_break_3",
   "minimum_passing_grade",
   "section_break_notes",
@@ -80,6 +81,15 @@
    "options": "\nProfessor Único\nProfessores por Disciplina",
    "in_list_view": 1,
    "description": "Define se a turma tem um único professor ou um professor por disciplina."
+  },
+  {
+   "fieldname": "default_teacher",
+   "fieldtype": "Link",
+   "label": "Professor Titular",
+   "options": "Teacher",
+   "depends_on": "eval:doc.teaching_model=='Professor Único'",
+   "mandatory_depends_on": "eval:doc.teaching_model=='Professor Único'",
+   "description": "Professor responsável pela maioria das disciplinas. Pode ser substituído por disciplina nas Atribuições de Disciplina."
   },
   {
    "fieldname": "column_break_3",

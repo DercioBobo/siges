@@ -2,5 +2,16 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("School Class", {
-	// No client-side logic required for phase 1
+	refresh(frm) {
+		frm.set_query("default_teacher", () => ({
+			filters: { is_active: 1 },
+		}));
+	},
+
+	teaching_model(frm) {
+		// Clear default_teacher when switching away from single-teacher model
+		if (frm.doc.teaching_model !== "Professor Único") {
+			frm.set_value("default_teacher", null);
+		}
+	},
 });

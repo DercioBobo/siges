@@ -7,6 +7,8 @@ frappe.ui.form.on("Class Subject Assignment", {
 	},
 
 	school_class(frm) {
+		// Clear teacher so fetch_from can repopulate from new school_class.default_teacher
+		frm.set_value("teacher", null);
 		set_queries(frm);
 	},
 });

@@ -14,3 +14,12 @@ class SchoolClass(Document):
                 frappe._("A Nota Mínima de Aprovação não pode ser negativa."),
                 title=frappe._("Nota inválida"),
             )
+        if self.default_teacher:
+            is_active = frappe.db.get_value("Teacher", self.default_teacher, "is_active")
+            if not is_active:
+                frappe.throw(
+                    frappe._("O professor <b>{0}</b> não está activo.").format(
+                        self.default_teacher
+                    ),
+                    title=frappe._("Professor inactivo"),
+                )
