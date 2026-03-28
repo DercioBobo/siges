@@ -6,9 +6,21 @@ frappe.ui.form.on("Student", {
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Atribuir a Turma"), () => assign_to_class_dialog(frm));
 
+				frm.add_custom_button(
+				__("Registar Transferência"),
+				() => frappe.new_doc("Student Transfer", { student: frm.doc.name }),
+				__("Acções")
+			);
+
 			frm.add_custom_button(
 				__("Ver Alocações"),
 				() => frappe.set_route("List", "Student Group Assignment", { student: frm.doc.name }),
+				__("Ver")
+			);
+
+			frm.add_custom_button(
+				__("Ver Transferências"),
+				() => frappe.set_route("List", "Student Transfer", { student: frm.doc.name }),
 				__("Ver")
 			);
 		}

@@ -30,6 +30,11 @@ frappe.ui.form.on("Class Group", {
 				() => frappe.new_doc("Student Attendance", { class_group: frm.doc.name }),
 				__("Criar")
 			);
+			frm.add_custom_button(
+				__("Promoção de Alunos"),
+				() => frappe.new_doc("Student Promotion", { class_group: frm.doc.name }),
+				__("Criar")
+			);
 
 			frm.add_custom_button(
 				__("Ver Alocações"),
