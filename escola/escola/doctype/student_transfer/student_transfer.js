@@ -3,7 +3,6 @@
 
 const _INTERNAL = "Interna (Entre Turmas)";
 const _EXIT     = "Saída (Para Outra Escola)";
-const _ENTRY    = "Entrada (Outra Escola)";
 
 frappe.ui.form.on("Student Transfer", {
 	refresh(frm) {
@@ -13,34 +12,15 @@ frappe.ui.form.on("Student Transfer", {
 	transfer_type(frm) {
 		const t = frm.doc.transfer_type;
 		if (t === _INTERNAL) {
-			frm.set_value("origin_school", null);
-			frm.set_value("origin_city", null);
-			frm.set_value("origin_class", null);
-			frm.set_value("origin_grades", null);
-			frm.set_value("entry_class_group", null);
 			frm.set_value("destination_school", null);
 			frm.set_value("destination_city", null);
 			frm.set_value("exit_reason", null);
 			frm.set_value("exit_reason_detail", null);
 		} else if (t === _EXIT) {
-			frm.set_value("origin_school", null);
-			frm.set_value("origin_city", null);
-			frm.set_value("origin_class", null);
-			frm.set_value("origin_grades", null);
-			frm.set_value("entry_class_group", null);
 			frm.set_value("from_school_class", null);
 			frm.set_value("from_class_group", null);
 			frm.set_value("to_school_class", null);
 			frm.set_value("to_class_group", null);
-		} else if (t === _ENTRY) {
-			frm.set_value("from_school_class", null);
-			frm.set_value("from_class_group", null);
-			frm.set_value("to_school_class", null);
-			frm.set_value("to_class_group", null);
-			frm.set_value("destination_school", null);
-			frm.set_value("destination_city", null);
-			frm.set_value("exit_reason", null);
-			frm.set_value("exit_reason_detail", null);
 		}
 		set_queries(frm);
 	},
@@ -57,7 +37,6 @@ frappe.ui.form.on("Student Transfer", {
 		frm.set_value("from_school_class", null);
 		frm.set_value("from_class_group", null);
 		frm.set_value("to_class_group", null);
-		frm.set_value("entry_class_group", null);
 		set_queries(frm);
 
 		const t = frm.doc.transfer_type || _INTERNAL;
@@ -92,10 +71,6 @@ function set_queries(frm) {
 	const from_filters = { is_active: 1 };
 	if (frm.doc.academic_year) from_filters.academic_year = frm.doc.academic_year;
 	frm.set_query("from_class_group", () => ({ filters: from_filters }));
-
-	const entry_filters = { is_active: 1 };
-	if (frm.doc.academic_year) entry_filters.academic_year = frm.doc.academic_year;
-	frm.set_query("entry_class_group", () => ({ filters: entry_filters }));
 }
 
 function fetch_active_assignment(frm) {

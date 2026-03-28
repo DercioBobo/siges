@@ -5,7 +5,6 @@ from frappe.model.document import Document
 
 _INTERNAL = "Interna (Entre Turmas)"
 _EXIT     = "Saída (Para Outra Escola)"
-_ENTRY    = "Entrada (Outra Escola)"
 
 
 def _safe_set_student_status(student, status):
@@ -27,8 +26,6 @@ class StudentTransfer(Document):
             self._validate_destination()
         elif t == _EXIT:
             self._validate_has_active_sga()
-        elif t == _ENTRY:
-            self._validate_entry()
         self._validate_not_duplicate()
 
     def on_submit(self):
@@ -37,8 +34,6 @@ class StudentTransfer(Document):
             self._handle_internal()
         elif t == _EXIT:
             self._handle_exit()
-        elif t == _ENTRY:
-            self._handle_entry()
         self.db_set("status", "Concluída")
 
     def on_cancel(self):
@@ -47,8 +42,6 @@ class StudentTransfer(Document):
             self._revert_internal()
         elif t == _EXIT:
             self._revert_exit()
-        elif t == _ENTRY:
-            self._revert_entry()
         self.db_set("status", "Cancelada")
 
     # ------------------------------------------------------------------
@@ -130,54 +123,6 @@ class StudentTransfer(Document):
                 _("O aluno <b>{0}</b> não tem alocações activas no Ano Lectivo <b>{1}</b>. "
                   "Não é possível registar uma saída.").format(self.student, self.academic_year),
                 title=_("Sem alocação activa"),
-            )
-
-    def _validate_entry(self):
-        if not self.entry_class_group:
-            frappe.throw(
-                _("Defina a <b>Turma de Destino</b> para a transferência de entrada."),
-                title=_("Turma em falta"),
-            )
-        cg = frappe.db.get_value(
-            "Class Group",
-            self.entry_class_group,
-            ["academic_year", "is_active", "max_students"],
-            as_dict=True,
-        )
-        if not cg:
-            return
-        if cg.academic_year != self.academic_year:
-            frappe.throw(
-                _("A Turma de Destino <b>{0}</b> pertence ao Ano Lectivo <b>{1}</b>, "
-                  "não ao Ano Lectivo <b>{2}</b>.").format(
-                    self.entry_class_group, cg.academic_year, self.academic_year
-                ),
-                title=_("Turma incompatível"),
-            )
-        if not cg.is_active:
-            frappe.throw(
-                _("A Turma de Destino <b>{0}</b> não está activa.").format(self.entry_class_group),
-                title=_("Turma inactiva"),
-            )
-        if cg.max_students:
-            active_count = frappe.db.count(
-                "Student Group Assignment",
-                {"class_group": self.entry_class_group, "status": "Activa"},
-            )
-            if active_count >= cg.max_students:
-                frappe.throw(
-                    _("A Turma de Destino <b>{0}</b> já atingiu a capacidade máxima "
-                      "de <b>{1}</b> alunos.").format(self.entry_class_group, cg.max_students),
-                    title=_("Capacidade esgotada"),
-                )
-        if frappe.db.exists(
-            "Student Group Assignment",
-            {"student": self.student, "academic_year": self.academic_year, "status": "Activa"},
-        ):
-            frappe.throw(
-                _("O aluno <b>{0}</b> já tem uma alocação activa no Ano Lectivo <b>{1}</b>. "
-                  "Utilize uma Transferência Interna.").format(self.student, self.academic_year),
-                title=_("Alocação já existente"),
             )
 
     def _validate_not_duplicate(self):
@@ -275,33 +220,6 @@ class StudentTransfer(Document):
             indicator="orange",
         )
 
-    def _handle_entry(self):
-        entry_class = frappe.db.get_value("Class Group", self.entry_class_group, "school_class")
-
-        new_doc = frappe.get_doc({
-            "doctype": "Student Group Assignment",
-            "student": self.student,
-            "academic_year": self.academic_year,
-            "school_class": entry_class,
-            "class_group": self.entry_class_group,
-            "assignment_date": self.transfer_date,
-            "status": "Activa",
-            "notes": _("Criado automaticamente pela Transferência {0}.").format(self.name),
-        })
-        new_doc.flags.ignore_permissions = True
-        new_doc.insert()
-        self.db_set("new_assignment", new_doc.name)
-
-        _safe_set_student_status(self.student, "Activo")
-
-        frappe.msgprint(
-            _("Entrada registada. Alocação <b>{0}</b> criada na Turma <b>{1}</b>.").format(
-                new_doc.name, self.entry_class_group
-            ),
-            title=_("Entrada concluída"),
-            indicator="green",
-        )
-
     # ------------------------------------------------------------------
     # Cancel / revert
     # ------------------------------------------------------------------
@@ -323,16 +241,6 @@ class StudentTransfer(Document):
         _safe_set_student_status(self.student, "Activo")
         frappe.msgprint(
             _("Saída cancelada. Alocação reactivada."),
-            title=_("Cancelamento concluído"),
-            indicator="orange",
-        )
-
-    def _revert_entry(self):
-        if self.new_assignment and frappe.db.exists("Student Group Assignment", self.new_assignment):
-            frappe.db.set_value("Student Group Assignment", self.new_assignment, "status", "Encerrada")
-        _safe_set_student_status(self.student, "Transferido")
-        frappe.msgprint(
-            _("Entrada cancelada. Alocação encerrada."),
             title=_("Cancelamento concluído"),
             indicator="orange",
         )
