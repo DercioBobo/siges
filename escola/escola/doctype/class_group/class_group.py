@@ -128,11 +128,11 @@ def sync_student_in_rosters(doc, method=None):
     Called via doc_events when a Student record is saved.
     Updates student_name in every Class Group Student row for this student.
     """
-    if not doc.student_name:
+    if not doc.full_name:
         return
     frappe.db.sql(
         """UPDATE `tabClass Group Student`
            SET student_name = %s
            WHERE student = %s""",
-        (doc.student_name, doc.name),
+        (doc.full_name, doc.name),
     )

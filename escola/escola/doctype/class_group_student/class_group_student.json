@@ -24,7 +24,7 @@
    "fieldname": "student_name",
    "fieldtype": "Data",
    "label": "Nome",
-   "fetch_from": "student.student_name",
+   "fetch_from": "student.full_name",
    "fetch_if_empty": 1,
    "read_only": 1,
    "in_list_view": 1,

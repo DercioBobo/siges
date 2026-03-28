@@ -7,21 +7,38 @@
  "is_submittable": 1,
  "field_order": [
   "naming_series",
-  "section_break_student",
-  "student",
-  "student_name",
-  "column_break_1",
+  "section_break_identification",
   "enrollment_date",
   "academic_year",
-  "section_break_type",
+  "column_break_1",
   "enrollment_type",
   "previous_school",
+  "section_break_student",
+  "first_name",
+  "last_name",
+  "full_name",
+  "column_break_2",
+  "gender",
+  "date_of_birth",
+  "column_break_3",
+  "place_of_birth",
+  "phone",
+  "address",
+  "section_break_guardian",
+  "guardian",
+  "guardian_first_name",
+  "guardian_last_name",
+  "column_break_4",
+  "guardian_relationship",
+  "guardian_phone",
+  "guardian_email",
   "section_break_turma",
   "school_class",
   "class_group",
   "turma_picker_html",
-  "section_break_notes",
-  "notes"
+  "section_break_system",
+  "student",
+  "guardian_created"
  ],
  "fields": [
   {
@@ -34,36 +51,14 @@
    "print_hide": 1
   },
   {
-   "fieldname": "section_break_student",
+   "fieldname": "section_break_identification",
    "fieldtype": "Section Break",
-   "label": "Aluno"
-  },
-  {
-   "fieldname": "student",
-   "fieldtype": "Link",
-   "label": "Aluno",
-   "options": "Student",
-   "reqd": 1,
-   "in_list_view": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "student_name",
-   "fieldtype": "Data",
-   "label": "Nome",
-   "fetch_from": "student.full_name",
-   "fetch_if_empty": 1,
-   "read_only": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
+   "label": "Identificação"
   },
   {
    "fieldname": "enrollment_date",
    "fieldtype": "Date",
-   "label": "Data de Inscrição",
+   "label": "Data de Matrícula",
    "reqd": 1,
    "default": "Today",
    "in_list_view": 1
@@ -77,15 +72,14 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "section_break_type",
-   "fieldtype": "Section Break",
-   "label": "Tipo de Inscrição"
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "enrollment_type",
    "fieldtype": "Select",
-   "label": "Tipo",
-   "options": "\nNovo\nTransferido\nReadmitido\nTransitou",
+   "label": "Tipo de Matrícula",
+   "options": "\nNovo\nTransferido",
    "reqd": 1,
    "in_list_view": 1
   },
@@ -96,6 +90,114 @@
    "depends_on": "eval:doc.enrollment_type=='Transferido'",
    "mandatory_depends_on": "eval:doc.enrollment_type=='Transferido'",
    "description": "Nome da escola de onde o aluno foi transferido."
+  },
+  {
+   "fieldname": "section_break_student",
+   "fieldtype": "Section Break",
+   "label": "Dados do Aluno"
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Apelido",
+   "reqd": 1
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Nome Completo",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Sexo",
+   "options": "\nMasculino\nFeminino",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Data de Nascimento",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "place_of_birth",
+   "fieldtype": "Data",
+   "label": "Local de Nascimento"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Telemóvel do Aluno"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Morada"
+  },
+  {
+   "fieldname": "section_break_guardian",
+   "fieldtype": "Section Break",
+   "label": "Encarregado de Educação",
+   "description": "Seleccione um Encarregado existente no sistema OU preencha os dados abaixo para criar um novo."
+  },
+  {
+   "fieldname": "guardian",
+   "fieldtype": "Link",
+   "label": "Encarregado Existente",
+   "options": "Guardian",
+   "description": "Se o Encarregado já está registado (ex.: irmão já inscrito), seleccione aqui."
+  },
+  {
+   "fieldname": "guardian_first_name",
+   "fieldtype": "Data",
+   "label": "Nome do Encarregado",
+   "depends_on": "eval:!doc.guardian"
+  },
+  {
+   "fieldname": "guardian_last_name",
+   "fieldtype": "Data",
+   "label": "Apelido do Encarregado",
+   "depends_on": "eval:!doc.guardian"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "guardian_relationship",
+   "fieldtype": "Select",
+   "label": "Parentesco",
+   "options": "\nPai\nMãe\nAvô\nAvó\nTio\nTia\nTutor\nOutro",
+   "depends_on": "eval:!doc.guardian"
+  },
+  {
+   "fieldname": "guardian_phone",
+   "fieldtype": "Data",
+   "label": "Telemóvel do Encarregado",
+   "depends_on": "eval:!doc.guardian"
+  },
+  {
+   "fieldname": "guardian_email",
+   "fieldtype": "Data",
+   "label": "Email do Encarregado",
+   "depends_on": "eval:!doc.guardian"
   },
   {
    "fieldname": "section_break_turma",
@@ -124,14 +226,28 @@
    "label": "Turma Picker"
   },
   {
-   "fieldname": "section_break_notes",
+   "fieldname": "section_break_system",
    "fieldtype": "Section Break",
-   "label": "Observações"
+   "label": "Sistema",
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.student"
   },
   {
-   "fieldname": "notes",
-   "fieldtype": "Small Text",
-   "label": "Observações"
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno Criado",
+   "options": "Student",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Preenchido automaticamente após submissão."
+  },
+  {
+   "fieldname": "guardian_created",
+   "fieldtype": "Link",
+   "label": "Encarregado Criado",
+   "options": "Guardian",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "links": [],
@@ -176,6 +292,6 @@
  ],
  "sort_field": "enrollment_date",
  "sort_order": "DESC",
- "title_field": "student_name",
+ "title_field": "full_name",
  "track_changes": 1
 }

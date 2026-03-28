@@ -185,18 +185,16 @@ def generate_next_year_enrollments(promotion_name):
             continue
 
         try:
-            # Create the Inscricao (submitted) — it will create the SGA automatically
-            ins = frappe.get_doc({
-                "doctype": "Inscricao",
+            frappe.get_doc({
+                "doctype": "Student Group Assignment",
                 "student": row.student,
-                "enrollment_date": today,
                 "academic_year": doc.next_academic_year,
                 "school_class": row.next_school_class,
                 "class_group": row.next_class_group,
-                "enrollment_type": "Transitou",
-            })
-            ins.insert(ignore_permissions=True)
-            ins.submit()
+                "assignment_date": today,
+                "status": "Activa",
+                "notes": _("Criado automaticamente pela Promoção {0}.").format(doc.name),
+            }).insert(ignore_permissions=True)
             created += 1
 
         except Exception as e:
