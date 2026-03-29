@@ -5,11 +5,27 @@ frappe.ui.form.on("Annual Assessment", {
 	refresh(frm) {
 		set_queries(frm);
 
+		// "Calcular" requires the doc to be saved first (server uses doc_name to run the calc).
 		frm.add_custom_button(
 			__("Calcular Avaliação"),
 			() => maybe_calculate(frm),
 			__("Acções")
 		);
+	},
+
+	async class_group(frm) {
+		set_queries(frm);
+		if (!frm.doc.class_group) return;
+
+		// Ensure academic_year is populated from the class group
+		if (!frm.doc.academic_year) {
+			const cg = await frappe.db.get_value(
+				"Class Group", frm.doc.class_group, ["academic_year"]
+			);
+			if (cg && cg.academic_year) {
+				frm.set_value("academic_year", cg.academic_year);
+			}
+		}
 	},
 
 	academic_year(frm) {

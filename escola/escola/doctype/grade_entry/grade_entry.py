@@ -5,6 +5,38 @@ from escola.escola.doctype.class_curriculum.class_curriculum import get_curricul
 
 
 @frappe.whitelist()
+def get_current_academic_term(academic_year):
+    """Return the name of the Academic Term whose date range covers today.
+
+    Falls back to the most recently started term if today is between terms.
+    Returns None if no term exists for the year.
+    """
+    today = frappe.utils.today()
+
+    # Exact match: today falls within [start_date, end_date]
+    term = frappe.db.get_value(
+        "Academic Term",
+        {
+            "academic_year": academic_year,
+            "start_date": ("<=", today),
+            "end_date": (">=", today),
+        },
+        "name",
+    )
+    if term:
+        return term
+
+    # Fallback: most recent term that has already started
+    term = frappe.db.get_value(
+        "Academic Term",
+        {"academic_year": academic_year, "start_date": ("<=", today)},
+        "name",
+        order_by="start_date desc",
+    )
+    return term
+
+
+@frappe.whitelist()
 def get_grade_entry_students(class_group, academic_year, subject=None):
     """Return rows to load into a Grade Entry.
 

@@ -7,18 +7,64 @@ frappe.ui.form.on("Grade Entry", {
         });
     },
 
-    class_group(frm) {
+    async class_group(frm) {
         _set_queries(frm);
+        if (!frm.doc.class_group) return;
+
+        // academic_year comes from fetch_from but may not be ready yet — read it directly
+        const cg = await frappe.db.get_value(
+            "Class Group", frm.doc.class_group, ["academic_year"]
+        );
+        const academic_year = (cg && cg.academic_year) || frm.doc.academic_year;
+        if (academic_year && frm.doc.academic_year !== academic_year) {
+            frm.set_value("academic_year", academic_year);
+        }
+
+        // Auto-detect the current academic term from today's date
+        if (academic_year && !frm.doc.academic_term) {
+            await _auto_fill_term(frm, academic_year);
+        }
+
+        // Auto-load rows on new docs once turma + term are known
+        if (frm.doc.__islocal && frm.doc.academic_term) {
+            _load_grade_rows(frm);
+        }
     },
 
-    academic_year(frm) {
+    async academic_year(frm) {
         frm.set_value("academic_term", null);
         _set_queries(frm);
+        if (frm.doc.academic_year) {
+            await _auto_fill_term(frm, frm.doc.academic_year);
+        }
+    },
+
+    academic_term(frm) {
+        _set_queries(frm);
+        // If class_group already selected and rows are empty, auto-load
+        if (frm.doc.__islocal && frm.doc.class_group && frm.doc.academic_year
+                && !(frm.doc.grade_rows && frm.doc.grade_rows.length)) {
+            _load_grade_rows(frm);
+        }
     },
 
     school_class(frm) {
         frm.set_value("class_group", null);
         _set_queries(frm);
+    },
+
+    subject(frm) {
+        // Subject filter changed — reload rows if already have class_group + term
+        if (frm.doc.__islocal && frm.doc.class_group && frm.doc.academic_term) {
+            frappe.confirm(
+                __("Recarregar alunos com a nova configuração de disciplina?"),
+                () => {
+                    frm.clear_table("grade_rows");
+                    frm.refresh_field("grade_rows");
+                    _load_grade_rows(frm);
+                }
+            );
+        }
     },
 });
 
@@ -32,12 +78,33 @@ frappe.ui.form.on("Grade Entry Row", {
     },
 
     score(frm, cdt, cdn) {
-        _recalc_approved(frm, cdt, cdn);
+        const row = frappe.get_doc(cdt, cdn);
+        if (row.is_absent) return;
+        const min_pass = 10; // server recalculates on save; this is a client preview
+        const s = parseFloat(row.score);
+        frappe.model.set_value(
+            cdt, cdn, "is_approved",
+            (!isNaN(s) ? (s >= min_pass ? 1 : 0) : 0)
+        );
     },
 });
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Auto-fill helpers
+// ---------------------------------------------------------------------------
+
+async function _auto_fill_term(frm, academic_year) {
+    const r = await frappe.call({
+        method: "escola.escola.doctype.grade_entry.grade_entry.get_current_academic_term",
+        args: { academic_year },
+    });
+    if (r.message && !frm.doc.academic_term) {
+        frm.set_value("academic_term", r.message);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Queries
 // ---------------------------------------------------------------------------
 
 function _set_queries(frm) {
@@ -55,33 +122,19 @@ function _set_queries(frm) {
     });
 
     frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
-
-    if (frm.doc.class_group) {
-        frm.set_query("subject", () => ({
-            query: "frappe.client.get_list",
-            filters: {},
-        }));
-    }
 }
 
-function _recalc_approved(frm, cdt, cdn) {
-    const row = frappe.get_doc(cdt, cdn);
-    const min_pass = _get_min_pass(frm);
-    if (row.is_absent || row.score === null || row.score === undefined || row.score === "") {
-        frappe.model.set_value(cdt, cdn, "is_approved", 0);
-    } else {
-        frappe.model.set_value(cdt, cdn, "is_approved", parseFloat(row.score) >= min_pass ? 1 : 0);
-    }
-}
-
-function _get_min_pass(frm) {
-    // Default 10; ideally fetched from School Class but keep it simple client-side
-    return 10;
-}
+// ---------------------------------------------------------------------------
+// Load rows
+// ---------------------------------------------------------------------------
 
 async function _load_grade_rows(frm) {
     if (!frm.doc.class_group || !frm.doc.academic_year) {
-        frappe.msgprint(__("Seleccione a Turma e o Ano Lectivo antes de carregar os alunos."));
+        frappe.msgprint(__("Seleccione a Turma primeiro."));
+        return;
+    }
+    if (!frm.doc.academic_term) {
+        frappe.msgprint(__("Não foi possível detectar o Período Académico actual. Seleccione o Período manualmente."));
         return;
     }
 
@@ -133,6 +186,8 @@ async function _load_grade_rows(frm) {
             message: __("{0} linha(s) adicionada(s) à pauta.", [added]),
             indicator: "green",
         });
+    } else if (!existing.size) {
+        frappe.show_alert({ message: __("Nenhuma linha encontrada."), indicator: "orange" });
     } else {
         frappe.show_alert({
             message: __("Todos os alunos já constam da pauta."),
