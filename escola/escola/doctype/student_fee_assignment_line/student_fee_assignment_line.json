@@ -10,7 +10,8 @@
   "description",
   "amount",
   "billing_mode",
-  "is_optional"
+  "is_optional",
+  "is_custom"
  ],
  "fields": [
   {
@@ -55,6 +56,13 @@
    "fieldtype": "Check",
    "default": "0",
    "label": "Opcional"
+  },
+  {
+   "fieldname": "is_custom",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Item Personalizado",
+   "description": "Linha adicionada manualmente para este aluno. Não é substituída ao recarregar o Plano."
   }
  ],
  "index_web_pages_for_search": 0,

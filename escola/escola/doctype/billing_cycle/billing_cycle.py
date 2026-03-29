@@ -48,6 +48,7 @@ def generate_invoices(doc_name):
     )
 
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
+    auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
 
     created = 0
     skipped = 0
@@ -114,11 +115,16 @@ def generate_invoices(doc_name):
             )
 
         si.insert(ignore_permissions=False)
+        if auto_submit:
+            si.submit()
         created += 1
         total_amount += si.grand_total
 
     # Refresh summary from actual invoice records (idempotent regardless of run count)
     _refresh_cycle_summary(cycle)
+
+    if created > 0:
+        cycle.db_set("status", "Gerado")
 
     return {
         "created": created,

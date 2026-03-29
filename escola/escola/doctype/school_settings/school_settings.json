@@ -34,6 +34,7 @@
   "default_customer_group",
   "default_territory",
   "invoice_due_days",
+  "auto_submit_invoices",
   "section_reports",
   "report_card_footer",
   "column_break_reports",
@@ -213,6 +214,13 @@
    "label": "Prazo Padrão de Vencimento (dias)",
    "default": "30",
    "description": "Número de dias a partir da data de facturação para calcular o vencimento."
+  },
+  {
+   "fieldname": "auto_submit_invoices",
+   "fieldtype": "Check",
+   "label": "Submeter Facturas Automaticamente",
+   "default": "0",
+   "description": "Se activo, as facturas geradas pelo Ciclo de Facturação são submetidas automaticamente. Por defeito ficam em Rascunho."
   },
   {
    "fieldname": "section_reports",

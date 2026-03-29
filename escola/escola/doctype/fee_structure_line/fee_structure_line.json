@@ -9,7 +9,7 @@
   "item_code",
   "description",
   "amount",
-  "is_recurring"
+  "billing_mode"
  ],
  "fields": [
   {
@@ -42,11 +42,12 @@
    "reqd": 1
   },
   {
-   "fieldname": "is_recurring",
-   "fieldtype": "Check",
-   "default": "0",
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Recorrente"
+   "label": "Modo de Cobrança",
+   "options": "Única\nMensal\nTrimestral\nAnual",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 0,

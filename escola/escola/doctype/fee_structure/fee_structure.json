@@ -11,10 +11,6 @@
   "academic_year",
   "school_class",
   "is_active",
-  "sb_regras",
-  "billing_frequency",
-  "start_date",
-  "end_date",
   "sb_linhas",
   "fee_lines",
   "sb_observacoes",
@@ -54,7 +50,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
-   "options": "School Class"
+   "options": "School Class",
+   "reqd": 1
   },
   {
    "fieldname": "is_active",
@@ -62,29 +59,6 @@
    "default": "1",
    "in_list_view": 1,
    "label": "Activo"
-  },
-  {
-   "fieldname": "sb_regras",
-   "fieldtype": "Section Break",
-   "label": "Regras"
-  },
-  {
-   "fieldname": "billing_frequency",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Frequência de Facturação",
-   "options": "\nÚnica\nMensal\nTrimestral\nAnual",
-   "reqd": 1
-  },
-  {
-   "fieldname": "start_date",
-   "fieldtype": "Date",
-   "label": "Data de Início"
-  },
-  {
-   "fieldname": "end_date",
-   "fieldtype": "Date",
-   "label": "Data de Fim"
   },
   {
    "fieldname": "sb_linhas",
