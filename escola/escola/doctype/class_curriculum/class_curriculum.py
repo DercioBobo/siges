@@ -38,37 +38,34 @@ class ClassCurriculum(Document):
                 )
 
     def _validate_uniqueness(self):
-        """Only one active Class Curriculum per school_class (+ academic_year if set)."""
-        if not self.is_active or not self.school_class:
+        """Only one active Class Curriculum per class_group."""
+        if not self.is_active or not self.class_group:
             return
-
-        filters = {
-            "school_class": self.school_class,
-            "is_active": 1,
-            "name": ("!=", self.name),
-        }
-        if self.academic_year:
-            filters["academic_year"] = self.academic_year
-
-        existing = frappe.db.get_value("Class Curriculum", filters, "name")
+        existing = frappe.db.get_value(
+            "Class Curriculum",
+            {"class_group": self.class_group, "is_active": 1, "name": ("!=", self.name)},
+            "name",
+        )
         if existing:
-            year_label = f" / {self.academic_year}" if self.academic_year else ""
             frappe.throw(
-                _("Já existe uma Grelha Curricular activa para a Classe <b>{0}{1}</b>: <b>{2}</b>. "
+                _("Já existe uma Grelha Curricular activa para a Turma <b>{0}</b>: <b>{1}</b>. "
                   "Desactive a grelha anterior antes de criar uma nova.").format(
-                    self.school_class, year_label, existing
+                    self.class_group, existing
                 ),
                 title=_("Grelha duplicada"),
             )
 
 
-def get_curriculum_subjects(school_class, academic_year=None):
+def get_curriculum_subjects(class_group):
     """
-    Return the subject lines for the active curriculum of a class.
-    Prefers year-specific match; falls back to a curriculum with no academic_year.
+    Return the subject lines for the active curriculum of a class group.
     Returns list of dicts: {subject, teacher}.
     """
-    curriculum_name = _find_curriculum(school_class, academic_year)
+    curriculum_name = frappe.db.get_value(
+        "Class Curriculum",
+        {"class_group": class_group, "is_active": 1},
+        "name",
+    )
     if not curriculum_name:
         return []
 
@@ -80,20 +77,42 @@ def get_curriculum_subjects(school_class, academic_year=None):
     )
 
 
-def _find_curriculum(school_class, academic_year=None):
-    """Find the active Class Curriculum for a class, with year-specific priority."""
-    if academic_year:
-        name = frappe.db.get_value(
-            "Class Curriculum",
-            {"school_class": school_class, "academic_year": academic_year, "is_active": 1},
-            "name",
-        )
-        if name:
-            return name
-
-    return frappe.db.get_value(
-        "Class Curriculum",
-        {"school_class": school_class, "is_active": 1},
-        "name",
-        order_by="creation desc",
+@frappe.whitelist()
+def get_class_group_curriculum_data(class_group):
+    """
+    Return everything needed to auto-populate a curriculum when a class_group is selected:
+    - class_teacher from the Class Group
+    - subjects from the School Class (with is_specialist flag)
+    Called client-side on class_group change.
+    """
+    cg = frappe.db.get_value(
+        "Class Group", class_group, ["school_class", "class_teacher"], as_dict=True
     )
+    if not cg:
+        return {"error": "class_group_not_found"}
+
+    subject_rows = frappe.get_all(
+        "School Class Subject",
+        filters={"parent": cg.school_class},
+        fields=["subject"],
+        order_by="idx asc",
+    )
+    if not subject_rows:
+        return {"error": "no_subjects", "school_class": cg.school_class}
+
+    subject_names = [r.subject for r in subject_rows]
+    specialist_records = frappe.get_all(
+        "Subject",
+        filters=[["name", "in", subject_names]],
+        fields=["name", "is_specialist"],
+    )
+    specialist_set = {r.name for r in specialist_records if r.is_specialist}
+
+    return {
+        "class_teacher": cg.class_teacher,
+        "school_class": cg.school_class,
+        "subjects": [
+            {"subject": r.subject, "is_specialist": r.subject in specialist_set}
+            for r in subject_rows
+        ],
+    }

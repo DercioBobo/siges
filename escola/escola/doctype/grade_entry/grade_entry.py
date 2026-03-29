@@ -24,8 +24,7 @@ def get_students_and_subjects(class_group, academic_year):
         order_by="student asc",
     )
 
-    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
-    subject_lines = get_curriculum_subjects(school_class, academic_year)
+    subject_lines = get_curriculum_subjects(class_group)
 
     if not student_assignments:
         return {"error": "no_students"}
@@ -272,9 +271,9 @@ class GradeEntry(Document):
         )
 
     def _validate_subjects_assigned(self):
-        if not self.school_class or not self.academic_year:
+        if not self.class_group:
             return
-        curriculum_subjects = get_curriculum_subjects(self.school_class, self.academic_year)
+        curriculum_subjects = get_curriculum_subjects(self.class_group)
         assigned = {sl.subject for sl in curriculum_subjects}
         if not assigned:
             return  # skip if no curriculum exists yet (allow saving during setup)

@@ -18,6 +18,8 @@
   "default_teacher",
   "column_break_3",
   "minimum_passing_grade",
+  "section_break_subjects",
+  "subjects",
   "section_break_notes",
   "notes"
  ],
@@ -101,6 +103,18 @@
    "label": "Nota Mínima de Aprovação",
    "default": "10",
    "description": "Nota mínima para aprovação nesta classe."
+  },
+  {
+   "fieldname": "section_break_subjects",
+   "fieldtype": "Section Break",
+   "label": "Disciplinas da Classe"
+  },
+  {
+   "fieldname": "subjects",
+   "fieldtype": "Table",
+   "label": "Disciplinas",
+   "options": "School Class Subject",
+   "description": "Lista de disciplinas leccionadas nesta classe. Usada para pré-preencher a Grelha Curricular de cada turma."
   },
   {
    "fieldname": "section_break_notes",

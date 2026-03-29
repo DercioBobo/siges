@@ -1,83 +1,99 @@
 frappe.ui.form.on("Class Curriculum", {
     refresh(frm) {
-        frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
+        frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
 
         if (!frm.doc.__islocal) {
             _show_summary(frm);
         }
 
-        // Button: bulk-assign homeroom teacher to all non-specialist subjects
         frm.add_custom_button(__("Preencher Professor Titular"), () => {
             _fill_homeroom_teacher(frm);
         });
     },
 
-    school_class(frm) {
-        // Cache the homeroom teacher whenever the class changes
-        _load_homeroom_teacher(frm);
+    class_group(frm) {
+        if (!frm.doc.class_group) return;
+        _populate_from_class_group(frm);
     },
 
     subject_lines_add(frm) { _show_summary(frm); },
     subject_lines_remove(frm) { _show_summary(frm); },
 });
 
-frappe.ui.form.on("Class Curriculum Line", {
-    subject(frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        if (!row.subject) return;
+// ---------------------------------------------------------------------------
+// Auto-populate on class_group selection
+// ---------------------------------------------------------------------------
 
-        frappe.db.get_value("Subject", row.subject, "is_specialist", (r) => {
-            if (!r) return;
+function _populate_from_class_group(frm) {
+    frappe.call({
+        method: "escola.escola.doctype.class_curriculum.class_curriculum.get_class_group_curriculum_data",
+        args: { class_group: frm.doc.class_group },
+        callback(r) {
+            if (r.exc) return;
+            const data = r.message;
 
-            if (!r.is_specialist) {
-                // Regular subject: auto-fill from class homeroom teacher
-                const homeroom = frm._homeroom_teacher;
-                if (homeroom) {
-                    frappe.model.set_value(cdt, cdn, "teacher", homeroom);
-                }
+            if (data.error === "class_group_not_found") return;
+
+            if (data.error === "no_subjects") {
+                frappe.msgprint({
+                    message: __("A Classe <b>{0}</b> não tem disciplinas definidas. "
+                              + "Adicione as disciplinas na ficha da Classe antes de criar a Grelha Curricular.",
+                              [data.school_class]),
+                    title: __("Disciplinas em falta"),
+                    indicator: "orange",
+                });
+                return;
             }
-            // Specialist subject: leave blank — teacher set manually per curriculum
-        });
-    },
-});
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+            if (!data.class_teacher) {
+                frappe.msgprint({
+                    message: __("A Turma <b>{0}</b> não tem Professor Titular definido. "
+                              + "Defina o Professor Titular na ficha da Turma para que as disciplinas "
+                              + "sejam preenchidas automaticamente.",
+                              [frm.doc.class_group]),
+                    title: __("Professor Titular em falta"),
+                    indicator: "orange",
+                });
+            }
 
-function _load_homeroom_teacher(frm) {
-    if (!frm.doc.school_class) {
-        frm._homeroom_teacher = null;
-        return;
-    }
-    frappe.db.get_value("School Class", frm.doc.school_class, "default_teacher", (r) => {
-        frm._homeroom_teacher = r ? r.default_teacher : null;
+            // Clear existing lines and repopulate
+            frm.clear_table("subject_lines");
+            data.subjects.forEach(s => {
+                const row = frm.add_child("subject_lines");
+                row.subject = s.subject;
+                row.teacher = (!s.is_specialist && data.class_teacher) ? data.class_teacher : null;
+            });
+
+            frm.refresh_field("subject_lines");
+            _show_summary(frm);
+        },
     });
 }
 
+// ---------------------------------------------------------------------------
+// Preencher Professor Titular (re-apply homeroom teacher to non-specialist lines)
+// ---------------------------------------------------------------------------
+
 function _fill_homeroom_teacher(frm) {
-    if (!frm.doc.school_class) {
-        frappe.msgprint(__("Seleccione a Classe primeiro."));
+    if (!frm.doc.class_group) {
+        frappe.msgprint(__("Seleccione a Turma primeiro."));
         return;
     }
 
-    frappe.db.get_value("School Class", frm.doc.school_class, "default_teacher", (r) => {
-        const homeroom = r ? r.default_teacher : null;
+    frappe.db.get_value("Class Group", frm.doc.class_group, "class_teacher", (r) => {
+        const homeroom = r ? r.class_teacher : null;
         if (!homeroom) {
             frappe.msgprint({
-                message: __("A Classe <b>{0}</b> não tem Professor Titular definido. "
-                          + "Configure o Professor Titular na ficha da Classe.", [frm.doc.school_class]),
+                message: __("A Turma <b>{0}</b> não tem Professor Titular definido.", [frm.doc.class_group]),
                 title: __("Professor Titular em falta"),
                 indicator: "orange",
             });
             return;
         }
 
-        // Collect subjects that need checking (non-specialist lines without a teacher)
         const lines = frm.doc.subject_lines || [];
         if (!lines.length) return;
 
-        // Fetch is_specialist for all subjects in the table in one call
         const subjects = [...new Set(lines.map(l => l.subject).filter(Boolean))];
         frappe.call({
             method: "frappe.client.get_list",
@@ -91,7 +107,6 @@ function _fill_homeroom_teacher(frm) {
                 const specialistSet = new Set(
                     (res.message || []).filter(s => s.is_specialist).map(s => s.name)
                 );
-
                 let filled = 0;
                 lines.forEach(row => {
                     if (row.subject && !specialistSet.has(row.subject)) {
@@ -99,7 +114,6 @@ function _fill_homeroom_teacher(frm) {
                         filled++;
                     }
                 });
-
                 frm.refresh_field("subject_lines");
                 frappe.show_alert({
                     message: __("Professor titular aplicado a {0} disciplina(s).", [filled]),
@@ -111,15 +125,16 @@ function _fill_homeroom_teacher(frm) {
     });
 }
 
+// ---------------------------------------------------------------------------
+// Summary headline
+// ---------------------------------------------------------------------------
+
 function _show_summary(frm) {
     const lines = frm.doc.subject_lines || [];
-    const total = lines.length;
-    if (!total) return;
+    if (!lines.length) return;
 
-    const withTeacher = lines.filter(l => l.teacher).length;
-    const withoutTeacher = total - withTeacher;
-
-    let msg = __("{0} disciplina(s)", [total]);
+    const withoutTeacher = lines.filter(l => !l.teacher).length;
+    let msg = __("{0} disciplina(s)", [lines.length]);
     if (withoutTeacher > 0) {
         msg += ` &nbsp;|&nbsp; <span style="color:var(--orange-600)">${__("{0} sem professor atribuído", [withoutTeacher])}</span>`;
     }
