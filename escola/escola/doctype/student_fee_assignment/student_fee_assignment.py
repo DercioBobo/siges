@@ -5,6 +5,11 @@ from frappe.utils import getdate
 
 
 class StudentFeeAssignment(Document):
+    def after_insert(self):
+        if self.student and not self.customer:
+            customer = _ensure_customer(self.student)
+            self.db_set("customer", customer)
+
     def validate(self):
         self._validate_uniqueness()
         self._validate_has_lines()

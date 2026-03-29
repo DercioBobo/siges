@@ -48,12 +48,41 @@ frappe.ui.form.on("Billing Cycle", {
             });
         });
 
-        // Show linked invoices button if cycle has been run
         if (!frm.doc.__islocal && (frm.doc.total_invoices_created || 0) > 0) {
             frm.add_custom_button(__("Ver Facturas"), () => {
                 frappe.set_route("List", "Sales Invoice", {
                     escola_billing_cycle: frm.doc.name,
                 });
+            }, __("Ver"));
+        }
+
+        if (!frm.doc.__islocal && frm.doc.status !== "Cancelado") {
+            frm.add_custom_button(__("Cancelar Ciclo"), () => {
+                const invoice_count = frm.doc.total_invoices_created || 0;
+                frappe.confirm(
+                    __("Esta acção irá cancelar/eliminar as {0} factura(s) geradas por este ciclo. "
+                     + "Esta operação não pode ser desfeita. Continuar?", [invoice_count]),
+                    () => {
+                        frappe.call({
+                            method: "escola.escola.doctype.billing_cycle.billing_cycle.cancel_cycle",
+                            args: { doc_name: frm.doc.name },
+                            freeze: true,
+                            freeze_message: __("A cancelar facturas..."),
+                            callback(r) {
+                                if (r.exc) return;
+                                const { cancelled, deleted, errors } = r.message;
+                                let msg = __("{0} factura(s) cancelada(s), {1} eliminada(s).",
+                                    [cancelled, deleted]);
+                                if (errors && errors.length) {
+                                    msg += "<br><b>" + __("{0} erro(s):", [errors.length]) + "</b><br>";
+                                    msg += errors.join("<br>");
+                                }
+                                frappe.msgprint({ message: msg, title: __("Ciclo cancelado"), indicator: "orange" });
+                                frm.reload_doc();
+                            },
+                        });
+                    }
+                );
             }, __("Acções"));
         }
     },
