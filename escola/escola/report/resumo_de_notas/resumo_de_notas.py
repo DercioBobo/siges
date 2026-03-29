@@ -33,8 +33,14 @@ def execute(filters=None):
             "width": 140,
         },
         {
-            "label": _("Média"),
-            "fieldname": "trimester_average",
+            "label": _("Nome da Avaliação"),
+            "fieldname": "assessment_name",
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
+            "label": _("Nota"),
+            "fieldname": "score",
             "fieldtype": "Float",
             "width": 80,
             "precision": 2,
@@ -50,12 +56,6 @@ def execute(filters=None):
             "fieldname": "is_absent",
             "fieldtype": "Check",
             "width": 70,
-        },
-        {
-            "label": _("Observações"),
-            "fieldname": "remarks",
-            "fieldtype": "Data",
-            "width": 200,
         },
     ]
 
@@ -79,15 +79,15 @@ def execute(filters=None):
             s.full_name,
             ger.subject,
             ge.evaluation_type,
-            ger.trimester_average,
+            ge.assessment_name,
+            ger.score,
             ger.is_approved,
-            ger.is_absent,
-            ger.remarks
+            ger.is_absent
         FROM `tabGrade Entry Row` ger
         INNER JOIN `tabGrade Entry` ge ON ge.name = ger.parent
         INNER JOIN `tabStudent`     s  ON s.name  = ger.student
         WHERE {where}
-        ORDER BY s.full_name, ger.subject, ge.creation
+        ORDER BY s.full_name, ger.subject, ge.assessment_date, ge.creation
         """,
         filters,
         as_dict=True,

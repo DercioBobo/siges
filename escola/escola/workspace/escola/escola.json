@@ -22,7 +22,6 @@
   {"hidden": 0, "is_query_report": 0, "label": "Encarregado de Educação",   "link_count": 0, "link_to": "Guardian",                "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Aluno",                     "link_count": 0, "link_to": "Student",                 "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Turma",                     "link_count": 0, "link_to": "Class Group",             "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Modelo de Avaliação",       "link_count": 0, "link_to": "Assessment Scheme",       "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Categoria de Propina",      "link_count": 0, "link_to": "Fee Category",            "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Operações Académicas", "link_count": 0, "onboard": 0, "type": "Card Break"},
@@ -31,11 +30,11 @@
   {"hidden": 0, "is_query_report": 0, "label": "Atribuir Turma ao Estudante",     "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Grelha Curricular",                "link_count": 0, "link_to": "Class Curriculum",         "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Presença de Alunos",              "link_count": 0, "link_to": "Student Attendance",        "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Pauta de Notas",                  "link_count": 0, "link_to": "Grade Entry",               "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Transferência de Aluno",          "link_count": 0, "link_to": "Student Transfer",          "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Avaliação e Resultados", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
+  {"hidden": 0, "is_query_report": 0, "label": "Pauta de Notas",     "link_count": 0, "link_to": "Grade Entry",        "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Avaliação Anual",    "link_count": 0, "link_to": "Annual Assessment", "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Promoção de Alunos", "link_count": 0, "link_to": "Student Promotion", "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Boletim",            "link_count": 0, "link_to": "Report Card",       "link_type": "DocType", "onboard": 1, "type": "Link"},

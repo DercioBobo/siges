@@ -29,7 +29,6 @@ function set_queries(frm) {
 	if (frm.doc.school_class) cg_filters.school_class = frm.doc.school_class;
 
 	frm.set_query("class_group", () => ({ filters: cg_filters }));
-	frm.set_query("assessment_scheme", () => ({ filters: { is_active: 1 } }));
 }
 
 function maybe_calculate(frm) {

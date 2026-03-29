@@ -18,6 +18,7 @@
   "default_teacher",
   "column_break_3",
   "minimum_passing_grade",
+  "max_score",
   "section_break_subjects",
   "subjects",
   "section_break_notes",
@@ -103,6 +104,13 @@
    "label": "Nota Mínima de Aprovação",
    "default": "10",
    "description": "Nota mínima para aprovação nesta classe."
+  },
+  {
+   "fieldname": "max_score",
+   "fieldtype": "Float",
+   "label": "Nota Máxima",
+   "default": "20",
+   "description": "Valor máximo da escala de avaliação (normalmente 20)."
   },
   {
    "fieldname": "section_break_subjects",

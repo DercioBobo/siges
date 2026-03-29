@@ -14,8 +14,13 @@
   "academic_year",
   "column_break_2",
   "evaluation_type",
-  "section_break_components",
-  "evaluation_components",
+  "assessment_name",
+  "section_break_details",
+  "assessment_date",
+  "subject",
+  "column_break_3",
+  "teacher",
+  "max_score",
   "section_break_rows",
   "grade_rows",
   "section_break_summary",
@@ -43,28 +48,12 @@
    "label": "Cabeçalho"
   },
   {
-   "fieldname": "academic_year",
+   "fieldname": "class_group",
    "fieldtype": "Link",
-   "label": "Ano Lectivo",
-   "options": "Academic Year",
+   "label": "Turma",
+   "options": "Class Group",
    "reqd": 1,
-   "in_list_view": 1,
-   "fetch_from": "class_group.academic_year",
-   "fetch_if_empty": 1
-  },
-  {
-   "fieldname": "school_class",
-   "fieldtype": "Link",
-   "label": "Classe",
-   "options": "School Class",
-   "reqd": 1,
-   "in_list_view": 1,
-   "fetch_from": "class_group.school_class",
-   "fetch_if_empty": 1
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
+   "in_list_view": 1
   },
   {
    "fieldname": "academic_term",
@@ -75,11 +64,27 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "class_group",
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "school_class",
    "fieldtype": "Link",
-   "label": "Turma",
-   "options": "Class Group",
-   "reqd": 1,
+   "label": "Classe",
+   "options": "School Class",
+   "read_only": 1,
+   "fetch_from": "class_group.school_class",
+   "fetch_if_empty": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "read_only": 1,
+   "fetch_from": "class_group.academic_year",
+   "fetch_if_empty": 1,
    "in_list_view": 1
   },
   {
@@ -91,20 +96,51 @@
    "fieldtype": "Select",
    "label": "Tipo de Avaliação",
    "reqd": 1,
-   "options": "\nTrabalho\nTeste\nExame\nAvaliação Contínua\nOutro",
+   "options": "\nTrabalho\nTeste\nExame\nOral\nAvaliação Contínua\nOutro",
    "in_list_view": 1
   },
   {
-   "fieldname": "section_break_components",
-   "fieldtype": "Section Break",
-   "label": "Componentes de Avaliação",
-   "description": "Defina os componentes e os seus pesos. A soma dos pesos deve ser 100%."
+   "fieldname": "assessment_name",
+   "fieldtype": "Data",
+   "label": "Nome da Avaliação",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Ex.: Teste 1, Trabalho de Casa 2, Exame de Passagem"
   },
   {
-   "fieldname": "evaluation_components",
-   "fieldtype": "Table",
-   "label": "Componentes",
-   "options": "Grade Evaluation Component"
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break",
+   "label": "Detalhes"
+  },
+  {
+   "fieldname": "assessment_date",
+   "fieldtype": "Date",
+   "label": "Data da Avaliação",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Link",
+   "label": "Disciplina",
+   "options": "Subject",
+   "description": "Deixar em branco para lançar notas de múltiplas disciplinas (modo Professor Único). Preencher para uma disciplina específica (modo especialista)."
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "teacher",
+   "fieldtype": "Link",
+   "label": "Professor",
+   "options": "Teacher"
+  },
+  {
+   "fieldname": "max_score",
+   "fieldtype": "Float",
+   "label": "Nota Máxima",
+   "default": "20",
+   "description": "Valor máximo da escala de notas (normalmente 20)."
   },
   {
    "fieldname": "section_break_rows",
@@ -204,7 +240,7 @@
    "write": 1
   }
  ],
- "sort_field": "academic_year",
+ "sort_field": "assessment_date",
  "sort_order": "DESC",
  "track_changes": 1
 }

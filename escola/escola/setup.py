@@ -70,49 +70,6 @@ def after_install():
 def after_migrate():
     create_custom_fields()
     create_default_items()
-    _migrate_grade_entry_row_fields()
-
-
-def _migrate_grade_entry_row_fields():
-    """
-    Idempotent post-schema migration: copy legacy `grade` values into `scores_json`.
-    Runs after every migrate so it catches the case where the patch fired before
-    schema sync had added the new columns.
-    """
-    import json
-
-    def _col_exists(col):
-        return bool(
-            frappe.db.sql(
-                "SHOW COLUMNS FROM `tabGrade Entry Row` LIKE %s", col, as_dict=True
-            )
-        )
-
-    if not _col_exists("grade"):
-        return
-    if not _col_exists("scores_json") or not _col_exists("trimester_average"):
-        return
-
-    rows = frappe.db.sql(
-        "SELECT name, grade FROM `tabGrade Entry Row` WHERE grade IS NOT NULL",
-        as_dict=True,
-    )
-    for row in rows:
-        frappe.db.sql(
-            """UPDATE `tabGrade Entry Row`
-               SET scores_json       = %s,
-                   trimester_average = %s,
-                   is_approved       = %s
-               WHERE name = %s""",
-            (
-                json.dumps({"Avaliação": row.grade}),
-                row.grade,
-                1 if (row.grade or 0) >= 10 else 0,
-                row.name,
-            ),
-        )
-    if rows:
-        frappe.db.commit()
 
 
 _DEFAULT_ITEMS = [

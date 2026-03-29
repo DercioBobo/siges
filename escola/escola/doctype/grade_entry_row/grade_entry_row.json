@@ -5,15 +5,11 @@
  "engine": "InnoDB",
  "field_order": [
   "student",
-  "column_break_1",
   "subject",
-  "column_break_2",
-  "teacher",
-  "column_break_3",
+  "column_break_1",
+  "score",
   "is_absent",
-  "trimester_average",
-  "is_approved",
-  "scores_json"
+  "is_approved"
  ],
  "fields": [
   {
@@ -24,11 +20,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1,
-   "columns": 3
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
+   "columns": 4
   },
   {
    "fieldname": "subject",
@@ -40,33 +32,21 @@
    "columns": 3
   },
   {
-   "fieldname": "column_break_2",
+   "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "teacher",
-   "fieldtype": "Link",
-   "label": "Professor",
-   "options": "Teacher",
+   "fieldname": "score",
+   "fieldtype": "Float",
+   "label": "Nota",
    "in_list_view": 1,
-   "columns": 2
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
+   "columns": 2,
+   "precision": "2"
   },
   {
    "fieldname": "is_absent",
    "fieldtype": "Check",
    "label": "S/Nota",
-   "in_list_view": 1,
-   "columns": 1
-  },
-  {
-   "fieldname": "trimester_average",
-   "fieldtype": "Float",
-   "label": "Média",
-   "read_only": 1,
    "in_list_view": 1,
    "columns": 1
   },
@@ -77,13 +57,6 @@
    "read_only": 1,
    "in_list_view": 1,
    "columns": 1
-  },
-  {
-   "fieldname": "scores_json",
-   "fieldtype": "Small Text",
-   "label": "Notas (JSON)",
-   "hidden": 1,
-   "print_hide": 1
   }
  ],
  "istable": 1,
