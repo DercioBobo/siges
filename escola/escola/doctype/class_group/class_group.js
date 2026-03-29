@@ -89,7 +89,7 @@ function add_students_dialog(frm) {
 						in_list_view: 1,
 						reqd: 1,
 						columns: 4,
-						get_query: () => ({ filters: { is_active: 1 } }),
+						get_query: () => ({ filters: { current_status: "Activo" } }),
 					},
 					{
 						fieldname: "student_name",

@@ -26,22 +26,17 @@ frappe.ui.form.on("Class Curriculum Line", {
         const row = locals[cdt][cdn];
         if (!row.subject) return;
 
-        frappe.db.get_value("Subject", row.subject, ["is_specialist", "default_teacher"], (r) => {
+        frappe.db.get_value("Subject", row.subject, "is_specialist", (r) => {
             if (!r) return;
 
-            if (r.is_specialist) {
-                // Specialist subject: use the subject's own default_teacher (if any)
-                if (r.default_teacher) {
-                    frappe.model.set_value(cdt, cdn, "teacher", r.default_teacher);
-                }
-                // else leave blank — user must fill manually
-            } else {
+            if (!r.is_specialist) {
                 // Regular subject: auto-fill from class homeroom teacher
                 const homeroom = frm._homeroom_teacher;
                 if (homeroom) {
                     frappe.model.set_value(cdt, cdn, "teacher", homeroom);
                 }
             }
+            // Specialist subject: leave blank — teacher set manually per curriculum
         });
     },
 });
