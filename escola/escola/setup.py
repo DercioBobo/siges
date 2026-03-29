@@ -47,6 +47,18 @@ _CUSTOM_FIELDS = {
             "search_index": 1,
         },
     ],
+    "Sales Invoice Item": [
+        {
+            "fieldname": "escola_is_penalty_line",
+            "fieldtype": "Check",
+            "label": "Linha de Multa (Escola)",
+            "insert_after": "description",
+            "default": "0",
+            "read_only": 1,
+            "no_copy": 1,
+            "print_hide": 1,
+        },
+    ],
 }
 
 

@@ -34,7 +34,22 @@
   "default_customer_group",
   "default_territory",
   "invoice_due_days",
+  "invoice_posting_day",
+  "payment_due_day",
   "auto_submit_invoices",
+  "section_penalty",
+  "penalty_grace_days",
+  "column_break_penalty_1",
+  "penalty_increment_percent",
+  "penalty_max_percent",
+  "column_break_penalty_2",
+  "penalty_frequency",
+  "penalty_mode",
+  "section_suspension",
+  "auto_suspend_on_non_payment",
+  "suspension_threshold_weeks",
+  "column_break_suspension",
+  "auto_submit_on_suspension",
   "section_reports",
   "report_card_footer",
   "column_break_reports",
@@ -216,11 +231,105 @@
    "description": "Número de dias a partir da data de facturação para calcular o vencimento."
   },
   {
+   "fieldname": "invoice_posting_day",
+   "fieldtype": "Int",
+   "label": "Dia de Emissão das Facturas",
+   "default": "25",
+   "description": "Dia do mês em que as facturas de propinas são geradas (ex.: 25)."
+  },
+  {
+   "fieldname": "payment_due_day",
+   "fieldtype": "Int",
+   "label": "Dia de Vencimento das Propinas",
+   "default": "10",
+   "description": "Dia do mês seguinte em que as propinas vencem (ex.: 10)."
+  },
+  {
    "fieldname": "auto_submit_invoices",
    "fieldtype": "Check",
    "label": "Submeter Facturas Automaticamente",
    "default": "0",
    "description": "Se activo, as facturas geradas pelo Ciclo de Facturação são submetidas automaticamente. Por defeito ficam em Rascunho."
+  },
+  {
+   "fieldname": "section_penalty",
+   "fieldtype": "Section Break",
+   "label": "Multas por Atraso"
+  },
+  {
+   "fieldname": "penalty_grace_days",
+   "fieldtype": "Int",
+   "label": "Dias de Tolerância",
+   "default": "0",
+   "description": "Dias após o vencimento antes de iniciar o cálculo de multas. 0 = multa começa no dia seguinte ao vencimento."
+  },
+  {
+   "fieldname": "column_break_penalty_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "penalty_increment_percent",
+   "fieldtype": "Float",
+   "label": "Multa por Período (%)",
+   "default": "10",
+   "description": "Percentagem acrescentada por cada período de atraso (ex.: 10 = +10% por semana)."
+  },
+  {
+   "fieldname": "penalty_max_percent",
+   "fieldtype": "Float",
+   "label": "Multa Máxima (%)",
+   "default": "30",
+   "description": "Tecto máximo da multa. A multa não ultrapassa esta percentagem independentemente das semanas em atraso."
+  },
+  {
+   "fieldname": "column_break_penalty_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "penalty_frequency",
+   "fieldtype": "Select",
+   "label": "Frequência da Multa",
+   "options": "Semanal\nQuinzenal\nMensal",
+   "default": "Semanal",
+   "description": "Periodicidade de incremento da multa."
+  },
+  {
+   "fieldname": "penalty_mode",
+   "fieldtype": "Select",
+   "label": "Modo de Aplicação da Multa",
+   "options": "Dinâmico\nAdicionar à Factura",
+   "default": "Dinâmico",
+   "description": "Dinâmico: multa calculada e apresentada mas não afecta a factura. Adicionar à Factura: linha de multa adicionada à factura em Rascunho."
+  },
+  {
+   "fieldname": "section_suspension",
+   "fieldtype": "Section Break",
+   "label": "Suspensão por Falta de Pagamento"
+  },
+  {
+   "fieldname": "auto_suspend_on_non_payment",
+   "fieldtype": "Check",
+   "label": "Suspender Automaticamente ao Atingir o Limite",
+   "default": "0",
+   "description": "Se activo, o aluno é automaticamente marcado como Suspenso ao atingir o número de semanas configurado."
+  },
+  {
+   "fieldname": "suspension_threshold_weeks",
+   "fieldtype": "Int",
+   "label": "Semanas para Suspensão",
+   "default": "4",
+   "description": "Número de períodos de atraso a partir do qual o aluno é elegível para suspensão."
+  },
+  {
+   "fieldname": "column_break_suspension",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auto_submit_on_suspension",
+   "fieldtype": "Check",
+   "label": "Submeter Factura ao Suspender",
+   "default": "0",
+   "description": "Se activo, a factura em Rascunho é automaticamente submetida quando o aluno atinge o limite de suspensão."
   },
   {
    "fieldname": "section_reports",

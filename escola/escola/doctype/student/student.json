@@ -28,6 +28,7 @@
   "admission_date",
   "column_break_7",
   "current_status",
+  "financial_status",
   "column_break_8",
   "current_school_class",
   "column_break_9",
@@ -168,6 +169,15 @@
    "label": "Estado Actual",
    "options": "\nActivo\nTransferido\nDesistente\nConcluiu",
    "default": "Activo",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "financial_status",
+   "fieldtype": "Select",
+   "label": "Estado Financeiro",
+   "options": "\nRegular\nEm Dívida\nEm Dívida Crítica\nSuspenso",
+   "default": "Regular",
+   "read_only": 1,
    "in_list_view": 1
   },
   {
