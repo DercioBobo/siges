@@ -119,7 +119,7 @@ class Inscricao(Document):
             "place_of_birth": self.place_of_birth or "",
             "phone": self.phone or "",
             "address": self.address or "",
-            "enrollment_type": self.enrollment_type,
+            "admission_date": self.enrollment_date,
             "current_status": "Activo",
             "primary_guardian": guardian_name,
         })

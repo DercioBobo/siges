@@ -23,9 +23,15 @@
   "section_break_school",
   "student_code",
   "column_break_5",
-  "enrollment_type",
+  "bi_number",
   "column_break_6",
+  "admission_date",
+  "column_break_7",
   "current_status",
+  "column_break_8",
+  "current_school_class",
+  "column_break_9",
+  "current_class_group",
   "section_break_guardian",
   "primary_guardian",
   "section_break_notes",
@@ -137,13 +143,23 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "enrollment_type",
-   "fieldtype": "Select",
-   "label": "Tipo de Inscrição",
-   "options": "\nNovo\nTransferido\nReadmitido"
+   "fieldname": "bi_number",
+   "fieldtype": "Data",
+   "label": "Nº do BI",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "admission_date",
+   "fieldtype": "Date",
+   "label": "Data de Admissão",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_7",
    "fieldtype": "Column Break"
   },
   {
@@ -152,6 +168,29 @@
    "label": "Estado Actual",
    "options": "\nActivo\nTransferido\nDesistente\nConcluiu",
    "default": "Activo",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_school_class",
+   "fieldtype": "Link",
+   "label": "Classe Actual",
+   "options": "School Class",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_class_group",
+   "fieldtype": "Link",
+   "label": "Turma Actual",
+   "options": "Class Group",
+   "read_only": 1,
    "in_list_view": 1
   },
   {

@@ -11,9 +11,11 @@ class StudentGroupAssignment(Document):
 
     def after_insert(self):
         _roster_sync(self)
+        _sync_student_current_turma(self)
 
     def on_update(self):
         _roster_sync(self)
+        _sync_student_current_turma(self)
 
     def on_trash(self):
         _roster_remove(self.name)
@@ -105,6 +107,32 @@ class StudentGroupAssignment(Document):
 # ------------------------------------------------------------------
 # Roster sync helpers (called from lifecycle hooks and rebuild_roster)
 # ------------------------------------------------------------------
+
+def _sync_student_current_turma(sga):
+    """Keep current_class_group and current_school_class on Student in sync with active SGA."""
+    if sga.status == "Activa":
+        frappe.db.set_value(
+            "Student", sga.student,
+            {"current_class_group": sga.class_group, "current_school_class": sga.school_class},
+            update_modified=False,
+        )
+    else:
+        # If another active SGA exists (shouldn't normally), use it; otherwise clear.
+        active = frappe.db.get_value(
+            "Student Group Assignment",
+            {"student": sga.student, "status": "Activa", "name": ("!=", sga.name)},
+            ["class_group", "school_class"],
+            as_dict=True,
+        )
+        frappe.db.set_value(
+            "Student", sga.student,
+            {
+                "current_class_group": active.class_group if active else None,
+                "current_school_class": active.school_class if active else None,
+            },
+            update_modified=False,
+        )
+
 
 def _roster_sync(sga):
     """Remove any existing roster row for this assignment, then re-add if still active."""
