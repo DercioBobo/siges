@@ -402,3 +402,55 @@ def get_student_financial_summary(student_name):
         "alert_level":       _alert_level(worst_pd["periods"], settings),
         "penalty_frequency": settings["penalty_frequency"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Automatic triggers (hooks)
+# ---------------------------------------------------------------------------
+
+def on_sales_invoice_update(doc, method):
+    """
+    Called automatically when a Sales Invoice is updated after submit or cancelled.
+    Recalculates financial_status for the linked student.
+    """
+    student = getattr(doc, "escola_student", None)
+    if not student:
+        try:
+            student = frappe.db.get_value("Sales Invoice", doc.name, "escola_student")
+        except Exception:
+            return
+    if student:
+        try:
+            update_student_financial_status(student)
+        except Exception:
+            pass
+
+
+def update_all_student_financial_statuses():
+    """
+    Daily scheduled job: recalculate financial_status for every student
+    who has at least one non-cancelled invoice.
+    Catches time-based transitions (due dates crossed overnight).
+    """
+    try:
+        rows = frappe.db.sql(
+            """
+            SELECT DISTINCT escola_student
+            FROM `tabSales Invoice`
+            WHERE docstatus != 2
+              AND escola_student IS NOT NULL
+              AND escola_student != ''
+            """,
+            as_dict=True,
+        )
+    except Exception:
+        return
+
+    for row in rows:
+        try:
+            update_student_financial_status(row.escola_student)
+        except Exception:
+            frappe.log_error(
+                title="Escola — erro ao actualizar estado financeiro",
+                message=frappe.get_traceback(),
+            )

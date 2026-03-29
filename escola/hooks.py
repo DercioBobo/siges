@@ -33,6 +33,11 @@ doc_events = {
         # Keep student_name in sync on every Class Group roster row
         "on_update": "escola.escola.doctype.class_group.class_group.sync_student_in_rosters",
     },
+    "Sales Invoice": {
+        # Recalculate student financial_status whenever a payment is applied or invoice changes
+        "on_update_after_submit": "escola.escola.doctype.billing_cycle.penalty.on_sales_invoice_update",
+        "on_cancel":              "escola.escola.doctype.billing_cycle.penalty.on_sales_invoice_update",
+    },
 }
 
 # -----------------------------------------------------------------
@@ -55,9 +60,15 @@ fixtures = [
 # website_route_rules = []
 
 # -----------------------------------------------------------------
-# Scheduled tasks — not used yet
+# Scheduled tasks
 # -----------------------------------------------------------------
-# scheduler_events = {}
+scheduler_events = {
+    # Recalculate financial_status for every student with outstanding invoices.
+    # Catches time-based transitions (e.g. due date crossed overnight).
+    "daily": [
+        "escola.escola.doctype.billing_cycle.penalty.update_all_student_financial_statuses",
+    ],
+}
 
 # -----------------------------------------------------------------
 # Jinja customizations — not used yet
