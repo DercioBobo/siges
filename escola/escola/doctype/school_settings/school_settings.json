@@ -38,6 +38,8 @@
   "payment_due_day",
   "auto_submit_invoices",
   "section_penalty",
+  "default_fee_item_code",
+  "penalty_item_code",
   "penalty_grace_days",
   "column_break_penalty_1",
   "penalty_increment_percent",
@@ -255,6 +257,20 @@
    "fieldname": "section_penalty",
    "fieldtype": "Section Break",
    "label": "Multas por Atraso"
+  },
+  {
+   "fieldname": "default_fee_item_code",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Item Padrão de Propina",
+   "description": "Item ERPNext utilizado nas linhas de factura de propinas. Sugerido ao criar novas linhas no Plano de Propinas."
+  },
+  {
+   "fieldname": "penalty_item_code",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Item de Multa por Atraso",
+   "description": "Item ERPNext utilizado nas linhas de multa nas facturas. Criado automaticamente se não existir."
   },
   {
    "fieldname": "penalty_grace_days",

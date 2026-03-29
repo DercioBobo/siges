@@ -64,10 +64,12 @@ _CUSTOM_FIELDS = {
 
 def after_install():
     create_custom_fields()
+    create_default_items()
 
 
 def after_migrate():
     create_custom_fields()
+    create_default_items()
     _migrate_grade_entry_row_fields()
 
 
@@ -111,6 +113,47 @@ def _migrate_grade_entry_row_fields():
         )
     if rows:
         frappe.db.commit()
+
+
+_DEFAULT_ITEMS = [
+    {
+        "item_code": "Propina",
+        "item_name": "Propina",
+        "description": "Propina escolar.",
+    },
+    {
+        "item_code": "Multa por Atraso",
+        "item_name": "Multa por Atraso",
+        "description": "Multa por atraso no pagamento de propinas escolares.",
+    },
+]
+
+
+def create_default_items():
+    """Idempotently create default ERPNext Items used by the escola module."""
+    try:
+        groups = frappe.get_all("Item Group", filters={"is_group": 0}, fields=["name"], limit=1)
+        item_group = groups[0].name if groups else "All Item Groups"
+
+        for item_def in _DEFAULT_ITEMS:
+            if frappe.db.exists("Item", item_def["item_code"]):
+                continue
+            frappe.get_doc({
+                "doctype": "Item",
+                "item_code": item_def["item_code"],
+                "item_name": item_def["item_name"],
+                "item_group": item_group,
+                "is_stock_item": 0,
+                "include_item_in_manufacturing": 0,
+                "description": item_def["description"],
+            }).insert(ignore_permissions=True)
+
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(
+            title="Escola — default items setup failed",
+            message=frappe.get_traceback(),
+        )
 
 
 def create_custom_fields():

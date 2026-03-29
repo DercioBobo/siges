@@ -24,6 +24,7 @@ def _get_settings():
         "penalty_max_percent":         float(s.penalty_max_percent or 30.0),
         "penalty_frequency":           s.penalty_frequency or "Semanal",
         "penalty_mode":                s.penalty_mode or "Dinâmico",
+        "penalty_item_code":           s.penalty_item_code or "Multa por Atraso",
         "auto_suspend_on_non_payment": int(s.auto_suspend_on_non_payment or 0),
         "suspension_threshold_weeks":  int(s.suspension_threshold_weeks or 4),
         "auto_submit_on_suspension":   int(s.auto_submit_on_suspension or 0),
@@ -125,9 +126,10 @@ def _remove_penalty_lines(inv):
     inv.items = [row for row in inv.items if not row.get("escola_is_penalty_line")]
 
 
-def _get_or_create_penalty_item():
+def _get_or_create_penalty_item(item_code=None):
     """Return the item_code for penalty lines, creating the ERPNext Item if absent."""
-    item_code = "Multa por Atraso"
+    if not item_code:
+        item_code = "Multa por Atraso"
     if frappe.db.exists("Item", item_code):
         return item_code
 
@@ -243,7 +245,7 @@ def apply_penalty_to_invoice(invoice_name):
         inv.save(ignore_permissions=True)
         return {"applied": False, "reason": "zero_penalty"}
 
-    penalty_item = _get_or_create_penalty_item()
+    penalty_item = _get_or_create_penalty_item(settings["penalty_item_code"])
     label = _frequency_label(settings["penalty_frequency"], pd["periods"])
 
     new_row = inv.append("items", {
