@@ -24,6 +24,7 @@
   "grading_scale_max",
   "column_break_grading",
   "recurso_threshold",
+  "max_absences_threshold",
   "section_enrollment",
   "enrollment_requires_guardian",
   "default_max_students_per_class",
@@ -168,6 +169,13 @@
    "label": "Limiar de Recurso",
    "default": "8",
    "description": "Média mínima para qualificar para exame de recurso (abaixo deste valor = Retido directamente)."
+  },
+  {
+   "fieldname": "max_absences_threshold",
+   "fieldtype": "Int",
+   "label": "Limite de Faltas (Alerta)",
+   "default": "0",
+   "description": "Número de faltas totais por período a partir do qual o aluno é assinalado como 'Em Risco'. 0 = sem limite."
   },
   {
    "fieldname": "section_enrollment",

@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.term_attendance.term_attendance import get_annual_absences
 
 
 @frappe.whitelist()
@@ -72,10 +73,20 @@ def calculate_assessment(doc_name):
     if not data:
         return {"error": "no_grades"}
 
+    # --- absences per student across all terms ----------------------------
+    absences = get_annual_absences(doc.class_group, doc.academic_year)
+    abs_threshold = int(
+        frappe.db.get_single_value("School Settings", "max_absences_threshold") or 0
+    )
+
     result_rows = []
     max_terms = len(terms)
 
     for student in sorted(data):
+        student_abs = absences.get(student, {})
+        total_abs = student_abs.get("total", 0)
+        abs_at_risk = 1 if (abs_threshold > 0 and total_abs >= abs_threshold) else 0
+
         for subject in sorted(data[student]):
             term_avgs = {
                 pos: round(sum(vals) / len(vals), 2)
@@ -88,7 +99,9 @@ def calculate_assessment(doc_name):
 
             present = list(term_avgs.values())
             final_grade = round(sum(present) / len(present), 2) if present else 0.0
-            result = "Aprovado" if final_grade >= min_passing else "Reprovado"
+
+            # System suggestion: grade-based only; absences are a flag, not a hard fail
+            suggested = "Aprovado" if final_grade >= min_passing else "Reprovado"
 
             result_rows.append({
                 "student": student,
@@ -97,7 +110,10 @@ def calculate_assessment(doc_name):
                 "term_2_average": t2,
                 "term_3_average": t3,
                 "final_grade": final_grade,
-                "result": result,
+                "total_absences": total_abs,
+                "absences_at_risk": abs_at_risk,
+                "suggested_result": suggested,
+                "result": suggested,   # pre-fill with suggestion; teacher can override
                 "remarks": "",
             })
 
@@ -183,3 +199,13 @@ class AnnualAssessment(Document):
                     title=_("Linha duplicada"),
                 )
             seen.add(key)
+            # Warn if teacher result differs from suggestion (informational only)
+            if row.result and row.suggested_result and row.result != row.suggested_result:
+                frappe.msgprint(
+                    _("Aluno <b>{0}</b> / <b>{1}</b>: resultado alterado pelo professor "
+                      "(<b>{2}</b> → <b>{3}</b>).").format(
+                        row.student, row.subject, row.suggested_result, row.result
+                    ),
+                    alert=True,
+                    indicator="orange",
+                )

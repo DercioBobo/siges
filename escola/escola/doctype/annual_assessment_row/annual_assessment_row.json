@@ -13,11 +13,17 @@
   "term_2_average",
   "column_break_t2",
   "term_3_average",
+  "section_break_absences",
+  "total_absences",
+  "column_break_abs",
+  "absences_at_risk",
   "section_break_result",
-  "final_grade",
+  "suggested_result",
   "column_break_3",
   "result",
   "column_break_4",
+  "final_grade",
+  "column_break_5",
   "remarks"
  ],
  "fields": [
@@ -79,17 +85,39 @@
    "precision": "2"
   },
   {
-   "fieldname": "section_break_result",
+   "fieldname": "section_break_absences",
    "fieldtype": "Section Break",
-   "label": "Resultado Final"
+   "label": "Faltas Anuais"
   },
   {
-   "fieldname": "final_grade",
-   "fieldtype": "Float",
-   "label": "Média Anual",
+   "fieldname": "total_absences",
+   "fieldtype": "Int",
+   "label": "Total Faltas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_abs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "absences_at_risk",
+   "fieldtype": "Check",
+   "label": "Em Risco (Faltas)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_result",
+   "fieldtype": "Section Break",
+   "label": "Resultado"
+  },
+  {
+   "fieldname": "suggested_result",
+   "fieldtype": "Select",
+   "label": "Sugestão do Sistema",
+   "options": "\nAprovado\nReprovado",
+   "read_only": 1,
    "in_list_view": 1,
-   "columns": 2,
-   "precision": "2"
+   "columns": 2
   },
   {
    "fieldname": "column_break_3",
@@ -98,13 +126,27 @@
   {
    "fieldname": "result",
    "fieldtype": "Select",
-   "label": "Resultado",
+   "label": "Resultado Final (Professor)",
    "options": "\nAprovado\nReprovado",
    "in_list_view": 1,
-   "columns": 2
+   "columns": 2,
+   "description": "O professor pode alterar o resultado sugerido."
   },
   {
    "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "final_grade",
+   "fieldtype": "Float",
+   "label": "Média Anual",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2,
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_5",
    "fieldtype": "Column Break"
   },
   {
