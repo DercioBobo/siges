@@ -3,6 +3,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.class_curriculum.class_curriculum import get_curriculum_subjects
 
 
 @frappe.whitelist()
@@ -24,30 +25,21 @@ def get_students_and_subjects(class_group, academic_year):
     )
 
     school_class = frappe.db.get_value("Class Group", class_group, "school_class")
-    subject_assignments = frappe.get_all(
-        "Class Subject Assignment",
-        filters={
-            "school_class": school_class,
-            "academic_year": academic_year,
-            "is_active": 1,
-        },
-        fields=["subject", "teacher"],
-        order_by="subject asc",
-    )
+    subject_lines = get_curriculum_subjects(school_class, academic_year)
 
     if not student_assignments:
         return {"error": "no_students"}
-    if not subject_assignments:
+    if not subject_lines:
         return {"error": "no_subjects"}
 
     rows = []
     for sa in student_assignments:
-        for ca in subject_assignments:
+        for sl in subject_lines:
             rows.append(
                 {
                     "student": sa.student,
-                    "subject": ca.subject,
-                    "teacher": ca.teacher or None,
+                    "subject": sl.subject,
+                    "teacher": sl.teacher or None,
                 }
             )
     return rows
@@ -282,25 +274,16 @@ class GradeEntry(Document):
     def _validate_subjects_assigned(self):
         if not self.school_class or not self.academic_year:
             return
-        assigned = set(
-            frappe.get_all(
-                "Class Subject Assignment",
-                filters={
-                    "school_class": self.school_class,
-                    "academic_year": self.academic_year,
-                    "is_active": 1,
-                },
-                pluck="subject",
-            )
-        )
+        curriculum_subjects = get_curriculum_subjects(self.school_class, self.academic_year)
+        assigned = {sl.subject for sl in curriculum_subjects}
         if not assigned:
-            return  # skip if no assignments exist yet (allow saving during setup)
+            return  # skip if no curriculum exists yet (allow saving during setup)
         for row in self.grade_rows:
             if row.subject and row.subject not in assigned:
                 frappe.throw(
-                    _("A disciplina <b>{0}</b> não tem uma Atribuição de "
-                      "Disciplina activa para a Classe <b>{1}</b>. "
-                      "Crie a atribuição antes de lançar notas.").format(
+                    _("A disciplina <b>{0}</b> não consta da Grelha Curricular activa "
+                      "para a Classe <b>{1}</b>. "
+                      "Adicione a disciplina à Grelha Curricular antes de lançar notas.").format(
                         row.subject, self.school_class
                     ),
                     title=_("Disciplina não atribuída"),

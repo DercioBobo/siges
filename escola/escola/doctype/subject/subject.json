@@ -11,6 +11,9 @@
   "subject_code",
   "column_break_2",
   "is_active",
+  "section_break_teacher",
+  "is_specialist",
+  "default_teacher",
   "section_break_notes",
   "notes"
  ],
@@ -46,6 +49,25 @@
    "label": "Activa",
    "default": "1",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_teacher",
+   "fieldtype": "Section Break",
+   "label": "Professor"
+  },
+  {
+   "fieldname": "is_specialist",
+   "fieldtype": "Check",
+   "label": "Requer Professor Especialista",
+   "default": "0",
+   "description": "Se activo, esta disciplina não herda o professor titular da Classe — tem sempre um professor próprio (ex.: Educação Física, Música, Artes)."
+  },
+  {
+   "fieldname": "default_teacher",
+   "fieldtype": "Link",
+   "label": "Professor Padrão",
+   "options": "Teacher",
+   "description": "Professor especialista padrão para esta disciplina. Auto-preenchido na Grelha Curricular quando a disciplina é marcada como especialista."
   },
   {
    "fieldname": "section_break_notes",

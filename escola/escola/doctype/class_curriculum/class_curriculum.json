@@ -6,15 +6,14 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "section_break_identification",
+  "sb_identification",
   "school_class",
   "academic_year",
   "column_break_1",
-  "subject",
-  "teacher",
-  "section_break_status",
   "is_active",
-  "section_break_notes",
+  "sb_lines",
+  "subject_lines",
+  "sb_notes",
   "notes"
  ],
  "fields": [
@@ -22,13 +21,13 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "CSA-.YYYY.-.####",
-   "default": "CSA-.YYYY.-.####",
+   "options": "CUR-.YYYY.-.####",
+   "default": "CUR-.YYYY.-.####",
    "hidden": 1,
    "print_hide": 1
   },
   {
-   "fieldname": "section_break_identification",
+   "fieldname": "sb_identification",
    "fieldtype": "Section Break",
    "label": "Identificação"
   },
@@ -38,42 +37,20 @@
    "label": "Classe",
    "options": "School Class",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "search_index": 1
   },
   {
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
-   "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "description": "Opcional. Se não preenchido, a grelha aplica-se a todos os anos lectivos."
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "subject",
-   "fieldtype": "Link",
-   "label": "Disciplina",
-   "options": "Subject",
-   "reqd": 1,
-   "in_list_view": 1
-  },
-  {
-   "fieldname": "teacher",
-   "fieldtype": "Link",
-   "label": "Professor Responsável",
-   "options": "Teacher",
-   "in_list_view": 1,
-   "fetch_from": "school_class.default_teacher",
-   "fetch_if_empty": 1,
-   "description": "Para 'Professor Único', o professor titular é preenchido automaticamente. Substitua apenas para disciplinas com professor especialista."
-  },
-  {
-   "fieldname": "section_break_status",
-   "fieldtype": "Section Break",
-   "label": "Estado"
   },
   {
    "fieldname": "is_active",
@@ -83,7 +60,19 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "section_break_notes",
+   "fieldname": "sb_lines",
+   "fieldtype": "Section Break",
+   "label": "Disciplinas"
+  },
+  {
+   "fieldname": "subject_lines",
+   "fieldtype": "Table",
+   "label": "Disciplinas",
+   "options": "Class Curriculum Line",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_notes",
    "fieldtype": "Section Break",
    "label": "Observações"
   },
@@ -97,7 +86,7 @@
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
- "name": "Class Subject Assignment",
+ "name": "Class Curriculum",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
@@ -134,5 +123,6 @@
  ],
  "sort_field": "school_class",
  "sort_order": "ASC",
+ "title_field": "school_class",
  "track_changes": 1
 }
