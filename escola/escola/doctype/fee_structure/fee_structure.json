@@ -43,7 +43,7 @@
    "in_list_view": 1,
    "label": "Ano Lectivo",
    "options": "Academic Year",
-   "reqd": 1
+   "description": "Opcional. Se não preenchido, o plano aplica-se a todos os anos lectivos."
   },
   {
    "fieldname": "school_class",

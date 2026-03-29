@@ -17,8 +17,8 @@ frappe.ui.form.on("Billing Cycle", {
                 const msg = already
                     ? __("Este ciclo já gerou {0} factura(s). Serão criadas apenas facturas em falta. Continuar?",
                          [frm.doc.total_invoices_created])
-                    : __("Serão geradas facturas para todos os alunos activos com atribuições no modo '{0}'. Continuar?",
-                         [frm.doc.billing_mode]);
+                    : __("Serão geradas facturas para todos os alunos activos da Classe '{0}' com propinas no modo '{1}'. Continuar?",
+                         [frm.doc.school_class, frm.doc.billing_mode]);
 
                 frappe.confirm(msg, () => {
                     frappe.call({
@@ -30,7 +30,7 @@ frappe.ui.form.on("Billing Cycle", {
                             if (r.exc) return;
                             const { created, skipped, total_amount } = r.message;
                             if (created === 0 && skipped === 0) {
-                                frappe.msgprint(__("Nenhuma factura criada. Verifique as Atribuições de Propinas activas."));
+                                frappe.msgprint(__("Nenhuma factura criada. Verifique se existe um Plano de Propinas activo para a Classe e se há alunos matriculados."));
                             } else {
                                 frappe.msgprint(__("{0} factura(s) criada(s), {1} ignorada(s). Total: {2}.",
                                     [created, skipped, format_currency(total_amount)]));

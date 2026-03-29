@@ -28,7 +28,7 @@
   {"hidden": 0, "is_query_report": 0, "label": "Operações Académicas", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Inscrição",                       "link_count": 0, "link_to": "Inscricao",                "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Alocação de Turma",               "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Atribuir Turma ao Estudante",     "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Atribuição de Disciplinas à Classe","link_count": 0, "link_to": "Class Subject Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Presença de Alunos",              "link_count": 0, "link_to": "Student Attendance",        "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Pauta de Notas",                  "link_count": 0, "link_to": "Grade Entry",               "link_type": "DocType", "onboard": 1, "type": "Link"},
@@ -43,9 +43,8 @@
 
   {"hidden": 0, "is_query_report": 0, "label": "Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
-  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",               "link_count": 0, "link_to": "Fee Structure",           "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Atribuição de Propinas ao Aluno", "link_count": 0, "link_to": "Student Fee Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação",             "link_count": 0, "link_to": "Billing Cycle",           "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",   "link_count": 0, "link_to": "Fee Structure",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação", "link_count": 0, "link_to": "Billing Cycle", "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
