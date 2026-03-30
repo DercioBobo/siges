@@ -59,18 +59,17 @@ def execute(filters=None):
         },
     ]
 
-    if not filters.get("class_group"):
-        return columns, []
-
-    conditions = ["ge.class_group = %(class_group)s", "ge.academic_year = %(academic_year)s"]
-
+    conditions = []
+    if filters.get("class_group"):
+        conditions.append("ge.class_group = %(class_group)s")
+    if filters.get("academic_year"):
+        conditions.append("ge.academic_year = %(academic_year)s")
     if filters.get("academic_term"):
         conditions.append("ge.academic_term = %(academic_term)s")
-
     if filters.get("evaluation_type"):
         conditions.append("ge.evaluation_type = %(evaluation_type)s")
 
-    where = " AND ".join(conditions)
+    where = " AND ".join(conditions) if conditions else "1=1"
 
     data = frappe.db.sql(
         f"""

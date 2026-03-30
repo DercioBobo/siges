@@ -7,6 +7,13 @@ def execute(filters=None):
 
     columns = [
         {
+            "label": _("Turma"),
+            "fieldname": "class_group",
+            "fieldtype": "Link",
+            "options": "Class Group",
+            "width": 130,
+        },
+        {
             "label": _("Nº do Aluno"),
             "fieldname": "student_code",
             "fieldtype": "Data",
@@ -45,21 +52,17 @@ def execute(filters=None):
         },
     ]
 
-    if not filters.get("class_group"):
-        return columns, []
-
-    assignment_filters = {
-        "class_group": filters["class_group"],
-        "status": "Activa",
-    }
+    assignment_filters = {"status": "Activa"}
+    if filters.get("class_group"):
+        assignment_filters["class_group"] = filters["class_group"]
     if filters.get("academic_year"):
         assignment_filters["academic_year"] = filters["academic_year"]
 
     assignments = frappe.get_all(
         "Student Group Assignment",
         filters=assignment_filters,
-        fields=["student"],
-        order_by="student asc",
+        fields=["student", "class_group"],
+        order_by="class_group asc, student asc",
     )
 
     data = []
@@ -78,6 +81,7 @@ def execute(filters=None):
             as_dict=True,
         )
         if s:
+            s["class_group"] = a.class_group
             data.append(s)
 
     return columns, data

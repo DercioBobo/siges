@@ -41,53 +41,32 @@ def execute(filters=None):
         },
     ]
 
-    if not filters.get("class_group") or not filters.get("academic_year"):
-        return columns, []
-
-    annual = frappe.db.get_value(
-        "Annual Assessment",
-        {
-            "class_group": filters["class_group"],
-            "academic_year": filters["academic_year"],
-        },
-        "name",
-    )
-    if not annual:
-        return columns, []
-
-    row_filters = {"parent": annual}
+    conditions = []
+    if filters.get("class_group"):
+        conditions.append("aa.class_group = %(class_group)s")
+    if filters.get("academic_year"):
+        conditions.append("aa.academic_year = %(academic_year)s")
     if filters.get("subject"):
-        row_filters["subject"] = filters["subject"]
+        conditions.append("aar.subject = %(subject)s")
 
-    rows = frappe.get_all(
-        "Annual Assessment Row",
-        filters=row_filters,
-        fields=["student", "subject", "final_grade", "result"],
-        order_by="subject asc, student asc",
+    where = " AND ".join(conditions) if conditions else "1=1"
+
+    data = frappe.db.sql(
+        f"""
+        SELECT
+            aar.subject,
+            aar.student,
+            s.full_name,
+            aar.final_grade,
+            aar.result
+        FROM `tabAnnual Assessment Row` aar
+        INNER JOIN `tabAnnual Assessment` aa ON aa.name = aar.parent
+        INNER JOIN `tabStudent`           s  ON s.name  = aar.student
+        WHERE {where}
+        ORDER BY aar.subject, s.full_name
+        """,
+        filters,
+        as_dict=True,
     )
-
-    if not rows:
-        return columns, []
-
-    student_names = list({r.student for r in rows})
-    student_map = {
-        s.name: s.full_name
-        for s in frappe.get_all(
-            "Student",
-            filters={"name": ("in", student_names)},
-            fields=["name", "full_name"],
-        )
-    }
-
-    data = [
-        {
-            "subject": r.subject,
-            "student": r.student,
-            "full_name": student_map.get(r.student, r.student),
-            "final_grade": r.final_grade,
-            "result": r.result,
-        }
-        for r in rows
-    ]
 
     return columns, data

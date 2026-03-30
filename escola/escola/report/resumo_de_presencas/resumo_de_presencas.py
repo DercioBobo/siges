@@ -58,14 +58,13 @@ def execute(filters=None):
         },
     ]
 
-    if not filters.get("class_group"):
-        return columns, []
-
-    conditions = ["sa.class_group = %(class_group)s"]
+    conditions = []
+    if filters.get("class_group"):
+        conditions.append("sa.class_group = %(class_group)s")
     if filters.get("academic_year"):
         conditions.append("sa.academic_year = %(academic_year)s")
 
-    where = " AND ".join(conditions)
+    where = " AND ".join(conditions) if conditions else "1=1"
 
     data = frappe.db.sql(
         f"""
