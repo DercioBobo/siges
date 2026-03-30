@@ -68,8 +68,9 @@ frappe.ui.form.on("Student", {
         }
     },
 
-    first_name(frm) { update_full_name(frm); },
-    last_name(frm)  { update_full_name(frm); },
+    first_name(frm)    { update_full_name(frm); },
+    last_name(frm)     { update_full_name(frm); },
+    date_of_birth(frm) { update_age(frm); },
 });
 
 // ---------------------------------------------------------------------------
@@ -121,6 +122,18 @@ function _load_financial_summary(frm) {
 // ---------------------------------------------------------------------------
 // Full name sync
 // ---------------------------------------------------------------------------
+
+function update_age(frm) {
+    if (!frm.doc.date_of_birth) return;
+    const dob = frappe.datetime.str_to_obj(frm.doc.date_of_birth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    if (
+        today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
+    ) age--;
+    frm.set_value("idade", age >= 0 ? age : null);
+}
 
 function update_full_name(frm) {
     const parts = [frm.doc.first_name, frm.doc.last_name].filter(Boolean);
