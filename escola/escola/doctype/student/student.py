@@ -30,6 +30,7 @@ def update_all_student_ages():
 
 class Student(Document):
     def before_insert(self):
+        self._sync_full_name()
         self._generate_student_code()
 
     def before_save(self):
