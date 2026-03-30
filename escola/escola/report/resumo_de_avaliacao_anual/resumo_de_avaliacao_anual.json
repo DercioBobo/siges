@@ -22,10 +22,10 @@
  "is_standard": "Yes",
  "modified": "2024-01-01 00:00:00.000000",
  "module": "Escola",
- "name": "Resumo de Avaliação Anual",
+ "name": "Resumo de Avaliacao Anual",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Annual Assessment",
- "report_name": "Resumo de Avaliação Anual",
+ "report_name": "Resumo de Avaliacao Anual",
  "report_type": "Script Report"
 }

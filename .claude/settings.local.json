@@ -13,7 +13,11 @@
       "Bash(touch \"C:/Users/DBobo/PhpstormProjects/siges/escola/escola/report/$dir/__init__.py\")",
       "Bash(grep -r \"term_number\\\\|term_start_date\\\\|term_end_date\" /c/Users/DBobo/PhpstormProjects/siges/escola --include=*.json -l)",
       "Read(//opt/**)",
-      "Bash(/dev/null -name *.json -path */workspace/*)"
+      "Bash(/dev/null -name *.json -path */workspace/*)",
+      "Bash(python3 -c \"import sys; [print\\(l.rstrip\\(\\)\\) for l in sys.stdin if any\\(ord\\(c\\)>127 for c in l\\)]\")",
+      "Bash(grep -rn \"\"name\"\": C:UsersDBoboPhpstormProjectssigesescolaescoladoctype --include=*.json)",
+      "Bash(python3 -c \":*)",
+      "Bash(/c/Python313/python -c \":*)"
     ]
   }
 }

@@ -25,9 +25,9 @@
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
   {"hidden": 0, "is_query_report": 1, "label": "Lista da Turma",            "link_count": 0, "link_to": "Lista da Turma",            "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",       "link_count": 0, "link_to": "Resumo de Presenças",       "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",       "link_count": 0, "link_to": "Resumo de Presencas",       "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo de Notas",           "link_count": 0, "link_to": "Resumo de Notas",           "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual", "link_count": 0, "link_to": "Resumo de Avaliação Anual", "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual", "link_count": 0, "link_to": "Resumo de Avaliacao Anual", "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo de Boletins",        "link_count": 0, "link_to": "Resumo de Boletins",        "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo Final da Turma",     "link_count": 0, "link_to": "Resumo Final da Turma",     "link_type": "Report", "onboard": 0, "type": "Link"}
 

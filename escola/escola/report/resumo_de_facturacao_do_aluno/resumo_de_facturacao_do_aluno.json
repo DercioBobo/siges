@@ -32,10 +32,10 @@
  "is_standard": "Yes",
  "modified": "2024-01-01 00:00:00.000000",
  "module": "Escola",
- "name": "Resumo de Facturação do Aluno",
+ "name": "Resumo de Facturacao do Aluno",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Student Fee Assignment",
- "report_name": "Resumo de Facturação do Aluno",
+ "report_name": "Resumo de Facturacao do Aluno",
  "report_type": "Script Report"
 }

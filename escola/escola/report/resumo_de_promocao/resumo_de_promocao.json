@@ -22,10 +22,10 @@
  "is_standard": "Yes",
  "modified": "2024-01-01 00:00:00.000000",
  "module": "Escola",
- "name": "Resumo de Promoção",
+ "name": "Resumo de Promocao",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Student Promotion",
- "report_name": "Resumo de Promoção",
+ "report_name": "Resumo de Promocao",
  "report_type": "Script Report"
 }

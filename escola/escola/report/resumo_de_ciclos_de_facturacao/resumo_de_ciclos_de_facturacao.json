@@ -32,10 +32,10 @@
  "is_standard": "Yes",
  "modified": "2024-01-01 00:00:00.000000",
  "module": "Escola",
- "name": "Resumo de Ciclos de Facturação",
+ "name": "Resumo de Ciclos de Facturacao",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Billing Cycle",
- "report_name": "Resumo de Ciclos de Facturação",
+ "report_name": "Resumo de Ciclos de Facturacao",
  "report_type": "Script Report"
 }

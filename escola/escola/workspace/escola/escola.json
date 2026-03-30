@@ -31,7 +31,7 @@
   {"hidden": 0, "is_query_report": 0, "label": "Grelha Curricular",                "link_count": 0, "link_to": "Class Curriculum",         "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Faltas por Período",              "link_count": 0, "link_to": "Term Attendance",           "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Troca de Turma",                  "link_count": 0, "link_to": "Troca de Turma",            "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Renovação de Matrícula",          "link_count": 0, "link_to": "Renovação de Matrícula",      "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Renovação de Matrícula",          "link_count": 0, "link_to": "Renovacao de Matricula",      "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Transferência de Aluno",          "link_count": 0, "link_to": "Student Transfer",          "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Avaliação e Resultados", "link_count": 0, "onboard": 0, "type": "Card Break"},
@@ -50,18 +50,18 @@
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
   {"hidden": 0, "is_query_report": 1, "label": "Lista da Turma",                "link_count": 0, "link_to": "Lista da Turma",                "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",           "link_count": 0, "link_to": "Resumo de Presenças",           "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",           "link_count": 0, "link_to": "Resumo de Presencas",           "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo de Notas",               "link_count": 0, "link_to": "Resumo de Notas",               "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual",     "link_count": 0, "link_to": "Resumo de Avaliação Anual",     "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Promoção",            "link_count": 0, "link_to": "Resumo de Promoção",            "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual",     "link_count": 0, "link_to": "Resumo de Avaliacao Anual",     "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Promoção",            "link_count": 0, "link_to": "Resumo de Promocao",            "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo de Boletins",            "link_count": 0, "link_to": "Resumo de Boletins",            "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Resumo Final da Turma",         "link_count": 0, "link_to": "Resumo Final da Turma",         "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Desempenho Final por Disciplina","link_count": 0, "link_to": "Desempenho Final por Disciplina","link_type": "Report", "onboard": 0, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios de Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Facturação do Aluno",  "link_count": 0, "link_to": "Resumo de Facturação do Aluno",  "link_type": "Report", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Ciclos de Facturação", "link_count": 0, "link_to": "Resumo de Ciclos de Facturação", "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Facturação do Aluno",  "link_count": 0, "link_to": "Resumo de Facturacao do Aluno",  "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Ciclos de Facturação", "link_count": 0, "link_to": "Resumo de Ciclos de Facturacao", "link_type": "Report", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 1, "label": "Lista de Facturas por Aluno",    "link_count": 0, "link_to": "Lista de Facturas por Aluno",    "link_type": "Report", "onboard": 0, "type": "Link"}
 
  ],
@@ -83,7 +83,7 @@
   {"color": "#EF4444", "doc_type": "Grade Entry",       "label": "Pauta de Notas",          "type": "DocType"},
   {"color": "#14B8A6", "doc_type": "Billing Cycle",     "label": "Ciclo de Facturação",     "type": "DocType"},
   {"color": "#F97316", "doc_type": "Troca de Turma",          "label": "Troca de Turma",          "type": "DocType"},
-  {"color": "#A855F7", "doc_type": "Renovação de Matrícula", "label": "Renovação de Matrícula",  "type": "DocType"}
+  {"color": "#A855F7", "doc_type": "Renovacao de Matricula", "label": "Renovação de Matrícula",  "type": "DocType"}
  ],
  "title": "Escola"
 }

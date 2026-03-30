@@ -80,7 +80,7 @@ class RenovacaoDeMatricula(Document):
 
     def _validate_not_duplicate(self):
         existing = frappe.db.get_value(
-            "Renovação de Matrícula",
+            "Renovacao de Matricula",
             {
                 "class_group": self.class_group,
                 "academic_year": self.academic_year,
@@ -93,7 +93,7 @@ class RenovacaoDeMatricula(Document):
         if existing:
             frappe.throw(
                 _(
-                    "Já existe uma Renovação de Matrícula concluída para esta turma "
+                    "Já existe uma Renovacao de Matricula concluída para esta turma "
                     "neste percurso de anos: <b>{0}</b>."
                 ).format(existing),
                 title=_("Renovação duplicada"),
@@ -165,7 +165,7 @@ class RenovacaoDeMatricula(Document):
                     "assignment_date": self.renewal_date or today,
                     "status": "Activa",
                     "notes": _(
-                        "Criada automaticamente pela Renovação de Matrícula {0}."
+                        "Criada automaticamente pela Renovacao de Matricula {0}."
                     ).format(self.name),
                 }
             )
