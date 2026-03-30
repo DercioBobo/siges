@@ -7,7 +7,10 @@
  "field_order": [
   "student",
   "student_name",
-  "assignment"
+  "renovacao",
+  "data_renovacao",
+  "assignment",
+  "renovacao_ref"
  ],
  "fields": [
   {
@@ -18,7 +21,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1,
-   "columns": 4,
+   "columns": 3,
    "read_only": 1
   },
   {
@@ -32,10 +35,34 @@
    "columns": 4
   },
   {
+   "fieldname": "renovacao",
+   "fieldtype": "Select",
+   "label": "Renovação",
+   "options": "\nSim\nNão",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "data_renovacao",
+   "fieldtype": "Date",
+   "label": "Data Renovação",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
    "fieldname": "assignment",
    "fieldtype": "Link",
    "label": "Alocação",
    "options": "Student Group Assignment",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "renovacao_ref",
+   "fieldtype": "Data",
+   "label": "Ref. Renovação",
    "read_only": 1,
    "hidden": 1
   }

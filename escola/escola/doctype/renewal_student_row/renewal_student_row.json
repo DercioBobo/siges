@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_code",
+  "full_name",
+  "financial_status",
+  "renovacao",
+  "motivo",
+  "motivo_detail",
+  "target_class_group"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "student_code",
+   "fieldtype": "Data",
+   "label": "Nº Aluno",
+   "fetch_from": "student.student_code",
+   "fetch_if_empty": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Nome Completo",
+   "fetch_from": "student.full_name",
+   "fetch_if_empty": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "financial_status",
+   "fieldtype": "Data",
+   "label": "Estado Financeiro",
+   "fetch_from": "student.financial_status",
+   "fetch_if_empty": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "renovacao",
+   "fieldtype": "Select",
+   "label": "Renovação",
+   "options": "\nSim\nNão",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "motivo",
+   "fieldtype": "Select",
+   "label": "Motivo de Não Renovação",
+   "options": "\nTransferência de Escola\nDesistência\nMudança de Residência\nProblemas Financeiros\nOutro",
+   "depends_on": "eval:doc.renovacao=='Não'"
+  },
+  {
+   "fieldname": "motivo_detail",
+   "fieldtype": "Data",
+   "label": "Detalhe do Motivo",
+   "depends_on": "eval:doc.motivo=='Outro'"
+  },
+  {
+   "fieldname": "target_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Destino (2027)",
+   "options": "Class Group",
+   "description": "Turma no Ano Lectivo de destino. Substitui a turma de destino definida no cabeçalho."
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Renewal Student Row",
+ "owner": "Administrator",
+ "permissions": []
+}

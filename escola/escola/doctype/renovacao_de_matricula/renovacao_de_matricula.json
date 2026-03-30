@@ -1,0 +1,232 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "naming_series",
+  "section_break_anos",
+  "academic_year",
+  "target_academic_year",
+  "column_break_1",
+  "renewal_date",
+  "status",
+  "section_break_turma",
+  "class_group",
+  "school_class",
+  "column_break_2",
+  "target_class_group",
+  "target_school_class",
+  "section_break_totais",
+  "total_students",
+  "column_break_3",
+  "total_renewed",
+  "column_break_4",
+  "total_not_renewed",
+  "section_break_students",
+  "renovation_students",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "REN-.YYYY.-.####",
+   "default": "REN-.YYYY.-.####",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_anos",
+   "fieldtype": "Section Break",
+   "label": "Ano Lectivo"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo de Origem",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Ano lectivo actual — turmas a renovar."
+  },
+  {
+   "fieldname": "target_academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo de Destino",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Próximo ano lectivo para o qual os alunos estão a renovar."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "renewal_date",
+   "fieldtype": "Date",
+   "label": "Data de Renovação",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "\nRascunho\nEm Processo\nConcluída\nCancelada",
+   "default": "Rascunho",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_turma",
+   "fieldtype": "Section Break",
+   "label": "Turma"
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Origem",
+   "options": "Class Group",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Turma do ano lectivo actual cujos alunos estão a renovar."
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "label": "Classe de Origem",
+   "options": "School Class",
+   "fetch_from": "class_group.school_class",
+   "fetch_if_empty": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Destino (padrão)",
+   "options": "Class Group",
+   "description": "Turma no ano lectivo de destino para onde os alunos vão. Pode ser substituída por aluno. Deixe em branco para atribuir turma mais tarde."
+  },
+  {
+   "fieldname": "target_school_class",
+   "fieldtype": "Link",
+   "label": "Classe de Destino",
+   "options": "School Class",
+   "fetch_from": "target_class_group.school_class",
+   "fetch_if_empty": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_totais",
+   "fieldtype": "Section Break",
+   "label": "Resumo",
+   "collapsible": 0
+  },
+  {
+   "fieldname": "total_students",
+   "fieldtype": "Int",
+   "label": "Total de Alunos",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_renewed",
+   "fieldtype": "Int",
+   "label": "A Renovar",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_not_renewed",
+   "fieldtype": "Int",
+   "label": "Não Renovam",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_students",
+   "fieldtype": "Section Break",
+   "label": "Alunos"
+  },
+  {
+   "fieldname": "renovation_students",
+   "fieldtype": "Table",
+   "label": "Alunos",
+   "options": "Renewal Student Row",
+   "reqd": 0
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Renovação de Matrícula",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "submit": 1,
+   "cancel": 0,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Professor",
+   "write": 0
+  }
+ ],
+ "sort_field": "renewal_date",
+ "sort_order": "DESC",
+ "title_field": "class_group",
+ "track_changes": 1
+}
