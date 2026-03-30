@@ -21,6 +21,8 @@
   "max_score",
   "section_break_subjects",
   "subjects",
+  "section_break_turmas",
+  "turmas_html",
   "section_break_notes",
   "notes"
  ],
@@ -123,6 +125,16 @@
    "label": "Disciplinas",
    "options": "School Class Subject",
    "description": "Lista de disciplinas leccionadas nesta classe. Usada para pré-preencher a Grelha Curricular de cada turma."
+  },
+  {
+   "fieldname": "section_break_turmas",
+   "fieldtype": "Section Break",
+   "label": "Turmas"
+  },
+  {
+   "fieldname": "turmas_html",
+   "fieldtype": "HTML",
+   "label": "Turmas"
   },
   {
    "fieldname": "section_break_notes",
