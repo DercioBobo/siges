@@ -30,6 +30,7 @@
   {"hidden": 0, "is_query_report": 0, "label": "Atribuir Turma ao Estudante",     "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Grelha Curricular",                "link_count": 0, "link_to": "Class Curriculum",         "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Faltas por Período",              "link_count": 0, "link_to": "Term Attendance",           "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Troca de Turma",                  "link_count": 0, "link_to": "Troca de Turma",            "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Transferência de Aluno",          "link_count": 0, "link_to": "Student Transfer",          "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Avaliação e Resultados", "link_count": 0, "onboard": 0, "type": "Card Break"},

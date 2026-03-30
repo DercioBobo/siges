@@ -11,34 +11,30 @@
   "student",
   "column_break_1",
   "academic_year",
-  "transfer_date",
+  "effective_date",
   "status",
-  "section_break_origin",
+  "section_break_movement",
   "from_class_group",
   "from_school_class",
-  "section_break_exit",
-  "destination_school",
   "column_break_2",
-  "destination_city",
-  "exit_reason",
-  "exit_reason_detail",
-  "section_break_documents",
-  "transfer_document",
-  "column_break_3",
-  "approved_by",
-  "section_break_justification",
+  "to_class_group",
+  "to_school_class",
+  "section_break_reason",
   "reason",
+  "reason_detail",
+  "section_break_notes",
   "notes",
   "section_break_system",
-  "from_assignment"
+  "from_assignment",
+  "new_assignment"
  ],
  "fields": [
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "TRF-.YYYY.-.####",
-   "default": "TRF-.YYYY.-.####",
+   "options": "TRC-.YYYY.-.####",
+   "default": "TRC-.YYYY.-.####",
    "hidden": 1,
    "print_hide": 1
   },
@@ -66,12 +62,14 @@
    "label": "Ano Lectivo",
    "options": "Academic Year",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "fetch_from": "from_class_group.academic_year",
+   "fetch_if_empty": 1
   },
   {
-   "fieldname": "transfer_date",
+   "fieldname": "effective_date",
    "fieldtype": "Date",
-   "label": "Data da Transferência",
+   "label": "Data Efectiva",
    "reqd": 1,
    "default": "Today",
    "in_list_view": 1
@@ -80,25 +78,23 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Estado",
-   "reqd": 1,
    "options": "\nRascunho\nConcluída\nCancelada",
    "default": "Rascunho",
    "read_only": 1,
    "in_list_view": 1
   },
   {
-   "fieldname": "section_break_origin",
+   "fieldname": "section_break_movement",
    "fieldtype": "Section Break",
-   "label": "Origem"
+   "label": "Movimentação"
   },
   {
    "fieldname": "from_class_group",
    "fieldtype": "Link",
    "label": "Turma de Origem",
    "options": "Class Group",
-   "in_list_view": 1,
-   "fetch_from": "from_school_class",
-   "description": "Turma em que o aluno estava antes de sair."
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "from_school_class",
@@ -110,67 +106,48 @@
    "fetch_if_empty": 0
   },
   {
-   "fieldname": "section_break_exit",
-   "fieldtype": "Section Break",
-   "label": "Escola de Destino"
-  },
-  {
-   "fieldname": "destination_school",
-   "fieldtype": "Data",
-   "label": "Escola de Destino",
-   "in_list_view": 1
-  },
-  {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "destination_city",
-   "fieldtype": "Data",
-   "label": "Cidade/Distrito"
-  },
-  {
-   "fieldname": "exit_reason",
-   "fieldtype": "Select",
-   "label": "Motivo de Saída",
-   "options": "\nMudança de Residência\nMotivos Familiares\nMotivos Económicos\nReprovação\nOutro",
+   "fieldname": "to_class_group",
+   "fieldtype": "Link",
+   "label": "Turma de Destino",
+   "options": "Class Group",
+   "reqd": 1,
    "in_list_view": 1
   },
   {
-   "fieldname": "exit_reason_detail",
-   "fieldtype": "Small Text",
-   "label": "Detalhe do Motivo",
-   "depends_on": "eval:doc.exit_reason=='Outro'"
-  },
-  {
-   "fieldname": "section_break_documents",
-   "fieldtype": "Section Break",
-   "label": "Documentos"
-  },
-  {
-   "fieldname": "transfer_document",
-   "fieldtype": "Attach",
-   "label": "Documento de Transferência"
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "approved_by",
+   "fieldname": "to_school_class",
    "fieldtype": "Link",
-   "label": "Autorizado por",
-   "options": "User"
+   "label": "Classe de Destino",
+   "options": "School Class",
+   "read_only": 1,
+   "fetch_from": "to_class_group.school_class",
+   "fetch_if_empty": 0
   },
   {
-   "fieldname": "section_break_justification",
+   "fieldname": "section_break_reason",
    "fieldtype": "Section Break",
-   "label": "Justificação"
+   "label": "Motivo"
   },
   {
    "fieldname": "reason",
+   "fieldtype": "Select",
+   "label": "Motivo da Troca",
+   "options": "\nPedido do Encarregado\nReorganização da Turma\nConflito entre Alunos\nProblemas de Adaptação\nDecisão Pedagógica\nOutro",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason_detail",
    "fieldtype": "Small Text",
-   "label": "Motivo"
+   "label": "Detalhe do Motivo",
+   "depends_on": "eval:doc.reason=='Outro'"
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
   },
   {
    "fieldname": "notes",
@@ -182,12 +159,20 @@
    "fieldtype": "Section Break",
    "label": "Sistema",
    "collapsible": 1,
-   "collapsible_depends_on": "eval:doc.from_assignment"
+   "collapsible_depends_on": "eval:doc.from_assignment || doc.new_assignment"
   },
   {
    "fieldname": "from_assignment",
    "fieldtype": "Link",
    "label": "Alocação de Origem",
+   "options": "Student Group Assignment",
+   "read_only": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "new_assignment",
+   "fieldtype": "Link",
+   "label": "Nova Alocação",
    "options": "Student Group Assignment",
    "read_only": 1,
    "print_hide": 1
@@ -197,7 +182,7 @@
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
- "name": "Student Transfer",
+ "name": "Troca de Turma",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
@@ -236,7 +221,7 @@
    "write": 0
   }
  ],
- "sort_field": "transfer_date",
+ "sort_field": "effective_date",
  "sort_order": "DESC",
  "title_field": "student",
  "track_changes": 1
