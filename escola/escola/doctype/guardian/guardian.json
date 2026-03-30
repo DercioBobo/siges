@@ -4,6 +4,7 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "quick_entry": 1,
  "field_order": [
   "naming_series",
   "section_break_personal",
@@ -74,7 +75,8 @@
    "fieldtype": "Select",
    "label": "Parentesco",
    "options": "\nPai\nMãe\nAvô\nAvó\nTio\nTia\nTutor\nOutro",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "section_break_contact",
@@ -102,7 +104,8 @@
    "fieldtype": "Data",
    "label": "Email",
    "options": "Email",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "address",

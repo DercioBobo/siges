@@ -4,6 +4,7 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "quick_entry": 1,
  "field_order": [
   "naming_series",
   "section_break_personal",
@@ -75,7 +76,8 @@
    "fieldname": "gender",
    "fieldtype": "Select",
    "label": "Sexo",
-   "options": "\nMasculino\nFeminino"
+   "options": "\nMasculino\nFeminino",
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "column_break_3",
@@ -95,7 +97,8 @@
    "fieldname": "phone",
    "fieldtype": "Data",
    "label": "Telemóvel",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "column_break_4",
@@ -106,7 +109,8 @@
    "fieldtype": "Data",
    "label": "Email",
    "options": "Email",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "address",

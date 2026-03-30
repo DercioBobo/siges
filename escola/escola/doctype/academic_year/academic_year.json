@@ -5,6 +5,7 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "quick_entry": 1,
  "field_order": [
   "year_name",
   "column_break_1",
@@ -36,7 +37,8 @@
    "fieldtype": "Check",
    "label": "Ano Actual",
    "in_list_view": 1,
-   "description": "Apenas um ano lectivo pode estar activo de cada vez."
+   "description": "Apenas um ano lectivo pode estar activo de cada vez.",
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "section_break_dates",

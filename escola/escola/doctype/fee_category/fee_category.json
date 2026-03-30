@@ -4,6 +4,7 @@
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "quick_entry": 1,
  "field_order": [
   "sb_identificacao",
   "category_name",
@@ -29,12 +30,14 @@
    "fieldtype": "Check",
    "default": "1",
    "in_list_view": 1,
-   "label": "Activa"
+   "label": "Activa",
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "description",
    "fieldtype": "Small Text",
-   "label": "Descrição"
+   "label": "Descrição",
+   "allow_in_quick_entry": 1
   }
  ],
  "links": [],
