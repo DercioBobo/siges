@@ -1,0 +1,50 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"prof_turmas\",\"type\":\"card\",\"data\":{\"card_name\":\"Turmas e Currículo\",\"col\":5}},{\"id\":\"prof_avaliacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Avaliação\",\"col\":7}},{\"id\":\"prof_relatorios\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios Académicos\",\"col\":12}}]",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "is_hidden": 0,
+ "label": "Professores",
+ "links": [
+
+  {"hidden": 0, "is_query_report": 0, "label": "Turmas e Currículo", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Turma",           "link_count": 0, "link_to": "Class Group",     "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Grelha Curricular","link_count": 0, "link_to": "Class Curriculum","link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Aluno",            "link_count": 0, "link_to": "Student",        "link_type": "DocType", "onboard": 0, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Avaliação", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Pauta de Notas",   "link_count": 0, "link_to": "Grade Entry",       "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Faltas por Período","link_count": 0, "link_to": "Term Attendance",   "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Avaliação Anual",   "link_count": 0, "link_to": "Annual Assessment", "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Promoção de Alunos","link_count": 0, "link_to": "Student Promotion", "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Boletim",           "link_count": 0, "link_to": "Report Card",       "link_type": "DocType", "onboard": 0, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 1, "label": "Lista da Turma",            "link_count": 0, "link_to": "Lista da Turma",            "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Presenças",       "link_count": 0, "link_to": "Resumo de Presenças",       "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Notas",           "link_count": 0, "link_to": "Resumo de Notas",           "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Avaliação Anual", "link_count": 0, "link_to": "Resumo de Avaliação Anual", "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Boletins",        "link_count": 0, "link_to": "Resumo de Boletins",        "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo Final da Turma",     "link_count": 0, "link_to": "Resumo Final da Turma",     "link_type": "Report", "onboard": 0, "type": "Link"}
+
+ ],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Professores",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "roles": [{"role": "Professor"}],
+ "sequence_id": 3,
+ "shortcuts": [
+  {"color": "#EF4444", "doc_type": "Grade Entry",     "label": "Pauta de Notas",    "type": "DocType"},
+  {"color": "#6366F1", "doc_type": "Class Group",     "label": "Turma",             "type": "DocType"},
+  {"color": "#F59E0B", "doc_type": "Term Attendance", "label": "Faltas por Período", "type": "DocType"}
+ ],
+ "title": "Professores"
+}

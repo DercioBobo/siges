@@ -1,0 +1,43 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"tes_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Facturação\",\"col\":5}},{\"id\":\"tes_relatorios\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios de Facturação\",\"col\":7}}]",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "is_hidden": 0,
+ "label": "Tesouraria",
+ "links": [
+
+  {"hidden": 0, "is_query_report": 0, "label": "Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação", "link_count": 0, "link_to": "Billing Cycle",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",   "link_count": 0, "link_to": "Fee Structure",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Categoria de Propina","link_count": 0, "link_to": "Fee Category",   "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Aluno",               "link_count": 0, "link_to": "Student",        "link_type": "DocType", "onboard": 0, "type": "Link"},
+
+  {"hidden": 0, "is_query_report": 0, "label": "Relatórios de Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
+
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Facturação do Aluno",  "link_count": 0, "link_to": "Resumo de Facturação do Aluno",  "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Resumo de Ciclos de Facturação", "link_count": 0, "link_to": "Resumo de Ciclos de Facturação", "link_type": "Report", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 1, "label": "Lista de Facturas por Aluno",    "link_count": 0, "link_to": "Lista de Facturas por Aluno",    "link_type": "Report", "onboard": 0, "type": "Link"}
+
+ ],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Tesouraria",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "roles": [
+  {"role": "Secretaria Escolar"},
+  {"role": "Diretor Escolar"}
+ ],
+ "sequence_id": 4,
+ "shortcuts": [
+  {"color": "#14B8A6", "doc_type": "Billing Cycle",  "label": "Ciclo de Facturação", "type": "DocType"},
+  {"color": "#10B981", "doc_type": "Fee Structure",  "label": "Plano de Propinas",   "type": "DocType"},
+  {"color": "#6366F1", "doc_type": "Student",        "label": "Aluno",               "type": "DocType"}
+ ],
+ "title": "Tesouraria"
+}

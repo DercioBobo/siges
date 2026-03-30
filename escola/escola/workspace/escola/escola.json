@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"card_config\",\"type\":\"card\",\"data\":{\"card_name\":\"Configurações\",\"col\":12}},{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":12}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":12}},{\"id\":\"card_avaliacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Avaliação e Resultados\",\"col\":12}},{\"id\":\"card_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Facturação\",\"col\":12}},{\"id\":\"card_rel_academicos\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios Académicos\",\"col\":12}},{\"id\":\"card_rel_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios de Facturação\",\"col\":12}}]",
+ "content": "[{\"id\":\"card_config\",\"type\":\"card\",\"data\":{\"card_name\":\"Configurações\",\"col\":4}},{\"id\":\"card_cadastros\",\"type\":\"card\",\"data\":{\"card_name\":\"Cadastros\",\"col\":8}},{\"id\":\"card_operacoes\",\"type\":\"card\",\"data\":{\"card_name\":\"Operações Académicas\",\"col\":6}},{\"id\":\"card_avaliacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Avaliação e Resultados\",\"col\":6}},{\"id\":\"card_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Facturação\",\"col\":5}},{\"id\":\"card_rel_academicos\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios Académicos\",\"col\":7}},{\"id\":\"card_rel_facturacao\",\"type\":\"card\",\"data\":{\"card_name\":\"Relatórios de Facturação\",\"col\":12}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "hide_custom": 0,
@@ -74,18 +74,14 @@
  "roles": [],
  "sequence_id": 1,
  "shortcuts": [
-  {
-   "color": "#8B5CF6",
-   "doc_type": "School Settings",
-   "label": "Configurações da Escola",
-   "type": "DocType"
-  },
-  {
-   "color": "#0EA5E9",
-   "doc_type": "Academic Term",
-   "label": "Períodos Académicos",
-   "type": "DocType"
-  }
+  {"color": "#8B5CF6", "doc_type": "School Settings",   "label": "Configurações da Escola", "type": "DocType"},
+  {"color": "#0EA5E9", "doc_type": "Academic Year",     "label": "Ano Lectivo",             "type": "DocType"},
+  {"color": "#10B981", "doc_type": "Student",           "label": "Aluno",                   "type": "DocType"},
+  {"color": "#6366F1", "doc_type": "Class Group",       "label": "Turma",                   "type": "DocType"},
+  {"color": "#F59E0B", "doc_type": "Inscricao",         "label": "Inscrição",               "type": "DocType"},
+  {"color": "#EF4444", "doc_type": "Grade Entry",       "label": "Pauta de Notas",          "type": "DocType"},
+  {"color": "#14B8A6", "doc_type": "Billing Cycle",     "label": "Ciclo de Facturação",     "type": "DocType"},
+  {"color": "#F97316", "doc_type": "Troca de Turma",    "label": "Troca de Turma",          "type": "DocType"}
  ],
  "title": "Escola"
 }
