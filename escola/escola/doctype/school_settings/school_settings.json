@@ -204,7 +204,7 @@
   {
    "fieldname": "default_company",
    "fieldtype": "Link",
-   "label": "Empresa ERPNext",
+   "label": "Empresa",
    "options": "Company",
    "description": "Empresa usada ao criar facturas e clientes."
   },
@@ -271,14 +271,14 @@
    "fieldtype": "Link",
    "options": "Item",
    "label": "Item Padrão de Propina",
-   "description": "Item ERPNext utilizado nas linhas de factura de propinas. Sugerido ao criar novas linhas no Plano de Propinas."
+   "description": "Item utilizado nas linhas de factura de propinas. Sugerido ao criar novas linhas no Plano de Propinas."
   },
   {
    "fieldname": "penalty_item_code",
    "fieldtype": "Link",
    "options": "Item",
    "label": "Item de Multa por Atraso",
-   "description": "Item ERPNext utilizado nas linhas de multa nas facturas. Criado automaticamente se não existir."
+   "description": "Item utilizado nas linhas de multa nas facturas. Criado automaticamente se não existir."
   },
   {
    "fieldname": "penalty_grace_days",
