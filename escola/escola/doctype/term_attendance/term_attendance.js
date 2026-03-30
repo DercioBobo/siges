@@ -98,6 +98,11 @@ async function _load_students(frm) {
         return;
     }
 
+    // Clear any auto-inserted empty rows before loading real data
+    if ((frm.doc.attendance_rows || []).every(r => !r.student)) {
+        frm.clear_table("attendance_rows");
+    }
+
     const existing = new Set((frm.doc.attendance_rows || []).map(r => r.student));
     let added = 0;
     for (const s of r.message) {

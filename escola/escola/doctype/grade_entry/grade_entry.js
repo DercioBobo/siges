@@ -168,6 +168,11 @@ async function _load_grade_rows(frm) {
         return;
     }
 
+    // Clear any auto-inserted empty rows before loading real data
+    if ((frm.doc.grade_rows || []).every(r => !r.student)) {
+        frm.clear_table("grade_rows");
+    }
+
     const existing = new Set(
         (frm.doc.grade_rows || []).map(r => r.student + "||" + r.subject)
     );
