@@ -35,6 +35,8 @@
   "current_class_group",
   "section_break_guardian",
   "primary_guardian",
+  "section_break_history",
+  "student_history_html",
   "section_break_notes",
   "notes"
  ],
@@ -214,6 +216,16 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "section_break_history",
+   "fieldtype": "Section Break",
+   "label": "Historial Académico"
+  },
+  {
+   "fieldname": "student_history_html",
+   "fieldtype": "HTML",
+   "label": "Historial Académico"
+  },
+  {
    "fieldname": "section_break_notes",
    "fieldtype": "Section Break",
    "label": "Observações"
@@ -224,7 +236,13 @@
    "label": "Observações"
   }
  ],
- "links": [],
+ "links": [
+  {"group": "Académico", "link_doctype": "Student Group Assignment", "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Report Card",              "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Inscricao",                "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Troca de Turma",           "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Student Transfer",         "link_fieldname": "student"}
+ ],
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",

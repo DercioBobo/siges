@@ -4,6 +4,99 @@ from frappe.model.document import Document
 from frappe.utils import getdate, today
 
 
+@frappe.whitelist()
+def get_student_academic_history(student):
+    """Return academic history aggregated per academic year for the given student."""
+    from collections import defaultdict
+
+    # 1. Student Group Assignments → backbone (one slot per unique academic_year, most recent SGA wins)
+    sgas = frappe.db.get_all(
+        "Student Group Assignment",
+        filters={"student": student},
+        fields=["academic_year", "class_group", "school_class", "status", "assignment_date"],
+        order_by="academic_year desc, assignment_date desc",
+    )
+
+    years = {}
+    for sga in sgas:
+        yr = sga.academic_year or "—"
+        if yr not in years:
+            years[yr] = {
+                "academic_year": yr,
+                "school_class": sga.school_class or "",
+                "class_group": sga.class_group or "",
+                "sga_status": sga.status or "",
+                "assignment_date": frappe.utils.formatdate(sga.assignment_date) if sga.assignment_date else "",
+                "final_decision": "",
+                "overall_average": None,
+                "total_absences": None,
+                "report_card": None,
+            }
+
+    # 2. Report Cards → enrich with overall_average, final_decision, name
+    rcs = frappe.db.get_all(
+        "Report Card",
+        filters={"student": student},
+        fields=["name", "academic_year", "overall_average", "final_decision"],
+    )
+    for rc in rcs:
+        yr = rc.academic_year or "—"
+        if yr not in years:
+            years[yr] = {
+                "academic_year": yr,
+                "school_class": "",
+                "class_group": "",
+                "sga_status": "",
+                "assignment_date": "",
+                "final_decision": "",
+                "overall_average": None,
+                "total_absences": None,
+                "report_card": None,
+            }
+        years[yr]["report_card"] = rc.name
+        years[yr]["final_decision"] = rc.final_decision or ""
+        if rc.overall_average is not None:
+            years[yr]["overall_average"] = float(rc.overall_average)
+
+    # 3. Total absences from Annual Assessment Rows
+    aa_rows = frappe.db.sql(
+        """
+        SELECT aa.academic_year, SUM(aar.total_absences) AS total_absences
+        FROM `tabAnnual Assessment Row` aar
+        JOIN `tabAnnual Assessment` aa ON aa.name = aar.parent
+        WHERE aar.student = %s
+        GROUP BY aa.academic_year
+        """,
+        student,
+        as_dict=True,
+    )
+    for row in aa_rows:
+        yr = row.academic_year or "—"
+        if yr in years:
+            years[yr]["total_absences"] = int(row.total_absences or 0)
+
+    # 4. Fallback absences from Term Attendance Rows (years not already covered)
+    missing = [yr for yr, d in years.items() if d["total_absences"] is None]
+    if missing:
+        ta_rows = frappe.db.sql(
+            """
+            SELECT ta.academic_year, SUM(tar.total_absences) AS total_absences
+            FROM `tabTerm Attendance Row` tar
+            JOIN `tabTerm Attendance` ta ON ta.name = tar.parent
+            WHERE tar.student = %s
+            GROUP BY ta.academic_year
+            """,
+            student,
+            as_dict=True,
+        )
+        for row in ta_rows:
+            yr = row.academic_year or "—"
+            if yr in years and years[yr]["total_absences"] is None:
+                years[yr]["total_absences"] = int(row.total_absences or 0)
+
+    return sorted(years.values(), key=lambda x: x["academic_year"], reverse=True)
+
+
 def _calc_age(date_of_birth):
     if not date_of_birth:
         return None

@@ -18,18 +18,64 @@ const _ALERT_MESSAGES = {
 frappe.ui.form.on("Student", {
     refresh(frm) {
         if (!frm.is_new()) {
-            const current_status = frm.doc.current_status;
+            const status = frm.doc.current_status;
 
             _set_financial_indicator(frm);
             _load_financial_summary(frm);
+            _load_academic_history(frm);
 
-            if (current_status === "Transferido" || current_status === "Desistente") {
+            // ── Ver ──────────────────────────────────────────────────
+            frm.add_custom_button(
+                __("Boletins"),
+                () => frappe.set_route("List", "Report Card", { student: frm.doc.name }),
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Alocações na Turma"),
+                () => frappe.set_route("List", "Student Group Assignment", { student: frm.doc.name }),
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Inscrições"),
+                () => frappe.set_route("List", "Inscricao", { student: frm.doc.name }),
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Trocas de Turma"),
+                () => frappe.set_route("List", "Troca de Turma", { student: frm.doc.name }),
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Transferências"),
+                () => frappe.set_route("List", "Student Transfer", { student: frm.doc.name }),
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Facturas"),
+                () => frappe.set_route("List", "Sales Invoice", { escola_student: frm.doc.name }),
+                __("Ver")
+            );
+
+            // ── Acções ───────────────────────────────────────────────
+            if (status === "Transferido" || status === "Desistente") {
                 frm.add_custom_button(
                     __("Reactivar Aluno"),
                     () => reactivate_dialog(frm),
                     __("Acções")
                 );
             }
+
+            frm.add_custom_button(
+                __("Nova Inscrição"),
+                () => frappe.new_doc("Inscricao", { student: frm.doc.name }),
+                __("Acções")
+            );
+
+            frm.add_custom_button(
+                __("Nova Troca de Turma"),
+                () => frappe.new_doc("Troca de Turma", { student: frm.doc.name }),
+                __("Acções")
+            );
 
             frm.add_custom_button(
                 __("Registar Transferência"),
@@ -52,18 +98,6 @@ frappe.ui.form.on("Student", {
                     });
                 },
                 __("Acções")
-            );
-
-            frm.add_custom_button(
-                __("Ver Transferências"),
-                () => frappe.set_route("List", "Student Transfer", { student: frm.doc.name }),
-                __("Ver")
-            );
-
-            frm.add_custom_button(
-                __("Ver Facturas"),
-                () => frappe.set_route("List", "Sales Invoice", { escola_student: frm.doc.name }),
-                __("Ver")
             );
         }
     },
@@ -117,6 +151,103 @@ function _load_financial_summary(frm) {
             frm.dashboard.set_headline(parts.join(" &nbsp;|&nbsp; "));
         },
     });
+}
+
+// ---------------------------------------------------------------------------
+// Academic history panel
+// ---------------------------------------------------------------------------
+
+function _load_academic_history(frm) {
+    const fd = frm.fields_dict["student_history_html"];
+    if (!fd) return;
+
+    fd.$wrapper.html(
+        `<div style="color:#9ca3af;font-size:12px;padding:4px 0;">${__("A carregar historial...")}</div>`
+    );
+
+    frappe.call({
+        method: "escola.escola.doctype.student.student.get_student_academic_history",
+        args: { student: frm.doc.name },
+        callback(r) {
+            if (r.exc) {
+                fd.$wrapper.html(
+                    `<div style="color:#9ca3af;font-size:13px;">${__("Não foi possível carregar o historial.")}</div>`
+                );
+                return;
+            }
+            fd.$wrapper.html(_render_history(r.message || []));
+        },
+    });
+}
+
+function _render_history(data) {
+    if (!data || !data.length) {
+        return `<div style="color:#9ca3af;font-size:13px;padding:8px 0;">${__("Sem historial académico registado.")}</div>`;
+    }
+
+    const STATUS_STYLE = {
+        "Activa":      { bg: "#f0fdf4", border: "#bbf7d0", badge_bg: "#dcfce7", badge_fg: "#16a34a" },
+        "Transferida": { bg: "#fffbeb", border: "#fde68a", badge_bg: "#fef3c7", badge_fg: "#b45309" },
+        "Encerrada":   { bg: "#f9fafb", border: "#e5e7eb", badge_bg: "#f3f4f6", badge_fg: "#6b7280" },
+    };
+    const RESULT_COLOR = {
+        "Aprovado":  "#16a34a",
+        "Reprovado": "#dc2626",
+    };
+
+    return data.map(yr => {
+        const sc = STATUS_STYLE[yr.sga_status] || STATUS_STYLE["Encerrada"];
+        const rc = RESULT_COLOR[yr.final_decision];
+
+        const decisionHtml = yr.final_decision
+            ? `<span style="color:${rc || "#374151"};font-weight:600;">${__(yr.final_decision)}</span>`
+            : "";
+        const avgHtml = yr.overall_average != null
+            ? `<span style="color:#374151;">${__("Média")}: <b>${yr.overall_average}</b></span>`
+            : "";
+        const absHtml = yr.total_absences != null
+            ? `<span style="color:#374151;">${__("Faltas")}: <b>${yr.total_absences}</b></span>`
+            : "";
+
+        const stats = [decisionHtml, avgHtml, absHtml].filter(Boolean);
+
+        const rcLink = yr.report_card
+            ? `<a href="/app/report-card/${encodeURIComponent(yr.report_card)}" target="_blank"
+                  style="font-size:12px;color:#6366f1;text-decoration:none;">${__("Ver Boletim")} →</a>`
+            : "";
+        const cgLink = yr.class_group
+            ? `<a href="/app/class-group/${encodeURIComponent(yr.class_group)}" target="_blank"
+                  style="font-size:12px;color:#6366f1;text-decoration:none;margin-left:12px;">${__("Ver Turma")} →</a>`
+            : "";
+
+        return `
+<div style="border:1px solid ${sc.border};border-radius:8px;margin-bottom:10px;overflow:hidden;">
+  <div style="background:${sc.bg};padding:9px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid ${sc.border};">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-weight:600;font-size:14px;">${yr.academic_year}</span>
+      ${yr.sga_status ? `<span style="background:${sc.badge_bg};color:${sc.badge_fg};font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">${__(yr.sga_status)}</span>` : ""}
+    </div>
+    ${yr.assignment_date ? `<span style="font-size:11px;color:#9ca3af;">${yr.assignment_date}</span>` : ""}
+  </div>
+  <div style="padding:10px 14px;">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;${stats.length ? "margin-bottom:8px;" : ""}">
+      <div>
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">${__("Classe")}</div>
+        <div style="font-size:13px;font-weight:500;">${yr.school_class || "—"}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">${__("Turma")}</div>
+        <div style="font-size:13px;font-weight:500;">${yr.class_group || "—"}</div>
+      </div>
+    </div>
+    ${stats.length ? `<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;">${stats.join('<span style="color:#d1d5db;">·</span>')}</div>` : ""}
+  </div>
+  ${(rcLink || cgLink) ? `
+  <div style="padding:7px 14px;border-top:1px solid #f3f4f6;background:#fafafa;">
+    ${rcLink}${cgLink}
+  </div>` : ""}
+</div>`;
+    }).join("");
 }
 
 // ---------------------------------------------------------------------------
