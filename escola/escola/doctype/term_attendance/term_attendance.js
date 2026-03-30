@@ -4,12 +4,7 @@ frappe.ui.form.on("Term Attendance", {
     },
 
     refresh(frm) {
-        frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
-        frm.set_query("academic_term", () => {
-            const f = { is_active: 1 };
-            if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
-            return { filters: f };
-        });
+        _set_queries(frm);
 
         frm.add_custom_button(__("Carregar Alunos"), () => {
             _load_students(frm);
@@ -20,7 +15,13 @@ frappe.ui.form.on("Term Attendance", {
         }
     },
 
+    school_class(frm) {
+        frm.set_value("class_group", null);
+        _set_queries(frm);
+    },
+
     async class_group(frm) {
+        _set_queries(frm);
         if (!frm.doc.class_group) return;
 
         const cg = await frappe.db.get_value(
@@ -61,6 +62,19 @@ frappe.ui.form.on("Term Attendance Row", {
 });
 
 // ---------------------------------------------------------------------------
+
+function _set_queries(frm) {
+    const cg_filters = { is_active: 1 };
+    if (frm.doc.school_class) cg_filters.school_class = frm.doc.school_class;
+    if (frm.doc.academic_year) cg_filters.academic_year = frm.doc.academic_year;
+    frm.set_query("class_group", () => ({ filters: cg_filters }));
+    frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
+    frm.set_query("academic_term", () => {
+        const f = { is_active: 1 };
+        if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
+        return { filters: f };
+    });
+}
 
 async function _auto_fill_term(frm, academic_year) {
     // Reuse the same server helper as Grade Entry

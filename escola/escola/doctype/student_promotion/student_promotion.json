@@ -46,7 +46,9 @@
    "label": "Classe",
    "options": "School Class",
    "reqd": 1,
-   "in_list_view": 1
+   "in_list_view": 1,
+   "fetch_from": "class_group.school_class",
+   "fetch_if_empty": 1
   },
   {
    "fieldname": "column_break_1",

@@ -59,7 +59,9 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
-   "options": "School Class"
+   "options": "School Class",
+   "fetch_from": "class_group.school_class",
+   "fetch_if_empty": 1
   },
   {
    "fieldname": "class_group",

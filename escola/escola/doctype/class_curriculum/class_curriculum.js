@@ -4,7 +4,7 @@ frappe.ui.form.on("Class Curriculum", {
     },
 
     refresh(frm) {
-        frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
+        _set_cg_query(frm);
 
         if (!frm.doc.__islocal) {
             _show_summary(frm);
@@ -15,7 +15,13 @@ frappe.ui.form.on("Class Curriculum", {
         });
     },
 
+    school_class(frm) {
+        frm.set_value("class_group", null);
+        _set_cg_query(frm);
+    },
+
     class_group(frm) {
+        _set_cg_query(frm);
         if (!frm.doc.class_group) return;
         _populate_from_class_group(frm);
     },
@@ -23,6 +29,18 @@ frappe.ui.form.on("Class Curriculum", {
     subject_lines_add(frm) { _show_summary(frm); },
     subject_lines_remove(frm) { _show_summary(frm); },
 });
+
+// ---------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------
+
+function _set_cg_query(frm) {
+    const f = { is_active: 1 };
+    if (frm.doc.school_class) f.school_class = frm.doc.school_class;
+    if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
+    frm.set_query("class_group", () => ({ filters: f }));
+    frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
+}
 
 // ---------------------------------------------------------------------------
 // Auto-populate on class_group selection
