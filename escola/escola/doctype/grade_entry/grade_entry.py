@@ -5,6 +5,38 @@ from escola.escola.doctype.class_curriculum.class_curriculum import get_curricul
 
 
 @frappe.whitelist()
+def get_current_academic_year():
+    """Return the name of the current Academic Year.
+
+    Priority:
+    1. Marked as active (is_active = 1)
+    2. Date range covers today
+    3. Most recently started year
+    """
+    today = frappe.utils.today()
+
+    year = frappe.db.get_value("Academic Year", {"is_active": 1}, "name")
+    if year:
+        return year
+
+    year = frappe.db.get_value(
+        "Academic Year",
+        {"start_date": ("<=", today), "end_date": (">=", today)},
+        "name",
+    )
+    if year:
+        return year
+
+    year = frappe.db.get_value(
+        "Academic Year",
+        {"start_date": ("<=", today)},
+        "name",
+        order_by="start_date desc",
+    )
+    return year
+
+
+@frappe.whitelist()
 def get_current_academic_term(academic_year):
     """Return the name of the Academic Term whose date range covers today.
 

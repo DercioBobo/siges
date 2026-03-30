@@ -1,4 +1,8 @@
 frappe.ui.form.on("Report Card", {
+    onload(frm) {
+        escola.utils.auto_fill_academic_year(frm);
+    },
+
     refresh(frm) {
         set_queries(frm);
         frm.add_custom_button(__("Carregar Avaliação"), () => {

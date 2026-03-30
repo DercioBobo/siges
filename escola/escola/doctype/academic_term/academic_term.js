@@ -2,6 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Academic Term", {
+	onload(frm) {
+		escola.utils.auto_fill_academic_year(frm);
+	},
+
 	academic_year(frm) {
 		// Suggest date range from academic year to help the user
 		if (!frm.doc.academic_year) return;

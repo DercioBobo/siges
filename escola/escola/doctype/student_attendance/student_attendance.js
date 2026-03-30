@@ -2,6 +2,10 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Student Attendance", {
+	onload(frm) {
+		escola.utils.auto_fill_academic_year(frm);
+	},
+
 	refresh(frm) {
 		set_class_group_query(frm);
 

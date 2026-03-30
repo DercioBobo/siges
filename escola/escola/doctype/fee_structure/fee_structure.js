@@ -1,4 +1,8 @@
 frappe.ui.form.on("Fee Structure", {
+    onload(frm) {
+        escola.utils.auto_fill_academic_year(frm);
+    },
+
     refresh(frm) {
         frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
 

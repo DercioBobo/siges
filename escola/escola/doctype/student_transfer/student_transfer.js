@@ -5,6 +5,10 @@ const _INTERNAL = "Interna (Entre Turmas)";
 const _EXIT     = "Saída (Para Outra Escola)";
 
 frappe.ui.form.on("Student Transfer", {
+	onload(frm) {
+		escola.utils.auto_fill_academic_year(frm);
+	},
+
 	refresh(frm) {
 		set_queries(frm);
 	},

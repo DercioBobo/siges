@@ -1,4 +1,8 @@
 frappe.ui.form.on("Grade Entry", {
+    onload(frm) {
+        escola.utils.auto_fill_academic_year(frm);
+    },
+
     refresh(frm) {
         _set_queries(frm);
 

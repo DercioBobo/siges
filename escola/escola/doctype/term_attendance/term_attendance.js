@@ -1,4 +1,8 @@
 frappe.ui.form.on("Term Attendance", {
+    onload(frm) {
+        escola.utils.auto_fill_academic_year(frm);
+    },
+
     refresh(frm) {
         frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
         frm.set_query("academic_term", () => {
