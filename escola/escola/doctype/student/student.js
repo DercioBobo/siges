@@ -15,13 +15,24 @@ const _ALERT_MESSAGES = {
 	4: "Aluno elegível para suspensão",
 };
 
+// Darken a hex color by amt (0–1) for use as a text label on a tinted background
+function _darken(hex, amt = 0.45) {
+	const n = parseInt(hex.slice(1), 16);
+	const r = Math.max(0, ((n >> 16) & 0xff) * (1 - amt)) | 0;
+	const g = Math.max(0, ((n >> 8)  & 0xff) * (1 - amt)) | 0;
+	const b = Math.max(0, ((n)       & 0xff) * (1 - amt)) | 0;
+	return `rgb(${r},${g},${b})`;
+}
+
 frappe.ui.form.on("Student", {
 	refresh(frm) {
 		if (!frm.is_new()) {
 			_set_financial_indicator(frm);
 			_load_financial_summary(frm);
-			_render_action_panel(frm);
 			_load_academic_history(frm);
+
+			const $btn = frm.add_custom_button(__("Acções"), () => _show_actions_modal(frm));
+			$btn.removeClass("btn-default").addClass("btn-primary");
 		}
 	},
 
@@ -31,7 +42,7 @@ frappe.ui.form.on("Student", {
 });
 
 // ---------------------------------------------------------------------------
-// Styles (injected once)
+// Actions modal (single toolbar button → modal with card grid)
 // ---------------------------------------------------------------------------
 
 function _inject_student_styles() {
@@ -39,48 +50,27 @@ function _inject_student_styles() {
 	const s = document.createElement("style");
 	s.id = "escola-student-styles";
 	s.textContent = `
-.stu-panel { margin: 6px 0 4px; }
-
-.stu-group-label {
+/* ── Actions modal ───────────────────────────── */
+.sam-section { margin-bottom: 20px; }
+.sam-label {
 	font-size: 10px; font-weight: 700; text-transform: uppercase;
-	letter-spacing: .7px; color: var(--text-muted); margin-bottom: 6px;
+	letter-spacing: .8px; color: var(--text-muted); margin-bottom: 10px;
 }
-
-.stu-btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-
-.stu-btn {
-	display: inline-flex; align-items: center; gap: 6px;
-	padding: 6px 13px; border-radius: 20px; border: 1.5px solid transparent;
-	font-size: 12px; font-weight: 600; cursor: pointer;
-	transition: filter .15s, transform .12s, box-shadow .12s;
-	white-space: nowrap; line-height: 1.3;
-	font-family: var(--font-stack);
+.sam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.sam-card {
+	display: flex; flex-direction: column; align-items: center; justify-content: center;
+	gap: 8px; padding: 16px 10px; border-radius: 10px;
+	border: 1.5px solid transparent; cursor: pointer;
+	transition: transform .13s, box-shadow .13s, filter .13s;
+	text-align: center; font-family: var(--font-stack);
+	min-height: 80px;
 }
-.stu-btn:hover { filter: brightness(.93); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.1); }
-.stu-btn:active { transform: translateY(0); box-shadow: none; }
-
-.stu-btn .stu-ico { font-size: 14px; line-height: 1; }
-
-/* nav variant — outlined pills */
-.stu-nav { background: transparent; }
-
-/* action variant — filled pills */
-.stu-act { }
-
-/* timeline button */
-.stu-timeline-btn {
-	display: inline-flex; align-items: center; gap: 8px;
-	padding: 8px 16px; border-radius: 8px;
-	background: linear-gradient(135deg, #6366f1, #8b5cf6);
-	color: #fff; font-size: 13px; font-weight: 600;
-	border: none; cursor: pointer;
-	transition: opacity .15s, transform .12s, box-shadow .12s;
-	font-family: var(--font-stack);
-}
-.stu-timeline-btn:hover { opacity: .88; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(99,102,241,.35); }
+.sam-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.12); filter: brightness(.96); }
+.sam-card:active { transform: translateY(0); box-shadow: none; }
+.sam-ico { font-size: 22px; line-height: 1; }
+.sam-lbl { font-size: 12px; font-weight: 600; line-height: 1.3; }
 
 /* ── Timeline modal ──────────────────────────── */
-.stl-wrap { padding: 8px 0 4px; }
 .stl-item { display: flex; gap: 16px; position: relative; }
 .stl-item:not(:last-child) { padding-bottom: 24px; }
 .stl-spine { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px; }
@@ -98,22 +88,12 @@ function _inject_student_styles() {
 	justify-content: space-between; border-bottom: 1px solid var(--border-color);
 }
 .stl-year { font-weight: 700; font-size: 15px; }
-.stl-status-badge {
-	font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 12px;
-	margin-left: 8px;
-}
+.stl-status-badge { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 12px; margin-left: 8px; }
 .stl-result { font-weight: 700; font-size: 13px; }
 .stl-body { padding: 10px 14px; display: flex; gap: 22px; flex-wrap: wrap; }
-.stl-stat { }
-.stl-stat-label {
-	font-size: 10px; color: var(--text-muted); text-transform: uppercase;
-	letter-spacing: .06em; margin-bottom: 2px;
-}
+.stl-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
 .stl-stat-val { font-size: 13px; font-weight: 500; }
-.stl-foot {
-	padding: 7px 14px; border-top: 1px solid var(--border-color);
-	background: var(--subtle-fg); display: flex; gap: 16px; flex-wrap: wrap;
-}
+.stl-foot { padding: 7px 14px; border-top: 1px solid var(--border-color); background: var(--subtle-fg); display: flex; gap: 16px; flex-wrap: wrap; }
 .stl-foot a { font-size: 12px; color: #6366f1; text-decoration: none; }
 .stl-foot a:hover { text-decoration: underline; }
 .stl-empty { text-align: center; padding: 40px 16px; color: var(--text-muted); font-size: 13px; }
@@ -121,70 +101,60 @@ function _inject_student_styles() {
 	document.head.appendChild(s);
 }
 
-// ---------------------------------------------------------------------------
-// Action panel
-// ---------------------------------------------------------------------------
-
-function _render_action_panel(frm) {
+function _show_actions_modal(frm) {
 	_inject_student_styles();
-	const fd = frm.fields_dict["student_actions_html"];
-	if (!fd) return;
 
-	const status    = frm.doc.current_status;
-	const isActive  = !status || status === "Activo";
+	const status     = frm.doc.current_status;
+	const isActive   = !status || status === "Activo";
 	const isInactive = status === "Transferido" || status === "Desistente";
 
-	// Navigation links ─────────────────────────────────────────────────────
-	const nav = [
-		{ id: "boletins",       ico: "📋", label: __("Boletins"),      color: "#4f46e5", bg: "#eef2ff" },
-		{ id: "alocacoes",      ico: "📌", label: __("Alocações"),      color: "#0284c7", bg: "#e0f2fe" },
-		{ id: "transferencias", ico: "✈", label: __("Transferências"),  color: "#b45309", bg: "#fef3c7" },
-		{ id: "facturas",       ico: "🧾", label: __("Facturas"),        color: "#059669", bg: "#d1fae5" },
+	const ver = [
+		{ id: "boletins",  ico: "📋", label: __("Boletins"),         color: "#4f46e5", bg: "#eef2ff" },
+		{ id: "facturas",  ico: "🧾", label: __("Facturas"),          color: "#059669", bg: "#d1fae5" },
+		{ id: "historial", ico: "🕐", label: __("Ver Historial"),     color: "#7c3aed", bg: "#f5f3ff" },
 	];
 
-	// Action buttons ───────────────────────────────────────────────────────
-	const actions = [
-		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),              color: "#fff", bg: "#2563eb", show: true },
-		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),             color: "#fff", bg: "#7c3aed", show: isActive },
-		{ id: "transferencia",     ico: "↗",  label: __("Registar Transferência"),      color: "#fff", bg: "#ea580c", show: isActive },
-		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true },
-		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),             color: "#fff", bg: "#16a34a", show: isInactive },
+	const acoes = [
+		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#fff",    bg: "#2563eb", show: true      },
+		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#fff",    bg: "#7c3aed", show: isActive   },
+		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#fff",    bg: "#ea580c", show: isActive   },
+		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
+		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#fff",    bg: "#16a34a", show: isInactive },
 	].filter(b => b.show);
 
-	const navHtml = nav.map(b =>
-		`<button class="stu-btn stu-nav" data-action="${b.id}"
-		         style="color:${b.color};border-color:${b.color};background:${b.bg}20;">
-		     <span class="stu-ico">${b.ico}</span>${b.label}
-		 </button>`
-	).join("");
+	const cards = (items) => items.map(b => {
+		// For white-text cards (colored bg), darken the label slightly for readability
+		const lblColor = b.color === "#fff" ? _darken(b.bg) : b.color;
+		return `
+		<div class="sam-card" data-action="${b.id}"
+		     style="background:${b.bg};border-color:${b.bg}30;">
+			<span class="sam-ico">${b.ico}</span>
+			<span class="sam-lbl" style="color:${lblColor};">${b.label}</span>
+		</div>`;
+	}).join("");
 
-	const actHtml = actions.map(b =>
-		`<button class="stu-btn stu-act" data-action="${b.id}"
-		         style="color:${b.color};background:${b.bg};border-color:${b.bg};">
-		     <span class="stu-ico">${b.ico}</span>${b.label}
-		 </button>`
-	).join("");
+	const d = new frappe.ui.Dialog({
+		title: frm.doc.full_name,
+		size:  "large",
+	});
 
-	fd.$wrapper.html(`
-		<div class="stu-panel">
-			<div class="stu-group-label">${__("Ver")}</div>
-			<div class="stu-btn-row">
-				${navHtml}
-				<button class="stu-timeline-btn" data-action="historial">
-					<span>🕐</span> ${__("Ver Historial")}
-				</button>
-			</div>
-			<div class="stu-group-label">${__("Acções")}</div>
-			<div class="stu-btn-row">${actHtml}</div>
+	d.$body.css("padding", "20px 24px 8px");
+	d.$body.html(`
+		<div class="sam-section">
+			<div class="sam-label">${__("Ver")}</div>
+			<div class="sam-grid">${cards(ver)}</div>
+		</div>
+		<div class="sam-section">
+			<div class="sam-label">${__("Acções")}</div>
+			<div class="sam-grid">${cards(acoes)}</div>
 		</div>
 	`);
 
-	fd.$wrapper.find("[data-action]").on("click", function () {
+	d.$body.find("[data-action]").on("click", function () {
 		const a = $(this).data("action");
+		d.hide();
 		switch (a) {
 			case "boletins":          frappe.set_route("List", "Report Card", { student: frm.doc.name }); break;
-			case "alocacoes":         frappe.set_route("List", "Student Group Assignment", { student: frm.doc.name }); break;
-			case "transferencias":    frappe.set_route("List", "Student Transfer", { student: frm.doc.name }); break;
 			case "facturas":          frappe.set_route("List", "Sales Invoice", { escola_student: frm.doc.name }); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
@@ -194,6 +164,11 @@ function _render_action_panel(frm) {
 			case "reactivar":         reactivate_dialog(frm); break;
 		}
 	});
+
+	d.$wrapper.find(".btn-modal-primary").hide();
+	d.set_secondary_action_label(__("Fechar"));
+	d.set_secondary_action(() => d.hide());
+	d.show();
 }
 
 // ---------------------------------------------------------------------------
