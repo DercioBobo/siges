@@ -22,8 +22,8 @@ def calculate_assessment(doc_name):
     terms = frappe.get_all(
         "Academic Term",
         filters={"academic_year": doc.academic_year},
-        fields=["name", "term_start_date"],
-        order_by="term_start_date asc, name asc",
+        fields=["name", "start_date"],
+        order_by="start_date asc, name asc",
     )
     if not terms:
         return {"error": "no_terms"}
