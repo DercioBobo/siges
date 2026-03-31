@@ -264,12 +264,7 @@ function manage_students_dialog(frm) {
                 </div>
                 <div class="section-title">${__("Resultados")}</div>
                 <div class="list-box tall" id="add-results">
-                    <div class="empty">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                        </svg>
-                        <div>${__("Digite pelo menos 2 caracteres para pesquisar")}</div>
-                    </div>
+                    <div class="empty">${__("A carregar…")}</div>
                 </div>
                 <hr>
                 <div class="section-title">
@@ -304,6 +299,7 @@ function manage_students_dialog(frm) {
         if (tab === "add") {
             d.set_primary_action(__("Atribuir"), () => submit_add());
             _update_add_btn();
+            _do_search(d.$body.find("#add-search").val().trim());
         } else {
             d.set_primary_action(__("Fechar"), () => d.hide());
             _render_remove_list("");
@@ -316,22 +312,20 @@ function manage_students_dialog(frm) {
     d.$body.find("#add-search").on("input", function () {
         clearTimeout(_search_timer);
         const q = this.value.trim();
-        if (q.length < 2) {
-            $("#add-results").html(`<div class="empty"><div>${__("Digite pelo menos 2 caracteres")}</div></div>`);
-            return;
-        }
-        _search_timer = setTimeout(() => _do_search(q), 300);
+        _search_timer = setTimeout(() => _do_search(q), q ? 300 : 0);
     });
 
     async function _do_search(q) {
-        d.$body.find("#add-results").html(`<div class="empty">${__("A pesquisar…")}</div>`);
+        d.$body.find("#add-results").html(`<div class="empty">${__("A carregar…")}</div>`);
+        const filters = [["current_status", "=", "Activo"]];
+        if (q) filters.push(["full_name", "like", `%${q}%`]);
         const r = await frappe.call({
             method: "frappe.client.get_list",
             args: {
                 doctype: "Student",
-                filters: [["current_status", "=", "Activo"], ["full_name", "like", `%${q}%`]],
+                filters,
                 fields: ["name", "full_name"],
-                limit_page_length: 25,
+                limit_page_length: 50,
             },
         });
         _render_add_results(r.message || []);
@@ -477,7 +471,10 @@ function manage_students_dialog(frm) {
     _update_add_btn();
 
     d.show();
-    setTimeout(() => d.$body.find("#add-search").focus(), 120);
+    setTimeout(() => {
+        d.$body.find("#add-search").focus();
+        _do_search("");
+    }, 120);
 }
 
 // ---------------------------------------------------------------------------
