@@ -7,13 +7,18 @@
  "field_order": [
   "naming_series",
   "section_break_header",
-  "academic_year",
-  "school_class",
-  "column_break_1",
   "class_group",
   "next_academic_year",
+  "column_break_1",
+  "academic_year",
+  "school_class",
   "column_break_2",
   "status",
+  "section_break_placement",
+  "next_school_class",
+  "target_class_group",
+  "column_break_3",
+  "retained_class_group",
   "section_break_rows",
   "promotion_rows"
  ],
@@ -79,6 +84,38 @@
    "options": "Rascunho\nFinalizado\nBloqueado",
    "default": "Rascunho",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_placement",
+   "fieldtype": "Section Break",
+   "label": "Turmas do Próximo Ano"
+  },
+  {
+   "fieldname": "next_school_class",
+   "fieldtype": "Link",
+   "label": "Classe Seguinte",
+   "options": "School Class",
+   "read_only": 1,
+   "fetch_from": "school_class.next_class",
+   "description": "Preenchida automaticamente a partir da Classe actual."
+  },
+  {
+   "fieldname": "target_class_group",
+   "fieldtype": "Link",
+   "label": "Turma dos Aprovados",
+   "options": "Class Group",
+   "description": "Turma para onde vão os alunos Aprovados / Concluídos."
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "retained_class_group",
+   "fieldtype": "Link",
+   "label": "Turma dos Reprovados",
+   "options": "Class Group",
+   "description": "Turma para onde ficam os alunos Reprovados (mesma classe, novo ano)."
   },
   {
    "fieldname": "section_break_rows",

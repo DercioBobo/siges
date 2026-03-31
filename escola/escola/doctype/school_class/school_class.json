@@ -13,6 +13,8 @@
   "class_level",
   "column_break_2",
   "education_level",
+  "column_break_next",
+  "next_class",
   "section_break_model",
   "teaching_model",
   "default_teacher",
@@ -72,6 +74,17 @@
    "reqd": 1,
    "options": "\nPré-Primário\nPrimário\nSecundário",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_next",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_class",
+   "fieldtype": "Link",
+   "label": "Classe Seguinte",
+   "options": "School Class",
+   "description": "Classe para a qual os alunos são promovidos ao passar."
   },
   {
    "fieldname": "section_break_model",
