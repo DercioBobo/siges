@@ -15,14 +15,6 @@ const _ALERT_MESSAGES = {
 	4: "Aluno elegível para suspensão",
 };
 
-// Darken a hex color by amt (0–1) for use as a text label on a tinted background
-function _darken(hex, amt = 0.45) {
-	const n = parseInt(hex.slice(1), 16);
-	const r = Math.max(0, ((n >> 16) & 0xff) * (1 - amt)) | 0;
-	const g = Math.max(0, ((n >> 8)  & 0xff) * (1 - amt)) | 0;
-	const b = Math.max(0, ((n)       & 0xff) * (1 - amt)) | 0;
-	return `rgb(${r},${g},${b})`;
-}
 
 frappe.ui.form.on("Student", {
 	refresh(frm) {
@@ -115,23 +107,20 @@ function _show_actions_modal(frm) {
 	];
 
 	const acoes = [
-		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#fff",    bg: "#2563eb", show: true      },
-		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#fff",    bg: "#7c3aed", show: isActive   },
-		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#fff",    bg: "#ea580c", show: isActive   },
+		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: true      },
+		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
+		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
 		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
-		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#fff",    bg: "#16a34a", show: isInactive },
+		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#166534", bg: "#f0fdf4", show: isInactive },
 	].filter(b => b.show);
 
-	const cards = (items) => items.map(b => {
-		// For white-text cards (colored bg), darken the label slightly for readability
-		const lblColor = b.color === "#fff" ? _darken(b.bg) : b.color;
-		return `
+	const cards = (items) => items.map(b => `
 		<div class="sam-card" data-action="${b.id}"
-		     style="background:${b.bg};border-color:${b.bg}30;">
+		     style="background:${b.bg};border-color:${b.color}22;">
 			<span class="sam-ico">${b.ico}</span>
-			<span class="sam-lbl" style="color:${lblColor};">${b.label}</span>
-		</div>`;
-	}).join("");
+			<span class="sam-lbl" style="color:${b.color};">${b.label}</span>
+		</div>`
+	).join("");
 
 	const d = new frappe.ui.Dialog({
 		title: frm.doc.full_name,
