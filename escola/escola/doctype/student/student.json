@@ -33,6 +33,8 @@
   "current_school_class",
   "column_break_9",
   "current_class_group",
+  "section_break_quick_actions",
+  "student_actions_html",
   "section_break_guardian",
   "primary_guardian",
   "section_break_history",
@@ -202,6 +204,16 @@
    "options": "Class Group",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_quick_actions",
+   "fieldtype": "Section Break",
+   "label": "Acções Rápidas"
+  },
+  {
+   "fieldname": "student_actions_html",
+   "fieldtype": "HTML",
+   "label": "Acções"
   },
   {
    "fieldname": "section_break_guardian",
