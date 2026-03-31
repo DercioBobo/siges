@@ -5,30 +5,44 @@ from escola.escola.doctype.term_attendance.term_attendance import get_annual_abs
 
 
 @frappe.whitelist()
+def get_students_for_assessment(class_group):
+    """Return active students in a class group."""
+    sgas = frappe.db.get_all(
+        "Student Group Assignment",
+        filters={"class_group": class_group, "status": "Activa"},
+        fields=["student"],
+        order_by="student asc",
+    )
+    return [s.student for s in sgas]
+
+
+@frappe.whitelist()
 def calculate_assessment(doc_name):
     """
-    Compute final grades for all students in a class group.
+    Compute per-student overall averages from Grade Entry data.
 
-    Algorithm:
-    1. Fetch Academic Terms for the year ordered by start date → positional mapping T1/T2/T3.
-    2. For each Grade Entry (class_group, academic_year), collect rows with valid scores.
-       Multiple Grade Entries in the same term (e.g. Teste 1 + Teste 2) are averaged.
-    3. Per (student, subject): term_N_average = average of all scores in that term.
-       final_grade = simple average of available term averages.
-    4. Compare against School Class minimum_passing_grade.
+    Returns:
+        {
+            "rows":    [ {student, term_1_average, term_2_average, term_3_average,
+                          final_grade, total_absences, result}, ... ],
+            "details": { student: { subject: {t1, t2, t3, avg}, ... }, ... },
+            "terms":   ["T1", "T2", "T3"]   (labels of present terms)
+        }
     """
     doc = frappe.get_doc("Annual Assessment", doc_name)
 
     terms = frappe.get_all(
         "Academic Term",
         filters={"academic_year": doc.academic_year},
-        fields=["name", "start_date"],
+        fields=["name", "term_name", "start_date"],
         order_by="start_date asc, name asc",
     )
     if not terms:
         return {"error": "no_terms"}
 
+    # Position map: term_name → 1/2/3
     term_position = {t.name: idx + 1 for idx, t in enumerate(terms)}
+    term_labels   = [t.term_name or t.name for t in terms]
 
     min_passing = float(
         frappe.db.get_value("School Class", doc.school_class, "minimum_passing_grade")
@@ -73,51 +87,65 @@ def calculate_assessment(doc_name):
     if not data:
         return {"error": "no_grades"}
 
-    # --- absences per student across all terms ----------------------------
     absences = get_annual_absences(doc.class_group, doc.academic_year)
     abs_threshold = int(
         frappe.db.get_single_value("School Settings", "max_absences_threshold") or 0
     )
+    max_terms = len(terms)
 
     result_rows = []
-    max_terms = len(terms)
+    details = {}
 
     for student in sorted(data):
         student_abs = absences.get(student, {})
-        total_abs = student_abs.get("total", 0)
-        abs_at_risk = 1 if (abs_threshold > 0 and total_abs >= abs_threshold) else 0
+        total_abs   = student_abs.get("total", 0)
 
-        for subject in sorted(data[student]):
-            term_avgs = {
+        # Per subject: average per term
+        subject_term_avgs = {}  # subject → {pos: avg}
+        for subject, term_scores in data[student].items():
+            subject_term_avgs[subject] = {
                 pos: round(sum(vals) / len(vals), 2)
-                for pos, vals in data[student][subject].items()
+                for pos, vals in term_scores.items()
             }
 
-            t1 = term_avgs.get(1)
-            t2 = term_avgs.get(2) if max_terms >= 2 else None
-            t3 = term_avgs.get(3) if max_terms >= 3 else None
+        # Per term: mean of all subject averages
+        term_avgs = {}  # pos → mean across subjects
+        for pos in range(1, max_terms + 1):
+            vals = [
+                subject_term_avgs[subj][pos]
+                for subj in subject_term_avgs
+                if pos in subject_term_avgs[subj]
+            ]
+            if vals:
+                term_avgs[pos] = round(sum(vals) / len(vals), 2)
 
-            present = list(term_avgs.values())
-            final_grade = round(sum(present) / len(present), 2) if present else 0.0
+        all_term_avgs = list(term_avgs.values())
+        final_grade   = round(sum(all_term_avgs) / len(all_term_avgs), 2) if all_term_avgs else 0.0
+        result        = "Aprovado" if final_grade >= min_passing else "Reprovado"
 
-            # System suggestion: grade-based only; absences are a flag, not a hard fail
-            suggested = "Aprovado" if final_grade >= min_passing else "Reprovado"
+        result_rows.append({
+            "student":        student,
+            "term_1_average": term_avgs.get(1),
+            "term_2_average": term_avgs.get(2) if max_terms >= 2 else None,
+            "term_3_average": term_avgs.get(3) if max_terms >= 3 else None,
+            "final_grade":    final_grade,
+            "total_absences": total_abs,
+            "result":         result,
+        })
 
-            result_rows.append({
-                "student": student,
-                "subject": subject,
-                "term_1_average": t1,
-                "term_2_average": t2,
-                "term_3_average": t3,
-                "final_grade": final_grade,
-                "total_absences": total_abs,
-                "absences_at_risk": abs_at_risk,
-                "suggested_result": suggested,
-                "result": suggested,   # pre-fill with suggestion; teacher can override
-                "remarks": "",
-            })
+        # Details for HTML: subject → {t1, t2, t3, avg}
+        subject_details = {}
+        for subject, term_avgs_s in subject_term_avgs.items():
+            s_avgs = list(term_avgs_s.values())
+            subject_details[subject] = {
+                "t1":  term_avgs_s.get(1),
+                "t2":  term_avgs_s.get(2),
+                "t3":  term_avgs_s.get(3),
+                "avg": round(sum(s_avgs) / len(s_avgs), 2) if s_avgs else None,
+            }
+        details[student] = subject_details
 
-    return result_rows
+    return {"rows": result_rows, "details": details, "terms": term_labels}
 
 
 class AnnualAssessment(Document):
@@ -159,8 +187,8 @@ class AnnualAssessment(Document):
             "Annual Assessment",
             {
                 "academic_year": self.academic_year,
-                "class_group": self.class_group,
-                "name": ("!=", self.name),
+                "class_group":   self.class_group,
+                "name":          ("!=", self.name),
             },
             "name",
         )
@@ -183,29 +211,17 @@ class AnnualAssessment(Document):
                 row.final_grade < 0 or row.final_grade > max_grade
             ):
                 frappe.throw(
-                    _("A nota final <b>{0}</b> para o aluno <b>{1}</b> / "
-                      "disciplina <b>{2}</b> está fora do intervalo 0–{3}.").format(
-                        row.final_grade, row.student, row.subject, max_grade
+                    _("A média geral <b>{0}</b> para o aluno <b>{1}</b> "
+                      "está fora do intervalo 0–{2}.").format(
+                        row.final_grade, row.student, max_grade
                     ),
                     title=_("Nota fora do intervalo"),
                 )
-            key = (row.student, row.subject)
-            if key in seen:
+            if row.student in seen:
                 frappe.throw(
-                    _("A combinação Aluno <b>{0}</b> + Disciplina <b>{1}</b> "
-                      "aparece mais de uma vez na tabela.").format(
-                        row.student, row.subject
+                    _("O aluno <b>{0}</b> aparece mais de uma vez na tabela.").format(
+                        row.student
                     ),
-                    title=_("Linha duplicada"),
+                    title=_("Aluno duplicado"),
                 )
-            seen.add(key)
-            # Warn if teacher result differs from suggestion (informational only)
-            if row.result and row.suggested_result and row.result != row.suggested_result:
-                frappe.msgprint(
-                    _("Aluno <b>{0}</b> / <b>{1}</b>: resultado alterado pelo professor "
-                      "(<b>{2}</b> → <b>{3}</b>).").format(
-                        row.student, row.subject, row.suggested_result, row.result
-                    ),
-                    alert=True,
-                    indicator="orange",
-                )
+            seen.add(row.student)

@@ -13,6 +13,8 @@
   "school_class",
   "section_break_rows",
   "assessment_rows",
+  "section_break_detail",
+  "grades_detail_html",
   "section_break_notes",
   "notes"
  ],
@@ -73,6 +75,16 @@
    "fieldtype": "Table",
    "label": "Linhas de Avaliação",
    "options": "Annual Assessment Row"
+  },
+  {
+   "fieldname": "section_break_detail",
+   "fieldtype": "Section Break",
+   "label": "Detalhe das Notas"
+  },
+  {
+   "fieldname": "grades_detail_html",
+   "fieldtype": "HTML",
+   "label": "Detalhe das Notas"
   },
   {
    "fieldname": "section_break_notes",

@@ -229,11 +229,6 @@ class GradeEntry(Document):
                 row.is_approved = 0
 
     def _calculate_class_summary(self):
-        scores = [
-            row.score for row in self.grade_rows
-            if not row.is_absent and row.score is not None
-        ]
-        self.class_average = round(sum(scores) / len(scores), 2) if scores else 0
         self.total_approved = sum(1 for row in self.grade_rows if row.is_approved)
         self.total_failed = sum(
             1 for row in self.grade_rows

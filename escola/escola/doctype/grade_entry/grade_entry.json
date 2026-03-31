@@ -24,8 +24,6 @@
   "section_break_rows",
   "grade_rows",
   "section_break_summary",
-  "class_average",
-  "column_break_summary_1",
   "total_approved",
   "column_break_summary_2",
   "total_failed",
@@ -158,17 +156,6 @@
    "fieldname": "section_break_summary",
    "fieldtype": "Section Break",
    "label": "Resumo da Turma"
-  },
-  {
-   "fieldname": "class_average",
-   "fieldtype": "Float",
-   "label": "Média da Turma",
-   "read_only": 1,
-   "precision": "2"
-  },
-  {
-   "fieldname": "column_break_summary_1",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "total_approved",
