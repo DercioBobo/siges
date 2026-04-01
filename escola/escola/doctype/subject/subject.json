@@ -13,6 +13,7 @@
   "column_break_2",
   "is_active",
   "section_break_teacher",
+  "color",
   "is_specialist",
   "section_break_notes",
   "notes"
@@ -55,6 +56,13 @@
    "fieldname": "section_break_teacher",
    "fieldtype": "Section Break",
    "label": "Configuração"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Color",
+   "label": "Cor no Horário",
+   "description": "Cor de identificação visual no horário semanal (ex.: #6366F1)",
+   "allow_in_quick_entry": 1
   },
   {
    "fieldname": "is_specialist",

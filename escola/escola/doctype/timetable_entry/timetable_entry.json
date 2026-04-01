@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": [
+  "day_of_week",
+  "time_slot",
+  "subject",
+  "teacher",
+  "is_double",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "day_of_week",
+   "fieldtype": "Select",
+   "label": "Dia",
+   "options": "Segunda-Feira\nTerça-Feira\nQuarta-Feira\nQuinta-Feira\nSexta-Feira",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "time_slot",
+   "fieldtype": "Link",
+   "label": "Horário",
+   "options": "Time Slot",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Link",
+   "label": "Disciplina",
+   "options": "Subject",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "teacher",
+   "fieldtype": "Link",
+   "label": "Professor",
+   "options": "Teacher",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "is_double",
+   "fieldtype": "Check",
+   "label": "Aula Dupla",
+   "default": "0",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Data",
+   "label": "Notas"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Timetable Entry",
+ "owner": "Administrator",
+ "track_changes": 0
+}
