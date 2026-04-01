@@ -3,15 +3,18 @@ from frappe import _
 from frappe.model.document import Document
 
 
+# ---------------------------------------------------------------------------
+# Generate promotion rows from Annual Assessment
+# ---------------------------------------------------------------------------
+
 @frappe.whitelist()
 def generate_promotion(doc_name):
     """
     Load promotion decisions from Annual Assessment.
 
-    Decision per student:
     - Aprovado  → result == "Aprovado" and next_class exists
     - Concluído → result == "Aprovado" and no next_class (final class)
-    - Reprovado → result == "Reprovado" (stays in same class)
+    - Reprovado → result == "Reprovado"
     """
     doc = frappe.get_doc("Student Promotion", doc_name)
 
@@ -32,9 +35,8 @@ def generate_promotion(doc_name):
     if not ann_rows:
         return {"error": "no_rows"}
 
-    # Determine whether this is the final class (no next_class pointer)
     next_class = frappe.db.get_value("School Class", doc.school_class, "next_class")
-    is_final = not next_class
+    is_final   = not next_class
 
     result_rows = []
     for row in ann_rows:
@@ -54,80 +56,157 @@ def generate_promotion(doc_name):
     return result_rows
 
 
+# ---------------------------------------------------------------------------
+# Turma distribution — discovery and suggestion
+# ---------------------------------------------------------------------------
+
 @frappe.whitelist()
-def generate_next_year_enrollments(promotion_name):
+def get_promotion_turma_options(promotion_name):
     """
-    Create Student Group Assignments for the next academic year.
-
-    - Aprovado / Concluído → doc.target_class_group
-    - Reprovado            → doc.retained_class_group (same school_class, new year)
-
-    Idempotent: skips students already with an active SGA for next_academic_year.
+    Return existing turmas for the target classes and pre-computed
+    placement suggestions for aprovados and reprovados.
     """
     doc = frappe.get_doc("Student Promotion", promotion_name)
 
-    if not doc.next_academic_year:
-        frappe.throw(_("Defina o Ano Lectivo Seguinte antes de gerar inscrições."))
+    aprovados  = [r for r in doc.promotion_rows if r.decision == "Aprovado"]
+    concluidos = [r for r in doc.promotion_rows if r.decision == "Concluído"]
+    reprovados = [r for r in doc.promotion_rows if r.decision == "Reprovado"]
 
-    if doc.status != "Finalizado":
-        frappe.throw(
-            _("A Promoção de Alunos deve estar <b>Finalizada</b> antes de "
-              "gerar inscrições. Estado actual: <b>{0}</b>.").format(doc.status or "Rascunho"),
-            title=_("Estado incorrecto"),
-        )
-
-    if not doc.target_class_group and any(
-        r.decision in ("Aprovado", "Concluído") for r in doc.promotion_rows
-    ):
-        frappe.throw(
-            _("Defina a <b>Turma dos Aprovados</b> antes de gerar inscrições."),
-            title=_("Turma em falta"),
-        )
-
-    if not doc.retained_class_group and any(
-        r.decision == "Reprovado" for r in doc.promotion_rows
-    ):
-        frappe.throw(
-            _("Defina a <b>Turma dos Reprovados</b> antes de gerar inscrições."),
-            title=_("Turma em falta"),
-        )
-
-    # Resolve school_class for each target
-    target_sc = (
-        frappe.db.get_value("Class Group", doc.target_class_group, "school_class")
-        if doc.target_class_group else None
+    default_cap = int(
+        frappe.db.get_single_value("School Settings", "default_max_students_per_class") or 0
     )
-    retained_sc = doc.school_class  # Reprovado stays in same class
+
+    next_school_class = (
+        frappe.db.get_value("School Class", doc.school_class, "next_class")
+        if doc.school_class else None
+    )
+
+    def _get_groups(school_class, academic_year):
+        if not school_class or not academic_year:
+            return []
+        return frappe.db.get_all(
+            "Class Group",
+            filters={"school_class": school_class, "academic_year": academic_year, "is_active": 1},
+            fields=["name", "group_name", "max_students", "student_count"],
+            order_by="creation asc",
+        )
+
+    target_groups   = _get_groups(next_school_class, doc.next_academic_year)
+    retained_groups = _get_groups(doc.school_class,  doc.next_academic_year)
+
+    return {
+        "aprovados_count":   len(aprovados),
+        "concluidos_count":  len(concluidos),
+        "reprovados_count":  len(reprovados),
+        "next_school_class": next_school_class,
+        "school_class":      doc.school_class,
+        "next_academic_year": doc.next_academic_year,
+        "default_capacity":  default_cap,
+        "target_groups":     target_groups,
+        "retained_groups":   retained_groups,
+        "aprovados_options": _build_aprovados_options(
+            len(aprovados), target_groups, next_school_class,
+            doc.next_academic_year, default_cap,
+        ),
+        "reprovados_options": _build_reprovados_options(
+            len(reprovados), retained_groups, doc.school_class,
+            doc.next_academic_year, default_cap,
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Execute the confirmed distribution plan
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def execute_promotion_plan(promotion_name, plan):
+    """
+    1. Create any new Class Groups in the plan.
+    2. Assign `assigned_class_group` on each promotion row.
+    3. Create Student Group Assignments.
+    4. Update student_count on affected Class Groups.
+    5. Set promotion status to Finalizado.
+    """
+    doc  = frappe.get_doc("Student Promotion", promotion_name)
+    plan = frappe.parse_json(plan) if isinstance(plan, str) else plan
 
     today = frappe.utils.today()
+
+    # ── Step 1: Create new Class Groups ─────────────────────────────────────
+    created_cg      = {}   # temp_id → actual doc.name
+    created_cg_names = []
+    affected_cgs    = set()
+
+    for bucket in plan.get("aprovados", []) + plan.get("reprovados", []):
+        if bucket["type"] == "new":
+            tid = bucket["temp_id"]
+            if tid not in created_cg:
+                cg_doc = frappe.get_doc({
+                    "doctype":       "Class Group",
+                    "group_name":    bucket["name"],
+                    "school_class":  bucket["school_class"],
+                    "academic_year": bucket["academic_year"],
+                    "max_students":  int(bucket.get("capacity") or 0),
+                    "is_active":     1,
+                    "student_count": 0,
+                }).insert(ignore_permissions=True)
+                created_cg[tid]  = cg_doc.name
+                created_cg_names.append(cg_doc.group_name)
+                affected_cgs.add(cg_doc.name)
+        elif bucket["type"] == "existing":
+            affected_cgs.add(bucket["class_group"])
+
+    # ── Step 2: Assign students to class groups ──────────────────────────────
+    def resolve_cg(bucket):
+        if bucket["type"] == "existing":
+            return bucket["class_group"]
+        return created_cg.get(bucket["temp_id"])
+
+    def assign_to_buckets(students, buckets):
+        idx = 0
+        for bucket in buckets:
+            cg    = resolve_cg(bucket)
+            count = int(bucket.get("count", 0))
+            if not cg:
+                continue
+            for _ in range(count):
+                if idx < len(students):
+                    students[idx].assigned_class_group = cg
+                    idx += 1
+
+    aprovados  = sorted(
+        [r for r in doc.promotion_rows if r.decision == "Aprovado"],
+        key=lambda r: r.student,
+    )
+    reprovados = sorted(
+        [r for r in doc.promotion_rows if r.decision == "Reprovado"],
+        key=lambda r: r.student,
+    )
+
+    assign_to_buckets(aprovados,  plan.get("aprovados",  []))
+    assign_to_buckets(reprovados, plan.get("reprovados", []))
+
+    doc.save(ignore_permissions=True)
+
+    # ── Step 3: Create Student Group Assignments ─────────────────────────────
     created, skipped, errors = 0, 0, []
 
     for row in doc.promotion_rows:
-        if row.decision in ("Aprovado", "Concluído"):
-            target_cg = doc.target_class_group
-            sc = target_sc
-        elif row.decision == "Reprovado":
-            target_cg = doc.retained_class_group
-            sc = retained_sc
-        else:
+        if not row.assigned_class_group:
+            # Concluído or unassigned — no next enrolment
             skipped += 1
             continue
 
-        if not target_cg:
-            errors.append(_("{0}: sem turma destino — ignorado.").format(row.student))
-            continue
-
-        # Skip if already enrolled
-        if frappe.db.exists(
-            "Student Group Assignment",
-            {
-                "student":       row.student,
-                "academic_year": doc.next_academic_year,
-                "status":        "Activa",
-            },
-        ):
+        if frappe.db.exists("Student Group Assignment", {
+            "student":       row.student,
+            "academic_year": doc.next_academic_year,
+            "status":        "Activa",
+        }):
             skipped += 1
             continue
+
+        sc = frappe.db.get_value("Class Group", row.assigned_class_group, "school_class")
 
         try:
             frappe.get_doc({
@@ -135,18 +214,273 @@ def generate_next_year_enrollments(promotion_name):
                 "student":         row.student,
                 "academic_year":   doc.next_academic_year,
                 "school_class":    sc,
-                "class_group":     target_cg,
+                "class_group":     row.assigned_class_group,
                 "assignment_date": today,
                 "status":          "Activa",
-                "notes": _("Criado automaticamente pela Promoção {0}.").format(doc.name),
+                "notes":           _(
+                    "Criado automaticamente pela Promoção {0}."
+                ).format(doc.name),
             }).insert(ignore_permissions=True)
             created += 1
         except Exception as e:
             errors.append(f"{row.student}: {e}")
 
-    frappe.db.commit()
-    return {"created": created, "skipped": skipped, "errors": errors}
+    # ── Step 4: Refresh student_count on affected turmas ────────────────────
+    for cg_name in affected_cgs:
+        cnt = frappe.db.count(
+            "Student Group Assignment",
+            {"class_group": cg_name, "status": "Activa"},
+        )
+        frappe.db.set_value("Class Group", cg_name, "student_count", cnt)
 
+    # ── Step 5: Finalise ────────────────────────────────────────────────────
+    doc.status = "Finalizado"
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    return {
+        "created":        created,
+        "skipped":        skipped,
+        "errors":         errors,
+        "created_groups": created_cg_names,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Suggestion engine helpers
+# ---------------------------------------------------------------------------
+
+def _free(g):
+    """Available spots. Returns 9999 when max_students is 0 (unlimited)."""
+    if not g.max_students:
+        return 9999
+    return max(0, g.max_students - (g.student_count or 0))
+
+
+def _bucket_existing(g, count):
+    return {
+        "type":        "existing",
+        "class_group": g.name,
+        "group_name":  g.group_name,
+        "count":       count,
+        "after":       (g.student_count or 0) + count,
+        "max":         g.max_students or 0,
+    }
+
+
+def _bucket_new(temp_id, school_class, academic_year, count, n_existing, default_cap, offset=0):
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    letter  = letters[min(n_existing + offset, 25)]
+    return {
+        "type":           "new",
+        "temp_id":        temp_id,
+        "suggested_name": f"Turma {letter}",
+        "school_class":   school_class,
+        "academic_year":  academic_year,
+        "count":          count,
+        "capacity":       default_cap,
+    }
+
+
+def _distribute_evenly(count, groups):
+    """Round-robin even distribution across groups."""
+    n      = len(groups)
+    base   = count // n
+    extras = count % n
+    result = []
+    for i, g in enumerate(groups):
+        c = base + (1 if i < extras else 0)
+        if c > 0:
+            result.append(_bucket_existing(g, c))
+    return result
+
+
+def _build_aprovados_options(count, groups, school_class, academic_year, default_cap):
+    """
+    Aprovados strategy: pack together, minimise number of turmas.
+    """
+    if count == 0:
+        return []
+
+    options    = []
+    total_free = sum(_free(g) for g in groups)
+    n_existing = len(groups)
+
+    if not groups:
+        # ── No existing turmas ──────────────────────────────────────────────
+        options.append({
+            "id": "all_new", "recommended": True, "warning": None,
+            "label": f"Criar nova turma para todos os {count} aprovados",
+            "buckets": [],
+            "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, 0, default_cap)],
+        })
+        if default_cap and count > default_cap * 0.7:
+            h1, h2 = (count + 1) // 2, count // 2
+            options.append({
+                "id": "two_new", "recommended": False, "warning": None,
+                "label": f"Criar 2 turmas: {h1} + {h2} alunos (mais equilibrado)",
+                "buckets": [],
+                "new_groups": [
+                    _bucket_new("apr_new_0", school_class, academic_year, h1, 0, default_cap),
+                    _bucket_new("apr_new_1", school_class, academic_year, h2, 0, default_cap, offset=1),
+                ],
+            })
+        return options
+
+    # Sort most-full first (pack strategy)
+    by_full = sorted(groups, key=_free)
+
+    if total_free >= count:
+        # ── All fit in existing turmas ──────────────────────────────────────
+        buckets, rem = [], count
+        for g in by_full:
+            if rem <= 0:
+                break
+            take = min(_free(g), rem)
+            if take > 0:
+                buckets.append(_bucket_existing(g, take))
+                rem -= take
+        options.append({
+            "id": "pack", "recommended": True, "warning": None,
+            "label": "Alocar nos existentes: " + " + ".join(
+                f"{b['count']} em {b['group_name']}" for b in buckets
+            ),
+            "buckets": buckets, "new_groups": [],
+        })
+    elif total_free > 0:
+        # ── Partial fit: fill existing + create new ─────────────────────────
+        buckets, rem = [], count
+        for g in by_full:
+            if rem <= 0:
+                break
+            take = min(_free(g), rem)
+            if take > 0:
+                buckets.append(_bucket_existing(g, take))
+                rem -= take
+        options.append({
+            "id": "partial_new", "recommended": True, "warning": None,
+            "label": f"Preencher existentes ({count - rem}) + criar nova turma para {rem}",
+            "buckets": buckets,
+            "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, rem, n_existing, default_cap)],
+        })
+        # Overfill option
+        most_full = by_full[0]
+        options.append({
+            "id": "overfill", "recommended": False, "warning": "overfill",
+            "label": (
+                f"Exceder capacidade: todos os {count} em {most_full.group_name}"
+                + (f" ({(most_full.student_count or 0) + count}/{most_full.max_students})" if most_full.max_students else "")
+            ),
+            "buckets": [_bucket_existing(most_full, count)],
+            "new_groups": [],
+        })
+    else:
+        # ── All existing turmas are full ────────────────────────────────────
+        options.append({
+            "id": "all_new_full", "recommended": True, "warning": None,
+            "label": f"Turmas existentes cheias — criar nova turma para todos os {count}",
+            "buckets": [],
+            "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, n_existing, default_cap)],
+        })
+        most_full = by_full[0]
+        options.append({
+            "id": "overfill", "recommended": False, "warning": "overfill",
+            "label": (
+                f"Exceder capacidade: todos os {count} em {most_full.group_name}"
+                + (f" ({(most_full.student_count or 0) + count}/{most_full.max_students})" if most_full.max_students else "")
+            ),
+            "buckets": [_bucket_existing(most_full, count)],
+            "new_groups": [],
+        })
+
+    # Always offer "create new for all" as alternative
+    options.append({
+        "id": "all_new_alt", "recommended": False, "warning": None,
+        "label": f"Criar nova turma para todos os {count} aprovados",
+        "buckets": [],
+        "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, n_existing, default_cap)],
+    })
+
+    return options
+
+
+def _build_reprovados_options(count, groups, school_class, academic_year, default_cap):
+    """
+    Reprovados strategy: spread across turmas so repetentes are not isolated.
+    """
+    if count == 0:
+        return []
+
+    options    = []
+    n_existing = len(groups)
+
+    if not groups:
+        options.append({
+            "id": "all_new", "recommended": True, "warning": None,
+            "label": f"Criar nova turma para todos os {count} repetentes",
+            "buckets": [],
+            "new_groups": [_bucket_new("ret_new_0", school_class, academic_year, count, 0, default_cap)],
+        })
+        return options
+
+    # ── Spread evenly across existing turmas (recommended) ──────────────────
+    spread = _distribute_evenly(count, groups)
+    fits   = all(not b["max"] or b["after"] <= b["max"] for b in spread)
+
+    options.append({
+        "id": "spread", "recommended": fits, "warning": None if fits else "overfill",
+        "label": "Distribuir entre turmas existentes: " + " + ".join(
+            f"{b['count']} em {b['group_name']}" for b in spread
+        ),
+        "buckets": spread, "new_groups": [],
+    })
+
+    if not fits:
+        # ── Spread into free capacity + create new for overflow ──────────────
+        buckets, rem = [], count
+        for g in groups:
+            free = _free(g)
+            if free > 0 and rem > 0:
+                take = min(free, rem)
+                buckets.append(_bucket_existing(g, take))
+                rem -= take
+        if rem > 0:
+            new_g = _bucket_new("ret_new_0", school_class, academic_year, rem, n_existing, default_cap)
+            options.insert(0, {
+                "id": "spread_new", "recommended": True, "warning": None,
+                "label": f"Distribuir {count - rem} nas existentes + criar nova turma para {rem}",
+                "buckets": buckets,
+                "new_groups": [new_g],
+            })
+
+    # ── Per-group individual options (not recommended) ──────────────────────
+    for g in groups:
+        over = count > _free(g) and bool(g.max_students)
+        options.append({
+            "id": f"all_{g.name}", "recommended": False,
+            "warning": "overfill" if over else "not_recommended",
+            "label": (
+                f"Todos os {count} em {g.group_name}"
+                + (f" ({(g.student_count or 0) + count}/{g.max_students})" if g.max_students else "")
+            ),
+            "buckets": [_bucket_existing(g, count)],
+            "new_groups": [],
+        })
+
+    # ── Create new for all (not recommended when existing groups available) ──
+    options.append({
+        "id": "ret_all_new", "recommended": False, "warning": "not_recommended",
+        "label": f"Criar nova turma para todos os {count} repetentes",
+        "buckets": [],
+        "new_groups": [_bucket_new("ret_new_0", school_class, academic_year, count, n_existing, default_cap)],
+    })
+
+    return options
+
+
+# ---------------------------------------------------------------------------
+# Document class
+# ---------------------------------------------------------------------------
 
 class StudentPromotion(Document):
     def validate(self):
@@ -165,16 +499,18 @@ class StudentPromotion(Document):
             return
         if cg.academic_year != self.academic_year:
             frappe.throw(
-                _("A Turma <b>{0}</b> pertence ao Ano Lectivo <b>{1}</b>, "
-                  "não ao Ano Lectivo <b>{2}</b>.").format(
-                    self.class_group, cg.academic_year, self.academic_year),
+                _(
+                    "A Turma <b>{0}</b> pertence ao Ano Lectivo <b>{1}</b>, "
+                    "não ao Ano Lectivo <b>{2}</b>."
+                ).format(self.class_group, cg.academic_year, self.academic_year),
                 title=_("Turma incompatível"),
             )
         if self.school_class and cg.school_class != self.school_class:
             frappe.throw(
-                _("A Turma <b>{0}</b> pertence à Classe <b>{1}</b>, "
-                  "não à Classe <b>{2}</b>.").format(
-                    self.class_group, cg.school_class, self.school_class),
+                _(
+                    "A Turma <b>{0}</b> pertence à Classe <b>{1}</b>, "
+                    "não à Classe <b>{2}</b>."
+                ).format(self.class_group, cg.school_class, self.school_class),
                 title=_("Classe incompatível"),
             )
 
@@ -190,9 +526,10 @@ class StudentPromotion(Document):
         )
         if existing:
             frappe.throw(
-                _("Já existe uma Promoção de Alunos para a Turma <b>{0}</b> "
-                  "no Ano Lectivo <b>{1}</b>: <b>{2}</b>.").format(
-                    self.class_group, self.academic_year, existing),
+                _(
+                    "Já existe uma Promoção de Alunos para a Turma <b>{0}</b> "
+                    "no Ano Lectivo <b>{1}</b>: <b>{2}</b>."
+                ).format(self.class_group, self.academic_year, existing),
                 title=_("Promoção duplicada"),
             )
 
@@ -206,8 +543,9 @@ class StudentPromotion(Document):
         )
         if not ann:
             frappe.throw(
-                _("Não existe uma Avaliação Anual para a Turma <b>{0}</b> "
-                  "no Ano Lectivo <b>{1}</b>. Crie e calcule a Avaliação Anual primeiro.").format(
-                    self.class_group, self.academic_year),
+                _(
+                    "Não existe uma Avaliação Anual para a Turma <b>{0}</b> "
+                    "no Ano Lectivo <b>{1}</b>. Crie e calcule a Avaliação Anual primeiro."
+                ).format(self.class_group, self.academic_year),
                 title=_("Avaliação Anual em falta"),
             )

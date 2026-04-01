@@ -11,6 +11,8 @@
   "column_break_2",
   "decision",
   "column_break_3",
+  "assigned_class_group",
+  "column_break_4",
   "remarks"
  ],
  "fields": [
@@ -22,7 +24,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1,
-   "columns": 5
+   "columns": 4
   },
   {
    "fieldname": "column_break_1",
@@ -31,7 +33,7 @@
   {
    "fieldname": "final_grade",
    "fieldtype": "Float",
-   "label": "Média Geral",
+   "label": "Média",
    "read_only": 1,
    "in_list_view": 1,
    "columns": 2,
@@ -54,11 +56,24 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "assigned_class_group",
+   "fieldtype": "Link",
+   "label": "Turma Atribuída",
+   "options": "Class Group",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "remarks",
    "fieldtype": "Data",
    "label": "Observação",
    "in_list_view": 1,
-   "columns": 4
+   "columns": 2
   }
  ],
  "istable": 1,
