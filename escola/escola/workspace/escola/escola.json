@@ -30,8 +30,8 @@
   {"hidden": 0, "is_query_report": 0, "label": "Atribuir Turma ao Estudante",     "link_count": 0, "link_to": "Student Group Assignment",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Grelha Curricular",                "link_count": 0, "link_to": "Class Curriculum",         "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Faltas por Período",              "link_count": 0, "link_to": "Term Attendance",           "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Troca de Turma",                  "link_count": 0, "link_to": "Troca de Turma",            "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Renovação de Matrícula",          "link_count": 0, "link_to": "Renovacao de Matricula",      "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Troca de Turma",                  "link_count": 0, "link_to": "Troca De Turma",            "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Renovação de Matrícula",          "link_count": 0, "link_to": "Renovacao De Matricula",      "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Transferência de Aluno",          "link_count": 0, "link_to": "Student Transfer",          "link_type": "DocType", "onboard": 1, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Avaliação e Resultados", "link_count": 0, "onboard": 0, "type": "Card Break"},
@@ -79,11 +79,11 @@
   {"color": "#0EA5E9", "doc_type": "Academic Year",     "label": "Ano Lectivo",             "type": "DocType"},
   {"color": "#10B981", "doc_type": "Student",           "label": "Aluno",                   "type": "DocType"},
   {"color": "#6366F1", "doc_type": "Class Group",       "label": "Turma",                   "type": "DocType"},
-  {"color": "#F59E0B", "doc_type": "Inscricao",         "label": "Inscrição",               "type": "DocType"},
-  {"color": "#EF4444", "doc_type": "Grade Entry",       "label": "Pauta de Notas",          "type": "DocType"},
-  {"color": "#14B8A6", "doc_type": "Billing Cycle",     "label": "Ciclo de Facturação",     "type": "DocType"},
-  {"color": "#F97316", "doc_type": "Troca de Turma",          "label": "Troca de Turma",          "type": "DocType"},
-  {"color": "#A855F7", "doc_type": "Renovacao de Matricula", "label": "Renovação de Matrícula",  "type": "DocType"}
+  {"color": "#F59E0B", "doc_type": "Inscricao",              "label": "Inscrição",               "type": "DocType"},
+  {"color": "#F97316", "doc_type": "Troca De Turma",        "label": "Troca de Turma",          "type": "DocType"},
+  {"color": "#A855F7", "doc_type": "Renovacao De Matricula","label": "Renovação de Matrícula",  "type": "DocType"},
+  {"color": "#EF4444", "doc_type": "Grade Entry",           "label": "Pauta de Notas",          "type": "DocType"},
+  {"color": "#14B8A6", "doc_type": "Billing Cycle",         "label": "Ciclo de Facturação",     "type": "DocType"},
  ],
  "title": "Escola"
 }

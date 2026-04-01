@@ -147,7 +147,7 @@ function _show_actions_modal(frm) {
 			case "facturas":          frappe.set_route("List", "Sales Invoice", { escola_student: frm.doc.name }); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
-			case "troca-turma":       frappe.new_doc("Troca de Turma", { student: frm.doc.name }); break;
+			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
 			case "transferencia":     frappe.new_doc("Student Transfer", { student: frm.doc.name }); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
 			case "reactivar":         reactivate_dialog(frm); break;

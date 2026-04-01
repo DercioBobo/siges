@@ -80,7 +80,7 @@ class RenovacaoDeMatricula(Document):
 
     def _validate_not_duplicate(self):
         existing = frappe.db.get_value(
-            "Renovacao de Matricula",
+            "Renovacao De Matricula",
             {
                 "class_group": self.class_group,
                 "academic_year": self.academic_year,

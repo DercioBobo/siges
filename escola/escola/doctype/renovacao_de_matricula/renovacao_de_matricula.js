@@ -1,7 +1,7 @@
 // Copyright (c) 2024, EntreTech and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Renovacao de Matricula", {
+frappe.ui.form.on("Renovacao De Matricula", {
 	onload(frm) {
 		escola.utils.auto_fill_academic_year(frm);
 	},

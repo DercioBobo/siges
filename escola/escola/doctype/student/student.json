@@ -240,7 +240,7 @@
   {"group": "Académico", "link_doctype": "Student Group Assignment", "link_fieldname": "student"},
   {"group": "Académico", "link_doctype": "Report Card",              "link_fieldname": "student"},
   {"group": "Académico", "link_doctype": "Inscricao",                "link_fieldname": "student"},
-  {"group": "Académico", "link_doctype": "Troca de Turma",           "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Troca De Turma",           "link_fieldname": "student"},
   {"group": "Académico", "link_doctype": "Student Transfer",         "link_fieldname": "student"}
  ],
  "modified": "2024-01-01 00:00:00.000000",

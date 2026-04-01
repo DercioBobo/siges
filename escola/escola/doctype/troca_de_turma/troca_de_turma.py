@@ -115,7 +115,7 @@ class TrocaDeTurma(Document):
 
     def _validate_not_duplicate(self):
         existing = frappe.db.get_value(
-            "Troca de Turma",
+            "Troca De Turma",
             {
                 "student": self.student,
                 "academic_year": self.academic_year,
