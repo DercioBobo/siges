@@ -6,27 +6,33 @@ frappe.ui.form.on("Timetable", {
 		_set_time_slot_filter(frm);
 		frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
 		frm.set_query("academic_term", () => ({ filters: { is_active: 1 } }));
+
+		if (frm.is_new() && !frm.doc.academic_term) {
+			const today = frappe.datetime.get_today();
+			frappe.db.get_list("Academic Term", {
+				filters: [
+					["is_active", "=", 1],
+					["start_date", "<=", today],
+					["end_date", ">=", today],
+				],
+				fields: ["name"],
+				limit: 1,
+			}).then(rows => {
+				if (rows && rows.length) {
+					frm.set_value("academic_term", rows[0].name);
+				}
+			});
+		}
 	},
 
 	refresh(frm) {
 		_set_time_slot_filter(frm);
+		frm.fields_dict.timetable_entries.grid.toggle_enable("day_of_week", true);
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Ver Horário"), () => {
 				frappe.set_route("timetable-view");
 			}, __("Acções"));
-
-			if (frm.doc.status === "Rascunho") {
-				frm.add_custom_button(__("Activar"), () => {
-					frappe.confirm(
-						__("Activar este horário? O horário anterior desta turma/período será arquivado."),
-						() => {
-							frm.set_value("status", "Activo");
-							frm.save();
-						}
-					);
-				}, __("Acções"));
-			}
 		}
 	},
 

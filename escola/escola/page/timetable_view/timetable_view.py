@@ -64,8 +64,8 @@ def get_timetable_data(class_group, academic_term):
     time_slots = frappe.get_all(
         "Time Slot",
         filters=ts_filters,
-        fields=["name", "label", "start_time", "end_time", "slot_type", "sort_order"],
-        order_by="sort_order asc",
+        fields=["name", "label", "slot_type"],
+        order_by="label asc",
     )
 
     # All child entries for this timetable
