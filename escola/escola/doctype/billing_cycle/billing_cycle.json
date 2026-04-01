@@ -8,6 +8,7 @@
   "naming_series",
   "sb_identificacao",
   "cycle_name",
+  "billing_schedule",
   "sb_config",
   "academic_year",
   "posting_date",
@@ -33,6 +34,13 @@
    "hidden": 1,
    "label": "Naming Series",
    "options": "BIL-.YYYY.-.####"
+  },
+  {
+   "fieldname": "billing_schedule",
+   "fieldtype": "Link",
+   "label": "Agendamento",
+   "options": "Billing Schedule",
+   "read_only": 1
   },
   {
    "fieldname": "sb_identificacao",

@@ -10,6 +10,9 @@ class BillingCycle(Document):
         if self.due_date and self.posting_date and getdate(self.due_date) < getdate(self.posting_date):
             frappe.throw(_("A Data de Vencimento não pode ser anterior à Data de Facturação."))
 
+        if self.school_class and self.billing_mode:
+            _validate_fee_structure_compatibility(self.school_class, self.billing_mode)
+
 
 # ---------------------------------------------------------------------------
 # Invoice generation
@@ -146,6 +149,41 @@ def generate_invoices(doc_name):
     }
 
 
+def _validate_fee_structure_compatibility(school_class, billing_mode):
+    """
+    Warn early (on save) if no active Fee Structure has lines matching this billing_mode.
+    Raises a non-blocking msgprint (alert) rather than a hard throw so the user can still
+    save a draft cycle and fix the Fee Structure before generating invoices.
+    """
+    fs_name = frappe.db.get_value(
+        "Fee Structure",
+        {"school_class": school_class, "is_active": 1},
+        "name",
+    )
+    if not fs_name:
+        frappe.msgprint(
+            _("Aviso: Não existe um Plano de Propinas activo para a Classe <b>{0}</b>. "
+              "Crie um antes de gerar facturas.").format(school_class),
+            title=_("Plano de Propinas em falta"),
+            indicator="orange",
+        )
+        return
+
+    has_lines = frappe.db.exists(
+        "Fee Structure Line",
+        {"parent": fs_name, "billing_mode": billing_mode},
+    )
+    if not has_lines:
+        frappe.msgprint(
+            _("Aviso: O Plano de Propinas <b>{0}</b> não tem linhas com o Modo de Cobrança "
+              "<b>{1}</b>. Adicione as linhas correspondentes antes de gerar facturas.").format(
+                fs_name, billing_mode
+            ),
+            title=_("Modo de Cobrança sem linhas"),
+            indicator="orange",
+        )
+
+
 def _find_fee_structure(school_class, academic_year=None):
     """Find the single active Fee Structure for a class."""
     return frappe.db.get_value(
@@ -182,8 +220,12 @@ def cancel_cycle(doc_name):
         invoices = []
 
     cancelled, deleted, errors = 0, 0, []
+    affected_students = set()
 
     for inv in invoices:
+        student = frappe.db.get_value("Sales Invoice", inv.name, "escola_student")
+        if student:
+            affected_students.add(student)
         try:
             if inv.docstatus == 1:
                 frappe.get_doc("Sales Invoice", inv.name).cancel()
@@ -196,6 +238,16 @@ def cancel_cycle(doc_name):
 
     cycle.db_set("status", "Cancelado")
     _refresh_cycle_summary(cycle)
+
+    # Recalculate financial status for all affected students.
+    # Necessary because deleted draft invoices don't fire the on_cancel hook.
+    from escola.escola.doctype.billing_cycle.penalty import update_student_financial_status
+    for student in affected_students:
+        try:
+            update_student_financial_status(student)
+        except Exception:
+            pass
+
     frappe.db.commit()
 
     return {"cancelled": cancelled, "deleted": deleted, "errors": errors}

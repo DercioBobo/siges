@@ -67,7 +67,9 @@ scheduler_events = {
     # Catches time-based transitions (e.g. due date crossed overnight).
     "daily": [
         "escola.escola.doctype.billing_cycle.penalty.update_all_student_financial_statuses",
+        "escola.escola.doctype.billing_cycle.penalty.apply_all_pending_penalties",
         "escola.escola.doctype.student.student.update_all_student_ages",
+        "escola.escola.doctype.billing_schedule.billing_schedule.run_due_schedules",
     ],
 }
 

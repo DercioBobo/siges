@@ -426,6 +426,46 @@ def on_sales_invoice_update(doc, method):
             pass
 
 
+def apply_all_pending_penalties():
+    """
+    Daily scheduled job — only runs when penalty_mode == "Adicionar à Factura".
+    Finds every overdue draft invoice and applies/updates its penalty line.
+    Safe to run daily: apply_penalty_to_invoice is idempotent and only changes
+    the amount when a new penalty period is crossed.
+    """
+    settings = _get_settings()
+    if settings["penalty_mode"] != "Adicionar à Factura":
+        return
+
+    try:
+        invoices = frappe.db.sql(
+            """
+            SELECT name
+            FROM `tabSales Invoice`
+            WHERE docstatus = 0
+              AND outstanding_amount > 0
+              AND due_date < CURDATE()
+              AND escola_billing_cycle IS NOT NULL
+              AND escola_billing_cycle != ''
+            """,
+            as_dict=True,
+        )
+    except Exception:
+        return
+
+    for inv in invoices:
+        try:
+            apply_penalty_to_invoice(inv.name)
+        except Exception:
+            frappe.log_error(
+                title="Escola — erro ao aplicar multa automática",
+                message=frappe.get_traceback(),
+            )
+
+    if invoices:
+        frappe.db.commit()
+
+
 def update_all_student_financial_statuses():
     """
     Daily scheduled job: recalculate financial_status for every student

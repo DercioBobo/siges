@@ -1,0 +1,157 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sb_id",
+  "schedule_name",
+  "is_active",
+  "sb_config",
+  "school_class",
+  "billing_mode",
+  "cb_config",
+  "invoice_day",
+  "due_days",
+  "billing_month",
+  "sb_estado",
+  "last_billed_date",
+  "sb_obs",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Naming Series",
+   "options": "BSH-.YYYY.-.####"
+  },
+  {
+   "fieldname": "sb_id",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "schedule_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Agendamento",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1,
+   "label": "Activo"
+  },
+  {
+   "fieldname": "sb_config",
+   "fieldtype": "Section Break",
+   "label": "Configuração"
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Classe",
+   "options": "School Class",
+   "reqd": 1
+  },
+  {
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Modo de Cobrança",
+   "options": "\nMensal\nTrimestral\nAnual",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_config",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_day",
+   "fieldtype": "Int",
+   "default": "25",
+   "label": "Dia de Emissão",
+   "reqd": 1,
+   "description": "Dia do mês em que as facturas são emitidas (1–28)"
+  },
+  {
+   "fieldname": "due_days",
+   "fieldtype": "Int",
+   "default": "15",
+   "label": "Prazo de Pagamento (dias)",
+   "reqd": 1,
+   "description": "Dias após a emissão até ao vencimento"
+  },
+  {
+   "fieldname": "billing_month",
+   "fieldtype": "Int",
+   "label": "Mês de Referência",
+   "depends_on": "eval:['Trimestral','Anual'].includes(doc.billing_mode)",
+   "description": "Trimestral: 1=Jan/Abr/Jul/Out · 2=Fev/Mai/Ago/Nov · 3=Mar/Jun/Set/Dez. Anual: número do mês (1–12)."
+  },
+  {
+   "fieldname": "sb_estado",
+   "fieldtype": "Section Break",
+   "label": "Estado"
+  },
+  {
+   "fieldname": "last_billed_date",
+   "fieldtype": "Date",
+   "label": "Última Emissão",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_obs",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Billing Schedule",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "schedule_name"
+}

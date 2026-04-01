@@ -10,10 +10,13 @@
 
   {"hidden": 0, "is_query_report": 0, "label": "Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
-  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação", "link_count": 0, "link_to": "Billing Cycle",  "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",   "link_count": 0, "link_to": "Fee Structure",  "link_type": "DocType", "onboard": 1, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Categoria de Propina","link_count": 0, "link_to": "Fee Category",   "link_type": "DocType", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Aluno",               "link_count": 0, "link_to": "Student",        "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Agendamento de Cobrança", "link_count": 0, "link_to": "Billing Schedule",  "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Monitor de Agendamentos","link_count": 0, "link_to": "schedule-monitor",  "link_type": "Page",    "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Monitor de Facturas",    "link_count": 0, "link_to": "invoice-monitor",   "link_type": "Page",    "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação",    "link_count": 0, "link_to": "Billing Cycle",     "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",      "link_count": 0, "link_to": "Fee Structure",     "link_type": "DocType", "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Categoria de Propina",   "link_count": 0, "link_to": "Fee Category",      "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Aluno",                  "link_count": 0, "link_to": "Student",           "link_type": "DocType", "onboard": 0, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios de Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},
 
@@ -35,9 +38,9 @@
  ],
  "sequence_id": 4,
  "shortcuts": [
-  {"color": "#14B8A6", "doc_type": "Billing Cycle",  "label": "Ciclo de Facturação", "type": "DocType"},
-  {"color": "#10B981", "doc_type": "Fee Structure",  "label": "Plano de Propinas",   "type": "DocType"},
-  {"color": "#6366F1", "doc_type": "Student",        "label": "Aluno",               "type": "DocType"}
+  {"color": "#6366F1", "doc_type": "Billing Schedule", "label": "Agendamento de Cobrança", "type": "DocType"},
+  {"color": "#10B981", "doc_type": "Fee Structure",   "label": "Plano de Propinas",       "type": "DocType"},
+  {"color": "#14B8A6", "doc_type": "Student",         "label": "Aluno",                   "type": "DocType"}
  ],
  "title": "Tesouraria"
 }

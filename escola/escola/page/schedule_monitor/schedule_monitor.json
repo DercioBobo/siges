@@ -1,0 +1,18 @@
+{
+ "content": "1",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "schedule-monitor",
+ "owner": "Administrator",
+ "page_name": "schedule-monitor",
+ "restrict_to_domain": "",
+ "roles": [
+  {"role": "Diretor Escolar"},
+  {"role": "Secretaria Escolar"}
+ ],
+ "system_page": 0,
+ "title": "Monitor de Agendamentos"
+}
