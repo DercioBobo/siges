@@ -8,14 +8,15 @@
   "naming_series",
   "sb_identificacao",
   "cycle_name",
+  "sb_config",
   "academic_year",
-  "school_class",
-  "class_group",
   "posting_date",
+  "cb_config",
+  "school_class",
   "due_date",
-  "sb_contexto",
-  "billing_period_label",
+  "sb_cobranca",
   "billing_mode",
+  "cb_cobranca",
   "status",
   "sb_resultado",
   "total_students",
@@ -47,6 +48,11 @@
    "unique": 1
   },
   {
+   "fieldname": "sb_config",
+   "fieldtype": "Section Break",
+   "label": "Configuração"
+  },
+  {
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -55,26 +61,22 @@
    "reqd": 1
   },
   {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data de Facturação",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_config",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "school_class",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
    "options": "School Class",
-   "fetch_from": "class_group.school_class",
-   "fetch_if_empty": 1
-  },
-  {
-   "fieldname": "class_group",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Turma",
-   "options": "Class Group"
-  },
-  {
-   "fieldname": "posting_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Data de Facturação",
    "reqd": 1
   },
   {
@@ -85,16 +87,9 @@
    "reqd": 1
   },
   {
-   "fieldname": "sb_contexto",
+   "fieldname": "sb_cobranca",
    "fieldtype": "Section Break",
-   "label": "Contexto de Cobrança"
-  },
-  {
-   "fieldname": "billing_period_label",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Período de Cobrança",
-   "reqd": 1
+   "label": "Cobrança"
   },
   {
    "fieldname": "billing_mode",
@@ -103,6 +98,10 @@
    "label": "Modo de Cobrança",
    "options": "\nÚnica\nMensal\nTrimestral\nAnual",
    "reqd": 1
+  },
+  {
+   "fieldname": "cb_cobranca",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "status",
@@ -121,7 +120,6 @@
   {
    "fieldname": "total_students",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "Total de Alunos",
    "read_only": 1
   },

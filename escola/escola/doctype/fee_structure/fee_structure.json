@@ -8,7 +8,6 @@
   "naming_series",
   "sb_identificacao",
   "structure_name",
-  "academic_year",
   "school_class",
   "is_active",
   "sb_linhas",
@@ -36,14 +35,6 @@
    "label": "Nome do Plano",
    "reqd": 1,
    "unique": 1
-  },
-  {
-   "fieldname": "academic_year",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Ano Lectivo",
-   "options": "Academic Year",
-   "description": "Opcional. Se não preenchido, o plano aplica-se a todos os anos lectivos."
   },
   {
    "fieldname": "school_class",

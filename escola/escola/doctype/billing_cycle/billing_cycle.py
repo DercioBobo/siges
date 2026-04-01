@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
+from escola.escola.doctype.student.student import ensure_customer_for_student
 
 
 class BillingCycle(Document):
@@ -60,8 +61,6 @@ def generate_invoices(doc_name):
     }
     if cycle.academic_year:
         sga_filters["academic_year"] = cycle.academic_year
-    if cycle.class_group:
-        sga_filters["class_group"] = cycle.class_group
 
     sgAs = frappe.get_all(
         "Student Group Assignment",
@@ -72,24 +71,40 @@ def generate_invoices(doc_name):
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
     auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
 
+    # --- Phase 1: pre-create all customers before touching invoices ---
+    # A customer failure skips that student but never leaves invoices in a partial state.
+    customer_map = {}
+    pre_errors = []
+    for sga in sgAs:
+        if _invoice_exists(cycle, sga.student):
+            continue
+        try:
+            customer_map[sga.student] = ensure_customer_for_student(sga.student)
+        except Exception as e:
+            pre_errors.append(_("Cliente não criado para {0}: {1}").format(sga.student, str(e)))
+
+    # --- Phase 2: create invoices only for students with a valid customer ---
     created = 0
     skipped = 0
     total_amount = 0.0
 
     for sga in sgAs:
-        if _invoice_exists(cycle.name, sga.student):
+        if _invoice_exists(cycle, sga.student):
             skipped += 1
             continue
 
-        customer = _ensure_customer(sga.student)
+        customer = customer_map.get(sga.student)
+        if not customer:
+            skipped += 1
+            continue
 
         si = frappe.new_doc("Sales Invoice")
         si.customer = customer
         si.company = default_company
         si.posting_date = cycle.posting_date
         si.due_date = cycle.due_date
-        si.remarks = "{period} | Aluno: {student} | Ano: {year}".format(
-            period=cycle.billing_period_label,
+        si.remarks = "{mode} | Aluno: {student} | Ano: {year}".format(
+            mode=cycle.billing_mode or "",
             student=sga.student,
             year=cycle.academic_year or "",
         )
@@ -127,29 +142,16 @@ def generate_invoices(doc_name):
         "created": created,
         "skipped": skipped,
         "total_amount": total_amount,
+        "errors": pre_errors,
     }
 
 
 def _find_fee_structure(school_class, academic_year=None):
-    """
-    Find the active Fee Structure for a class.
-    Prefers year-specific match; falls back to a structure with no academic_year set.
-    """
-    if academic_year:
-        name = frappe.db.get_value(
-            "Fee Structure",
-            {"school_class": school_class, "academic_year": academic_year, "is_active": 1},
-            "name",
-        )
-        if name:
-            return name
-
-    # Fall back: active structure with no year restriction
+    """Find the single active Fee Structure for a class."""
     return frappe.db.get_value(
         "Fee Structure",
         {"school_class": school_class, "is_active": 1},
         "name",
-        order_by="creation desc",
     )
 
 
@@ -203,61 +205,27 @@ def cancel_cycle(doc_name):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _ensure_customer(student_name):
+
+def _invoice_exists(cycle, student_name):
     """
-    Return the ERPNext Customer name for this student, creating one if needed.
-    Safe to call multiple times — never creates duplicates.
+    Check whether a non-cancelled invoice already exists for this student
+    with the same billing_mode and posting_date, across any cycle.
+    Prevents duplicates when two cycles are created for the same period.
     """
     try:
-        existing = frappe.db.get_value("Customer", {"escola_student": student_name}, "name")
-        if existing:
-            return existing
-    except Exception:
-        pass
-
-    student = (
-        frappe.db.get_value("Student", student_name, ["full_name", "student_code"], as_dict=True)
-        or frappe._dict()
-    )
-    full_name = student.get("full_name") or student_name
-
-    customer = frappe.new_doc("Customer")
-    customer.customer_name = full_name
-    customer.customer_type = "Individual"
-    customer.customer_group = (
-        frappe.db.get_single_value("School Settings", "default_customer_group")
-        or frappe.db.get_single_value("Selling Settings", "customer_group")
-        or "All Customer Groups"
-    )
-    customer.territory = (
-        frappe.db.get_single_value("School Settings", "default_territory")
-        or frappe.db.get_single_value("Selling Settings", "territory")
-        or "All Territories"
-    )
-
-    try:
-        customer.escola_student = student_name
-    except Exception:
-        pass
-
-    customer.insert(ignore_permissions=True)
-    return customer.name
-
-
-def _invoice_exists(billing_cycle_name, student_name):
-    """Check whether a non-cancelled Sales Invoice already exists for this billing_cycle + student."""
-    try:
-        return bool(
-            frappe.db.get_value(
-                "Sales Invoice",
-                {
-                    "escola_billing_cycle": billing_cycle_name,
-                    "escola_student": student_name,
-                    "docstatus": ("!=", 2),
-                },
-                "name",
-            )
-        )
+        return bool(frappe.db.sql(
+            """
+            SELECT si.name
+            FROM `tabSales Invoice` si
+            JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
+            WHERE si.escola_student = %s
+              AND si.docstatus != 2
+              AND bc.billing_mode = %s
+              AND si.posting_date = %s
+            LIMIT 1
+            """,
+            (student_name, cycle.billing_mode, cycle.posting_date),
+        ))
     except Exception:
         return False
 

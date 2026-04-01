@@ -126,6 +126,12 @@ class Student(Document):
         self._sync_full_name()
         self._generate_student_code()
 
+    def after_insert(self):
+        try:
+            ensure_customer_for_student(self.name)
+        except Exception:
+            pass  # never block student creation
+
     def before_save(self):
         self._sync_full_name()
         self.idade = _calc_age(self.date_of_birth)
@@ -152,3 +158,48 @@ class Student(Document):
         else:
             seq = 1
         self.student_code = "ALU-{:05d}".format(seq)
+
+
+# ---------------------------------------------------------------------------
+# Customer provisioning
+# ---------------------------------------------------------------------------
+
+def ensure_customer_for_student(student_name):
+    """
+    Return the ERPNext Customer linked to this student, creating one if needed.
+    Safe to call multiple times — never creates duplicates.
+    """
+    try:
+        existing = frappe.db.get_value("Customer", {"escola_student": student_name}, "name")
+        if existing:
+            return existing
+    except Exception:
+        pass
+
+    student = (
+        frappe.db.get_value("Student", student_name, ["full_name", "student_code"], as_dict=True)
+        or frappe._dict()
+    )
+    full_name = student.get("full_name") or student_name
+
+    customer = frappe.new_doc("Customer")
+    customer.customer_name = full_name
+    customer.customer_type = "Individual"
+    customer.customer_group = (
+        frappe.db.get_single_value("School Settings", "default_customer_group")
+        or frappe.db.get_single_value("Selling Settings", "customer_group")
+        or "All Customer Groups"
+    )
+    customer.territory = (
+        frappe.db.get_single_value("School Settings", "default_territory")
+        or frappe.db.get_single_value("Selling Settings", "territory")
+        or "All Territories"
+    )
+
+    try:
+        customer.escola_student = student_name
+    except Exception:
+        pass
+
+    customer.insert(ignore_permissions=True)
+    return customer.name

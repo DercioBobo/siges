@@ -32,12 +32,19 @@ frappe.ui.form.on("Billing Cycle", {
                         freeze_message: __("A gerar facturas..."),
                         callback(r) {
                             if (r.exc) return;
-                            const { created, skipped, total_amount } = r.message;
+                            const { created, skipped, total_amount, errors } = r.message;
                             if (created === 0 && skipped === 0) {
                                 frappe.msgprint(__("Nenhuma factura criada. Verifique se existe um Plano de Propinas activo para a Classe e se há alunos matriculados."));
                             } else {
-                                frappe.msgprint(__("{0} factura(s) criada(s), {1} ignorada(s). Total: {2}.",
-                                    [created, skipped, format_currency(total_amount)]));
+                                let msg = __("{0} factura(s) criada(s), {1} ignorada(s). Total: {2}.",
+                                    [created, skipped, format_currency(total_amount)]);
+                                if (errors && errors.length)
+                                    msg += "<br><br><b>" + __("Erros de cliente ({0}):", [errors.length])
+                                        + "</b><br>" + errors.join("<br>");
+                                frappe.msgprint({
+                                    message: msg,
+                                    indicator: errors && errors.length ? "orange" : "green",
+                                });
                             }
                             frm.reload_doc();
                         },
@@ -123,12 +130,10 @@ frappe.ui.form.on("Billing Cycle", {
 
     academic_year(frm) {
         frm.set_value("school_class", null);
-        frm.set_value("class_group", null);
         set_queries(frm);
     },
 
     school_class(frm) {
-        frm.set_value("class_group", null);
         set_queries(frm);
     },
 });
@@ -138,10 +143,6 @@ frappe.ui.form.on("Billing Cycle", {
 // ---------------------------------------------------------------------------
 
 function set_queries(frm) {
-    const cg_filters = { is_active: 1 };
-    if (frm.doc.academic_year) cg_filters.academic_year = frm.doc.academic_year;
-    if (frm.doc.school_class)  cg_filters.school_class  = frm.doc.school_class;
-    frm.set_query("class_group",  () => ({ filters: cg_filters }));
     frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
 }
 

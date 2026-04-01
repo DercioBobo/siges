@@ -46,25 +46,20 @@ class FeeStructure(Document):
             seen.add(key)
 
     def _validate_uniqueness(self):
-        """Only one active Fee Structure per school_class (+ academic_year if set)."""
+        """Only one active Fee Structure per school_class."""
         if not self.is_active or not self.school_class:
             return
 
-        filters = {
+        existing = frappe.db.get_value("Fee Structure", {
             "school_class": self.school_class,
             "is_active": 1,
             "name": ("!=", self.name),
-        }
-        if self.academic_year:
-            filters["academic_year"] = self.academic_year
-
-        existing = frappe.db.get_value("Fee Structure", filters, "name")
+        }, "name")
         if existing:
-            year_label = f" / {self.academic_year}" if self.academic_year else ""
             frappe.throw(
-                _("Já existe um Plano de Propinas activo para a Classe <b>{0}{1}</b>: <b>{2}</b>. "
+                _("Já existe um Plano de Propinas activo para a Classe <b>{0}</b>: <b>{1}</b>. "
                   "Desactive o plano anterior antes de criar um novo.").format(
-                    self.school_class, year_label, existing
+                    self.school_class, existing
                 ),
                 title=_("Plano duplicado"),
             )
