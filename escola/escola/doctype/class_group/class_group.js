@@ -3,6 +3,14 @@ frappe.ui.form.on("Class Group", {
         escola.utils.auto_fill_academic_year(frm);
     },
 
+    school_class(frm) {
+        if (frm.is_new()) _suggest_group_name(frm);
+    },
+
+    academic_year(frm) {
+        if (frm.is_new()) _suggest_group_name(frm);
+    },
+
     refresh(frm) {
         frm.set_query("class_teacher", () => ({ filters: { is_active: 1 } }));
 
@@ -475,6 +483,36 @@ function manage_students_dialog(frm) {
         d.$body.find("#add-search").focus();
         _do_search("");
     }, 120);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-suggest group_name on new docs
+// ---------------------------------------------------------------------------
+
+async function _suggest_group_name(frm) {
+    if (!frm.doc.school_class || !frm.doc.academic_year) return;
+
+    const [sc_val, count_r] = await Promise.all([
+        frappe.db.get_value("School Class", frm.doc.school_class, "class_name"),
+        frappe.call({
+            method: "frappe.client.get_count",
+            args: {
+                doctype: "Class Group",
+                filters: {
+                    school_class:  frm.doc.school_class,
+                    academic_year: frm.doc.academic_year,
+                },
+            },
+        }),
+    ]);
+
+    const class_name = sc_val?.class_name || frm.doc.school_class;
+    const n          = count_r?.message || 0;
+    const letter     = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.min(n, 25)];
+    const years      = (frm.doc.academic_year || "").match(/\d{4}/g) || [];
+    const yy         = years.length ? years[years.length - 1].slice(-2) : "??";
+
+    frm.set_value("group_name", `${class_name} ${letter}-${yy}`);
 }
 
 // ---------------------------------------------------------------------------

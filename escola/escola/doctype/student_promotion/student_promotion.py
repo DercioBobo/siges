@@ -268,13 +268,33 @@ def _bucket_existing(g, count):
     }
 
 
+def _turma_letter(n_existing, offset=0):
+    return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[min(n_existing + offset, 25)]
+
+
+def _turma_name(school_class, academic_year, n_existing, offset=0):
+    """
+    Build the turma group_name following the convention:
+      {class_name} {letter}-{YY}
+    Examples: 1ª Classe A-26  8ª Classe B-26  12ª Classe C-27
+    """
+    import re
+    # Last 4-digit year in the academic_year string (e.g. "2025/2026" → 2026)
+    years = re.findall(r"\d{4}", str(academic_year or ""))
+    yy    = years[-1][-2:] if years else "??"
+
+    class_name = frappe.db.get_value("School Class", school_class, "class_name") if school_class else None
+    name_str   = class_name if class_name else (school_class or "?")
+
+    letter = _turma_letter(n_existing, offset)
+    return f"{name_str} {letter}-{yy}"
+
+
 def _bucket_new(temp_id, school_class, academic_year, count, n_existing, default_cap, offset=0):
-    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    letter  = letters[min(n_existing + offset, 25)]
     return {
         "type":           "new",
         "temp_id":        temp_id,
-        "suggested_name": f"Turma {letter}",
+        "suggested_name": _turma_name(school_class, academic_year, n_existing, offset),
         "school_class":   school_class,
         "academic_year":  academic_year,
         "count":          count,

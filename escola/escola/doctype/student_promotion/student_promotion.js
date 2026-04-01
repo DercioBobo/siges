@@ -19,7 +19,7 @@ frappe.ui.form.on("Student Promotion", {
 
 			if (can_distrib) {
 				const already_done = frm.doc.status === "Finalizado";
-				frm.add_custom_button(
+				const $btn = frm.add_custom_button(
 					already_done
 						? __("Redistribuir por Turmas")
 						: __("Distribuir por Turmas"),
@@ -32,9 +32,9 @@ frappe.ui.form.on("Student Promotion", {
 						} else {
 							_show_distribution_modal(frm);
 						}
-					},
-					__("Acções")
+					}
 				);
+				$btn.removeClass("btn-default").addClass("btn-primary");
 			}
 		}
 	},
@@ -345,15 +345,19 @@ async function _show_distribution_modal(frm) {
 		if (!result.message) return;
 		const m = result.message;
 
-		let msg = __("Inscrições criadas: <b>{0}</b> | Ignoradas: <b>{1}</b>", [m.created, m.skipped]);
-		if (m.created_groups && m.created_groups.length) {
-			msg += `<br>${__("Turmas criadas:")} <b>${m.created_groups.join(", ")}</b>`;
-		}
-		if (m.errors && m.errors.length) {
+		const parts = [__("<b>{0}</b> aluno(s) alocado(s) às turmas", [m.created])];
+		if (m.skipped)
+			parts.push(__("<b>{0}</b> já alocado(s) anteriormente — ignorados", [m.skipped]));
+		if (m.created_groups && m.created_groups.length)
+			parts.push(__("<b>{0}</b> turma(s) nova(s) criada(s): {1}",
+				[m.created_groups.length, m.created_groups.join(", ")]));
+
+		let msg = parts.join("<br>");
+		if (m.errors && m.errors.length)
 			msg += "<br><br><b>" + __("Avisos:") + "</b><br>" + m.errors.join("<br>");
-		}
+
 		frappe.msgprint({
-			title:     __("Resultado"),
+			title:     __("Alocação Concluída"),
 			message:   msg,
 			indicator: m.errors && m.errors.length ? "orange" : "green",
 		});
@@ -450,18 +454,24 @@ function _render_spm_plan(prefix, option, state) {
 	for (const ng of (option.new_groups || [])) {
 		const v = state.new_vals[ng.temp_id] || { name: ng.suggested_name, capacity: ng.capacity };
 		rows.push(`
-		<div class="spm-plan-row">
+		<div class="spm-plan-row" style="flex-wrap:wrap;gap:6px 8px;">
 			<span class="spm-new-badge">${__("Nova")}</span>
-			<input class="spm-name-inp" type="text"
-				value="${frappe.utils.escape_html(v.name || "")}"
-				placeholder="${__("Nome da turma")}"
-				data-field="name" data-tid="${ng.temp_id}">
+			<div style="display:flex;flex-direction:column;flex:1;min-width:120px;gap:2px;">
+				<input class="spm-name-inp" type="text"
+					value="${frappe.utils.escape_html(v.name || "")}"
+					placeholder="${__("Nome da turma")}"
+					data-field="name" data-tid="${ng.temp_id}">
+				<span style="font-size:10px;color:var(--text-muted);">
+					${__("Formato:")} <code style="font-size:10px;">{Classe} {letra}-{AA}</code>
+					&nbsp;·&nbsp; ${__("Ex:")} <b>${frappe.utils.escape_html(ng.suggested_name)}</b>
+				</span>
+			</div>
 			<span class="spm-plan-arrow">→</span>
 			<span class="spm-plan-count">${ng.count} ${__("alunos")}</span>
 			<span class="spm-cap-label">${__("Cap.:")}</span>
-			<input class="spm-cap-inp" type="number" min="0"
-				value="${v.capacity || ""}"
-				placeholder="${__("0 = ilimitado")}"
+			<input class="spm-cap-inp" type="text" inputmode="numeric" pattern="[0-9]*"
+				value="${v.capacity > 0 ? v.capacity : ""}"
+				placeholder="${__("0 = ilim.")}"
 				data-field="cap" data-tid="${ng.temp_id}">
 		</div>`);
 	}

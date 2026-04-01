@@ -17,7 +17,8 @@
       "Bash(python3 -c \"import sys; [print\\(l.rstrip\\(\\)\\) for l in sys.stdin if any\\(ord\\(c\\)>127 for c in l\\)]\")",
       "Bash(grep -rn \"\"name\"\": C:UsersDBoboPhpstormProjectssigesescolaescoladoctype --include=*.json)",
       "Bash(python3 -c \":*)",
-      "Bash(/c/Python313/python -c \":*)"
+      "Bash(/c/Python313/python -c \":*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('escola/escola/doctype/school_class/school_class.json'\\)\\); [print\\(f['fieldname'], f['fieldtype'], f.get\\('label',''\\)\\) for f in d.get\\('fields',[]\\)]\")"
     ]
   }
 }
