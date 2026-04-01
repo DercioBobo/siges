@@ -27,9 +27,9 @@ def get_turmas_summary(school_class):
 
 class SchoolClass(Document):
     def validate(self):
-        if self.class_level is not None and self.class_level < 1:
+        if self.class_level is not None and self.class_level < 0:
             frappe.throw(
-                frappe._("O Nível da Classe deve ser um número positivo."),
+                frappe._("O Nível da Classe não pode ser negativo."),
                 title=frappe._("Nível inválido"),
             )
         if self.minimum_passing_grade is not None and self.minimum_passing_grade < 0:

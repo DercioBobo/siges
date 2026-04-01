@@ -61,7 +61,7 @@
    "label": "Nível",
    "reqd": 1,
    "in_list_view": 1,
-   "description": "Número ordinal da classe (ex.: 1, 2, 8, 12)"
+   "description": "Número ordinal da classe (ex.: 0 para Pré-Primária, 1, 2, 8, 12)"
   },
   {
    "fieldname": "column_break_2",
