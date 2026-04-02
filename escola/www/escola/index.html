@@ -535,15 +535,20 @@
   const SCALE_MAX = {{ grading_scale_max }};
   const PASS_GRADE = {{ minimum_passing_grade }};
 
-  // ── API helper ──────────────────────────────────────────────────────────
+  // ── API helper (GET — no CSRF needed for allow_guest endpoints) ─────────
   async function fetchApi(method, args) {
-    const r = await fetch('/api/method/' + API + method, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': frappe.csrf_token },
-      body: JSON.stringify(args || {})
-    });
+    let url = '/api/method/' + API + method;
+    if (args && Object.keys(args).length > 0) {
+      url += '?' + new URLSearchParams(args);
+    }
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const d = await r.json();
-    if (d.exc) throw new Error('Erro no servidor');
+    if (!r.ok || d.exc) {
+      // Surface a readable server message if present
+      let msg = 'Erro no servidor';
+      try { msg = JSON.parse(d._server_messages || '[]').map(m => JSON.parse(m).message).join(' ') || msg; } catch(e) {}
+      throw new Error(msg);
+    }
     return d.message;
   }
 
