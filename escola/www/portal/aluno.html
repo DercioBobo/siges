@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ student_full_name }} — {{ school_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { primary: '#024ba5' } } } }
+  </script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .tab-btn.active { border-bottom: 2px solid #024ba5; color: #024ba5; font-weight: 600; }
+    .tab-btn { border-bottom: 2px solid transparent; }
+    @media (max-width: 640px) { .timetable-wrap { overflow-x: auto; } }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-[#024ba5] shadow-lg">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-3">
+          {% if school_logo %}
+          <img src="{{ school_logo }}" alt="Logo" class="h-9 w-9 rounded-lg object-cover bg-white/20">
+          {% else %}
+          <div class="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center">
+            <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7m0 0L3 9m9 5l9-5"/>
+            </svg>
+          </div>
+          {% endif %}
+          <span class="text-white font-bold text-lg tracking-tight">{{ school_name }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/portal" class="text-blue-100 hover:text-white text-sm flex items-center gap-1 transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            <span class="hidden sm:inline">Início</span>
+          </a>
+          <a href="/portal/perfil" class="text-blue-100 hover:text-white text-sm transition-colors hidden sm:block">
+            Perfil
+          </a>
+          <a href="/login?action=Logout"
+             class="bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1.5 rounded-lg transition-colors">
+            Sair
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Student header -->
+  <div class="bg-white border-b border-slate-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-5">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-[#024ba5] flex items-center justify-center shrink-0 shadow-sm">
+          <span class="text-white font-bold text-xl" id="avatar-initials">
+            {{ (student_full_name or '?').split()[:2] | map('first') | join('') | upper }}
+          </span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">{{ student_full_name }}</h1>
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+            {% if student_class %}
+            <span class="px-2.5 py-0.5 bg-[#e8f1fd] text-[#024ba5] rounded-md text-xs font-medium">{{ student_class }}</span>
+            {% endif %}
+            {% if student_class_group %}
+            <span class="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs">{{ student_class_group }}</span>
+            {% endif %}
+            {% if student_shift %}
+            <span class="px-2.5 py-0.5 rounded-md text-xs font-medium
+              {% if student_shift == 'Manhã' %}bg-yellow-50 text-yellow-700
+              {% elif student_shift == 'Tarde' %}bg-indigo-50 text-indigo-700
+              {% else %}bg-slate-100 text-slate-600{% endif %}">{{ student_shift }}</span>
+            {% endif %}
+            <span id="header-financial-badge"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex overflow-x-auto -mb-px gap-0 scrollbar-hide">
+        {% for tab_id, tab_label in [
+          ('resumo', 'Resumo'),
+          ('horario', 'Horário'),
+          ('notas', 'Notas'),
+          ('boletim', 'Boletim'),
+          ('presencas', 'Presenças'),
+          ('financeiro', 'Financeiro')
+        ] %}
+        <button
+          class="tab-btn shrink-0 px-4 sm:px-5 py-3 text-sm text-slate-500 hover:text-[#024ba5] transition-colors whitespace-nowrap"
+          data-tab="{{ tab_id }}"
+          onclick="switchTab('{{ tab_id }}')">
+          {{ tab_label }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab content -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    {% for tab_id in ['resumo', 'horario', 'notas', 'boletim', 'presencas', 'financeiro'] %}
+    <div id="panel-{{ tab_id }}" class="tab-panel hidden" data-tab="{{ tab_id }}"></div>
+    {% endfor %}
+  </main>
+
+  <script>
+    const STUDENT = "{{ student }}";
+    const API_BASE = 'escola.escola.portal_api.';
+    const loaded = new Set();
+    const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
+    const SHORT_DAYS = ['Seg','Ter','Qua','Qui','Sex'];
+
+    // ── API helper ──────────────────────────────────────────────────────────
+    async function api(method, args) {
+      const r = await fetch('/api/method/' + API_BASE + method, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': frappe.csrf_token,
+        },
+        body: JSON.stringify(args || {})
+      });
+      const d = await r.json();
+      if (d.exc) throw new Error(d._server_messages || 'Erro no servidor');
+      return d.message;
+    }
+
+    // ── Badge helpers ────────────────────────────────────────────────────────
+    function financialBadge(status) {
+      const cfg = {
+        'Regular':           'bg-green-100 text-green-700',
+        'Em Dívida':         'bg-amber-100 text-amber-800',
+        'Em Dívida Crítica': 'bg-orange-100 text-orange-700',
+        'Suspenso':          'bg-red-100 text-red-700',
+      };
+      return badge(status, cfg);
+    }
+    function resultBadge(r) {
+      const cfg = {
+        'Aprovado':  'bg-green-100 text-green-700',
+        'Promovido': 'bg-green-100 text-green-700',
+        'Transitou': 'bg-blue-100 text-blue-700',
+        'Reprovado': 'bg-red-100 text-red-700',
+        'Retido':    'bg-red-100 text-red-700',
+      };
+      return badge(r, cfg);
+    }
+    function invoiceStatusBadge(s) {
+      const cfg = {
+        'Paid':       'bg-green-100 text-green-700',
+        'Unpaid':     'bg-amber-100 text-amber-800',
+        'Overdue':    'bg-red-100 text-red-700',
+        'Return':     'bg-slate-100 text-slate-600',
+        'Credit Note':'bg-purple-100 text-purple-700',
+      };
+      const labels = { 'Paid':'Pago','Unpaid':'Por Pagar','Overdue':'Em Atraso','Return':'Devolvido','Credit Note':'Nota de Crédito' };
+      return badge(labels[s] || s, cfg, s);
+    }
+    function badge(label, cfg, key) {
+      const cls = cfg[key || label] || 'bg-slate-100 text-slate-600';
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${label || '—'}</span>`;
+    }
+
+    // ── Loading / empty states ───────────────────────────────────────────────
+    function spinner() {
+      return `<div class="flex justify-center py-16">
+        <div class="animate-spin h-9 w-9 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
+      </div>`;
+    }
+    function empty(msg) {
+      return `<div class="text-center py-16 text-slate-400 text-sm">${msg}</div>`;
+    }
+    function errorState() {
+      return `<div class="text-center py-16 text-red-500 text-sm">Erro ao carregar dados. Por favor tente novamente.</div>`;
+    }
+
+    // ── Card wrapper ─────────────────────────────────────────────────────────
+    function card(title, content, extra) {
+      return `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6 ${extra||''}">
+        ${title ? `<h3 class="text-base font-semibold text-slate-700 mb-4">${title}</h3>` : ''}
+        ${content}
+      </div>`;
+    }
+
+    // ── Tab switching ─────────────────────────────────────────────────────────
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.toggle('hidden', p.dataset.tab !== tab);
+      });
+      if (!loaded.has(tab)) {
+        loaded.add(tab);
+        loadTab(tab);
+      }
+    }
+
+    async function loadTab(tab) {
+      const panel = document.getElementById('panel-' + tab);
+      panel.innerHTML = spinner();
+      try {
+        if (tab === 'resumo')     await renderResumo(panel);
+        else if (tab === 'horario')    await renderHorario(panel);
+        else if (tab === 'notas')      await renderNotas(panel);
+        else if (tab === 'boletim')    await renderBoletim(panel);
+        else if (tab === 'presencas')  await renderPresencas(panel);
+        else if (tab === 'financeiro') await renderFinanceiro(panel);
+      } catch(e) {
+        panel.innerHTML = errorState();
+      }
+    }
+
+    // ── RESUMO ───────────────────────────────────────────────────────────────
+    async function renderResumo(panel) {
+      const d = await api('get_student_summary', { student: STUDENT });
+      const row = (label, val) => val
+        ? `<div><dt class="text-xs text-slate-400 mb-0.5">${label}</dt><dd class="text-sm font-medium text-slate-700">${val}</dd></div>`
+        : '';
+      panel.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          ${card('Dados Pessoais', `
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
+              ${row('Nome Completo', d.full_name)}
+              ${row('Nº do Aluno', d.student_code)}
+              ${row('Sexo', d.gender)}
+              ${row('Data de Nascimento', d.date_of_birth)}
+              ${row('Idade', d.idade ? d.idade + ' anos' : '')}
+              ${row('Local de Nascimento', d.place_of_birth)}
+              ${row('Nº do BI', d.bi_number)}
+              ${row('Data de Admissão', d.admission_date)}
+            </dl>
+          `)}
+          ${card('Situação Escolar', `
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
+              ${row('Classe', d.current_school_class)}
+              ${row('Turma', d.current_class_group)}
+              ${row('Turno', d.shift)}
+              ${row('Ano Lectivo', d.academic_year)}
+              ${row('Director de Turma', d.class_teacher)}
+              <div><dt class="text-xs text-slate-400 mb-1">Estado</dt><dd>${financialBadge(d.financial_status)}</dd></div>
+            </dl>
+          `)}
+          ${card('Contacto do Educando', `
+            <dl class="grid grid-cols-1 gap-y-4">
+              ${row('Telemóvel', d.phone)}
+              ${row('Morada', d.address)}
+            </dl>
+          `)}
+        </div>
+      `;
+    }
+
+    // ── HORÁRIO ───────────────────────────────────────────────────────────────
+    async function renderHorario(panel) {
+      const d = await api('get_student_timetable', { student: STUDENT });
+      if (!d.entries || d.entries.length === 0) {
+        panel.innerHTML = card('Horário Semanal', empty('Nenhum horário activo encontrado para esta turma.'));
+        return;
+      }
+
+      // Build entry map: day → slot → {subject, teacher, is_double}
+      const entryMap = {};
+      d.entries.forEach(e => {
+        if (!entryMap[e.day_of_week]) entryMap[e.day_of_week] = {};
+        entryMap[e.day_of_week][e.time_slot] = e;
+      });
+
+      // Subject colour palette (consistent per subject)
+      const palette = [
+        'bg-blue-50 text-blue-700 border-blue-200',
+        'bg-purple-50 text-purple-700 border-purple-200',
+        'bg-green-50 text-green-700 border-green-200',
+        'bg-pink-50 text-pink-700 border-pink-200',
+        'bg-orange-50 text-orange-700 border-orange-200',
+        'bg-teal-50 text-teal-700 border-teal-200',
+        'bg-indigo-50 text-indigo-700 border-indigo-200',
+        'bg-rose-50 text-rose-700 border-rose-200',
+      ];
+      const subjectColors = {};
+      let colorIdx = 0;
+      d.entries.forEach(e => {
+        if (e.subject && !subjectColors[e.subject]) {
+          subjectColors[e.subject] = palette[colorIdx++ % palette.length];
+        }
+      });
+
+      const daysPresent = DAYS.filter(day => d.entries.some(e => e.day_of_week === day));
+
+      let tableHtml = `
+        <div class="timetable-wrap">
+          <table class="w-full border-collapse text-sm min-w-[500px]">
+            <thead>
+              <tr>
+                <th class="p-2 text-left text-xs font-semibold text-slate-400 w-28 border-b border-slate-100">Horário</th>
+                ${daysPresent.map((day, i) => `
+                  <th class="p-2 text-center text-xs font-semibold text-slate-600 border-b border-slate-100">
+                    <span class="hidden sm:inline">${day.split('-')[0]}</span>
+                    <span class="sm:hidden">${SHORT_DAYS[DAYS.indexOf(day)]}</span>
+                  </th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>`;
+
+      d.time_slots.forEach(slot => {
+        const isBreak = (slot.slot_type || '').toLowerCase().includes('intervalo')
+                     || (slot.slot_type || '').toLowerCase().includes('break');
+        if (isBreak) {
+          tableHtml += `
+            <tr class="bg-slate-50">
+              <td colspan="${daysPresent.length + 1}" class="px-3 py-1.5 text-center text-xs text-slate-400 italic">
+                ${slot.label || 'Intervalo'} ${slot.start_time ? '· ' + slot.start_time.substring(0,5) : ''}
+              </td>
+            </tr>`;
+          return;
+        }
+        tableHtml += `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <td class="p-2 align-top">
+            <div class="text-xs font-medium text-slate-600">${slot.label || slot.name}</div>
+            ${slot.start_time ? `<div class="text-xs text-slate-400">${slot.start_time.substring(0,5)}${slot.end_time ? '–'+slot.end_time.substring(0,5):''}</div>` : ''}
+          </td>`;
+        daysPresent.forEach(day => {
+          const entry = (entryMap[day] || {})[slot.name];
+          if (entry && entry.subject) {
+            const cls = subjectColors[entry.subject] || 'bg-slate-50 text-slate-700 border-slate-200';
+            tableHtml += `
+              <td class="p-1.5 align-top">
+                <div class="border rounded-lg p-2 ${cls} ${entry.is_double ? 'ring-1 ring-current ring-opacity-30':''}" title="${entry.teacher||''}">
+                  <div class="text-xs font-semibold leading-tight">${entry.subject}</div>
+                  ${entry.teacher ? `<div class="text-xs opacity-70 mt-0.5 leading-tight truncate">${entry.teacher}</div>` : ''}
+                  ${entry.is_double ? `<div class="text-xs opacity-60 mt-0.5">Dobrado</div>` : ''}
+                </div>
+              </td>`;
+          } else {
+            tableHtml += `<td class="p-1.5"></td>`;
+          }
+        });
+        tableHtml += `</tr>`;
+      });
+
+      tableHtml += `</tbody></table></div>`;
+      panel.innerHTML = card('Horário Semanal', tableHtml);
+    }
+
+    // ── NOTAS ────────────────────────────────────────────────────────────────
+    async function renderNotas(panel) {
+      const d = await api('get_student_grades', { student: STUDENT });
+      if (!d.rows || d.rows.length === 0) {
+        panel.innerHTML = card('Notas', empty(`Nenhuma nota registada para o ano lectivo ${d.academic_year || 'actual'}.`));
+        return;
+      }
+
+      // Group: subject → term → [rows]
+      const bySubject = {};
+      d.rows.forEach(r => {
+        if (!bySubject[r.subject]) bySubject[r.subject] = {};
+        if (!bySubject[r.subject][r.academic_term]) bySubject[r.subject][r.academic_term] = [];
+        bySubject[r.subject][r.academic_term].push(r);
+      });
+
+      const terms = [...new Set(d.rows.map(r => r.academic_term))].sort();
+
+      let html = `<div class="space-y-5">`;
+      Object.entries(bySubject).sort(([a],[b]) => a.localeCompare(b)).forEach(([subj, byTerm]) => {
+        let rows = '';
+        Object.entries(byTerm).sort(([a],[b]) => a.localeCompare(b)).forEach(([term, entries]) => {
+          entries.forEach(e => {
+            const scoreDisplay = e.is_absent
+              ? `<span class="text-slate-400 italic text-xs">S/Nota</span>`
+              : `<span class="font-semibold ${(e.score||0) >= 10 ? 'text-green-700' : 'text-red-600'}">${e.score !== null ? e.score : '—'}</span><span class="text-slate-400 text-xs">/${e.max_score||20}</span>`;
+            rows += `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
+              <td class="py-2.5 px-3 text-xs text-slate-500">${term || '—'}</td>
+              <td class="py-2.5 px-3 text-xs text-slate-600">${e.evaluation_type || '—'}</td>
+              <td class="py-2.5 px-3 text-xs text-slate-600">${e.assessment_name || '—'}</td>
+              <td class="py-2.5 px-3 text-xs text-slate-400">${e.assessment_date || ''}</td>
+              <td class="py-2.5 px-3 text-right">${scoreDisplay}</td>
+              <td class="py-2.5 px-3 text-center">${e.is_approved ? '<span class="text-green-600 text-xs">✓</span>' : (e.is_absent ? '' : '<span class="text-red-500 text-xs">✗</span>')}</td>
+            </tr>`;
+          });
+        });
+        html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-3 bg-[#e8f1fd] border-b border-blue-100">
+            <h4 class="font-semibold text-[#024ba5] text-sm">${subj}</h4>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Período</th>
+                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Tipo</th>
+                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Avaliação</th>
+                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Data</th>
+                <th class="py-2 px-3 text-right text-xs font-medium text-slate-400">Nota</th>
+                <th class="py-2 px-3 text-center text-xs font-medium text-slate-400">✓</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+      panel.innerHTML = html;
+    }
+
+    // ── BOLETIM ───────────────────────────────────────────────────────────────
+    async function renderBoletim(panel) {
+      const d = await api('get_student_boletim', { student: STUDENT });
+      const aa = d.annual_assessment;
+      const rc = d.report_card;
+      const rows = d.report_card_rows || [];
+
+      if (!aa && !rc) {
+        panel.innerHTML = card('Boletim', empty(`Nenhum boletim disponível para o ano lectivo ${d.academic_year || 'actual'}.`));
+        return;
+      }
+
+      let html = `<div class="space-y-5">`;
+
+      // Annual summary card
+      if (aa) {
+        const avg = v => v !== null && v !== undefined ? `<span class="font-semibold text-slate-800">${parseFloat(v).toFixed(1)}</span>` : '<span class="text-slate-300">—</span>';
+        html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6">
+          <h3 class="text-base font-semibold text-slate-700 mb-4">Resumo Anual</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
+              <div class="text-xs text-slate-500 mb-1">1º Período</div>
+              <div class="text-2xl">${avg(aa.term_1_average)}</div>
+            </div>
+            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
+              <div class="text-xs text-slate-500 mb-1">2º Período</div>
+              <div class="text-2xl">${avg(aa.term_2_average)}</div>
+            </div>
+            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
+              <div class="text-xs text-slate-500 mb-1">3º Período</div>
+              <div class="text-2xl">${avg(aa.term_3_average)}</div>
+            </div>
+            <div class="bg-[#024ba5] rounded-xl p-4 text-center">
+              <div class="text-xs text-blue-200 mb-1">Média Final</div>
+              <div class="text-2xl text-white font-bold">${avg(aa.final_grade)}</div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-4">
+            <div><span class="text-xs text-slate-400 mr-2">Resultado:</span>${resultBadge(aa.result)}</div>
+            ${aa.total_absences != null ? `<div><span class="text-xs text-slate-400 mr-2">Faltas totais:</span><span class="font-medium text-slate-700">${aa.total_absences}</span></div>` : ''}
+            ${aa.remarks ? `<div class="text-xs text-slate-500 italic">${aa.remarks}</div>` : ''}
+          </div>
+        </div>`;
+      }
+
+      // Report card rows
+      if (rc && rows.length > 0) {
+        let tableRows = rows.map(r => `
+          <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+            <td class="py-3 px-4 text-sm text-slate-700">${r.subject}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="font-semibold ${(r.final_grade||0) >= 10 ? 'text-green-700':'text-red-600'}">${r.final_grade !== null ? parseFloat(r.final_grade).toFixed(1) : '—'}</span>
+            </td>
+            <td class="py-3 px-4 text-center">${resultBadge(r.result)}</td>
+            <td class="py-3 px-4 text-xs text-slate-400">${r.remarks || ''}</td>
+          </tr>`).join('');
+
+        let footer = '';
+        if (rc.overall_average != null) {
+          footer = `<tfoot><tr class="bg-slate-50 font-semibold">
+            <td class="py-3 px-4 text-sm">Média Geral</td>
+            <td class="py-3 px-4 text-center text-[#024ba5] font-bold">${parseFloat(rc.overall_average).toFixed(1)}</td>
+            <td class="py-3 px-4 text-center">${resultBadge(rc.final_decision)}</td>
+            <td></td>
+          </tr></tfoot>`;
+        }
+
+        html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-700">Classificações por Disciplina</h3>
+            <span class="text-xs text-slate-400">${d.academic_year || ''}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Disciplina</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Nota Final</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Resultado</th>
+                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Observação</th>
+              </tr></thead>
+              <tbody>${tableRows}</tbody>
+              ${footer}
+            </table>
+          </div>
+        </div>`;
+
+        // Comments
+        if (rc.teacher_comment || rc.management_comment) {
+          html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            ${rc.teacher_comment ? card('Observação do Professor', `<p class="text-sm text-slate-600 italic">"${rc.teacher_comment}"</p>`) : ''}
+            ${rc.management_comment ? card('Observação da Direcção', `<p class="text-sm text-slate-600 italic">"${rc.management_comment}"</p>`) : ''}
+          </div>`;
+        }
+      }
+
+      html += `</div>`;
+      panel.innerHTML = html;
+    }
+
+    // ── PRESENÇAS ─────────────────────────────────────────────────────────────
+    async function renderPresencas(panel) {
+      const d = await api('get_student_attendance', { student: STUDENT });
+      if (!d.rows || d.rows.length === 0) {
+        panel.innerHTML = card('Presenças', empty(`Nenhum registo de presenças para o ano lectivo ${d.academic_year || 'actual'}.`));
+        return;
+      }
+
+      const total = d.rows.reduce((s, r) => s + (r.total_absences || 0), 0);
+      const atRisk = d.rows.some(r => r.at_risk);
+
+      let rows = d.rows.map(r => {
+        const risk = r.at_risk
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Em Risco</span>`
+          : `<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Normal</span>`;
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
+          <td class="py-3 px-4 text-sm text-slate-700">${r.academic_term || '—'}</td>
+          <td class="py-3 px-4 text-center text-sm font-medium text-slate-600">${r.justified_absences || 0}</td>
+          <td class="py-3 px-4 text-center text-sm font-medium text-slate-600">${r.unjustified_absences || 0}</td>
+          <td class="py-3 px-4 text-center text-sm font-bold text-slate-800">${r.total_absences || 0}</td>
+          <td class="py-3 px-4 text-center">${risk}</td>
+        </tr>`;
+      }).join('');
+
+      const summaryColor = atRisk ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50';
+      const summaryText = atRisk ? 'text-red-700' : 'text-green-700';
+
+      panel.innerHTML = `<div class="space-y-5">
+        <div class="flex flex-wrap gap-4">
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 min-w-[160px]">
+            <div class="w-10 h-10 rounded-xl bg-[#e8f1fd] flex items-center justify-center">
+              <svg class="h-5 w-5 text-[#024ba5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <div><div class="text-xs text-slate-400">Total de Faltas</div><div class="text-2xl font-bold text-slate-800">${total}</div></div>
+          </div>
+          ${d.max_threshold > 0 ? `<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 min-w-[160px]">
+            <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center">
+              <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </div>
+            <div><div class="text-xs text-slate-400">Limite de Alerta</div><div class="text-2xl font-bold text-slate-800">${d.max_threshold}</div></div>
+          </div>` : ''}
+          ${atRisk ? `<div class="rounded-2xl border ${summaryColor} p-5 flex items-center gap-3">
+            <svg class="h-5 w-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <p class="text-sm ${summaryText} font-medium">O educando tem presenças em risco em pelo menos um período.</p>
+          </div>` : ''}
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-100">
+            <h3 class="text-base font-semibold text-slate-700">Faltas por Período</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Período</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Justificadas</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Injustificadas</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Total</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Situação</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ── FINANCEIRO ────────────────────────────────────────────────────────────
+    async function renderFinanceiro(panel) {
+      const d = await api('get_student_invoices', { student: STUDENT });
+
+      const fmtMZN = v => new Intl.NumberFormat('pt-MZ', { style:'currency', currency:'MZN', minimumFractionDigits:2 }).format(v || 0);
+
+      const statusColor = {
+        'Regular':           'bg-green-100 text-green-700 border-green-200',
+        'Em Dívida':         'bg-amber-100 text-amber-700 border-amber-200',
+        'Em Dívida Crítica': 'bg-orange-100 text-orange-700 border-orange-200',
+        'Suspenso':          'bg-red-100 text-red-700 border-red-200',
+      };
+      const fsCls = statusColor[d.financial_status] || 'bg-slate-100 text-slate-600 border-slate-200';
+
+      const summaryHtml = `
+        <div class="flex flex-wrap gap-4 mb-5">
+          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center gap-4 min-w-[180px]">
+            <div class="w-10 h-10 rounded-xl bg-[#e8f1fd] flex items-center justify-center">
+              <svg class="h-5 w-5 text-[#024ba5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">Em Dívida</div>
+              <div class="text-lg font-bold text-slate-800">${fmtMZN(d.total_outstanding)}</div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border ${fsCls} shadow-sm p-5 flex items-center gap-4 min-w-[180px]">
+            <div class="w-10 h-10 rounded-xl bg-white/60 flex items-center justify-center">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs opacity-70">Estado Financeiro</div>
+              <div class="text-base font-semibold">${d.financial_status || '—'}</div>
+            </div>
+          </div>
+        </div>`;
+
+      if (!d.invoices || d.invoices.length === 0) {
+        panel.innerHTML = summaryHtml + card('Facturas', empty('Nenhuma factura registada.'));
+        return;
+      }
+
+      const invRows = d.invoices.map(inv => {
+        const overdue = inv.status === 'Overdue' || (inv.outstanding_amount > 0 && inv.status !== 'Paid');
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 ${overdue ? 'bg-red-50/30':''}">
+          <td class="py-3 px-4 text-sm text-slate-600">${inv.posting_date || '—'}</td>
+          <td class="py-3 px-4 text-sm ${overdue?'text-red-600 font-medium':'text-slate-500'}">${inv.due_date || '—'}</td>
+          <td class="py-3 px-4 text-sm text-right font-medium text-slate-700">${fmtMZN(inv.grand_total)}</td>
+          <td class="py-3 px-4 text-sm text-right ${inv.outstanding_amount > 0 ?'text-red-600 font-semibold':'text-green-600'}">${fmtMZN(inv.outstanding_amount)}</td>
+          <td class="py-3 px-4 text-center">${invoiceStatusBadge(inv.status)}</td>
+        </tr>`;
+      }).join('');
+
+      panel.innerHTML = summaryHtml + `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-100">
+            <h3 class="text-base font-semibold text-slate-700">Facturas</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Emissão</th>
+                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Vencimento</th>
+                <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Total</th>
+                <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Em Dívida</th>
+                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Estado</th>
+              </tr></thead>
+              <tbody>${invRows}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set financial badge in header
+      const fs = "{{ student_financial_status }}";
+      if (fs) document.getElementById('header-financial-badge').innerHTML = financialBadge(fs);
+      // Activate first tab
+      switchTab('resumo');
+    });
+  </script>
+</body>
+</html>

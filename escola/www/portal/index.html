@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal do Encarregado{% if school_name %} — {{ school_name }}{% endif %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { primary: '#024ba5' } } }
+    }
+  </script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-[#024ba5] shadow-lg">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-3">
+          {% if school_logo %}
+          <img src="{{ school_logo }}" alt="Logo" class="h-9 w-9 rounded-lg object-cover bg-white/20">
+          {% else %}
+          <div class="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center">
+            <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7m0 0L3 9m9 5l9-5"/>
+            </svg>
+          </div>
+          {% endif %}
+          <span class="text-white font-bold text-lg tracking-tight">{{ school_name or 'Portal Escolar' }}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/portal/perfil"
+             class="flex items-center gap-2 text-blue-100 hover:text-white text-sm transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <span class="hidden sm:inline">{{ guardian_full_name }}</span>
+          </a>
+          <a href="/login?action=Logout"
+             class="bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1.5 rounded-lg transition-colors">
+            Sair
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+
+    {% if portal_disabled %}
+    <!-- Portal globally disabled -->
+    <div class="max-w-md mx-auto mt-16 text-center">
+      <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="h-8 w-8 text-[#024ba5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 mb-2">Portal Temporariamente Indisponível</h2>
+      <p class="text-slate-500 text-sm">O portal do encarregado está temporariamente desactivado. Por favor contacte a secretaria da escola.</p>
+    </div>
+
+    {% elif access_denied %}
+    <!-- Per-guardian access denied -->
+    <div class="max-w-md mx-auto mt-16 text-center">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800 mb-2">Acesso Desactivado</h2>
+      <p class="text-slate-500 text-sm">O seu acesso ao portal foi desactivado. Por favor contacte a secretaria da escola.</p>
+    </div>
+
+    {% else %}
+    <!-- Normal content — loaded via JS -->
+    <div id="loading" class="flex justify-center items-center py-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="animate-spin h-10 w-10 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
+        <p class="text-slate-400 text-sm">A carregar...</p>
+      </div>
+    </div>
+
+    <div id="main-content" class="hidden">
+      <!-- Welcome -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-800">
+          Bem-vindo, <span id="guardian-name" class="text-[#024ba5]"></span>
+        </h1>
+        <p class="text-slate-500 text-sm mt-1">Acompanhe o percurso escolar dos seus educandos.</p>
+      </div>
+
+      <!-- No students state -->
+      <div id="no-students" class="hidden text-center py-16">
+        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="h-8 w-8 text-[#024ba5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+        </div>
+        <p class="text-slate-500">Nenhum educando associado à sua conta. Contacte a secretaria.</p>
+      </div>
+
+      <!-- Students grid -->
+      <div id="students-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </div>
+    {% endif %}
+
+  </main>
+
+  {% if not portal_disabled and not access_denied %}
+  <script>
+    const API_BASE = 'escola.escola.portal_api.';
+
+    async function api(method, args) {
+      const r = await fetch('/api/method/' + API_BASE + method, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': frappe.csrf_token,
+        },
+        body: JSON.stringify(args || {})
+      });
+      const d = await r.json();
+      if (d.exc) throw new Error(d.message || 'Erro no servidor');
+      return d.message;
+    }
+
+    function financialBadge(status) {
+      const cfg = {
+        'Regular':           'bg-green-100 text-green-700',
+        'Em Dívida':         'bg-amber-100 text-amber-800',
+        'Em Dívida Crítica': 'bg-orange-100 text-orange-700',
+        'Suspenso':          'bg-red-100 text-red-700',
+      };
+      const cls = cfg[status] || 'bg-slate-100 text-slate-600';
+      return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${status || '—'}</span>`;
+    }
+
+    function statusBadge(status) {
+      const cfg = {
+        'Activo':      'bg-blue-100 text-blue-700',
+        'Transferido': 'bg-slate-100 text-slate-600',
+        'Desistente':  'bg-orange-100 text-orange-700',
+        'Concluiu':    'bg-green-100 text-green-700',
+      };
+      const cls = cfg[status] || 'bg-slate-100 text-slate-600';
+      return `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}">${status || '—'}</span>`;
+    }
+
+    function shiftBadge(shift) {
+      if (!shift) return '';
+      const cfg = { 'Manhã': 'bg-yellow-50 text-yellow-700', 'Tarde': 'bg-indigo-50 text-indigo-700', 'Noite': 'bg-slate-100 text-slate-600' };
+      return `<span class="px-2 py-0.5 rounded text-xs font-medium ${cfg[shift] || 'bg-slate-100 text-slate-600'}">${shift}</span>`;
+    }
+
+    function avatarInitials(name) {
+      return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    }
+
+    function renderStudentCard(s) {
+      return `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
+          <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-[#024ba5] flex items-center justify-center shrink-0">
+              <span class="text-white font-bold text-base">${avatarInitials(s.full_name)}</span>
+            </div>
+            <div class="min-w-0">
+              <h3 class="font-semibold text-slate-800 text-base leading-tight truncate">${s.full_name || '—'}</h3>
+              <p class="text-slate-400 text-xs mt-0.5">${s.student_code || ''}</p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                ${s.current_school_class ? `<span class="px-2 py-0.5 bg-[#e8f1fd] text-[#024ba5] rounded text-xs font-medium">${s.current_school_class}</span>` : ''}
+                ${shiftBadge(s.shift)}
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-50 pt-3 flex flex-wrap gap-2">
+            <div class="flex flex-col gap-1">
+              <span class="text-xs text-slate-400">Estado</span>
+              ${statusBadge(s.current_status)}
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-xs text-slate-400">Financeiro</span>
+              ${financialBadge(s.financial_status)}
+            </div>
+            ${s.academic_year ? `<div class="flex flex-col gap-1 ml-auto text-right"><span class="text-xs text-slate-400">Ano Lectivo</span><span class="text-xs font-medium text-slate-600">${s.academic_year}</span></div>` : ''}
+          </div>
+
+          <a href="/portal/aluno?s=${encodeURIComponent(s.name)}"
+             class="block w-full text-center bg-[#024ba5] hover:bg-[#013a82] text-white text-sm font-medium py-2.5 rounded-xl transition-colors">
+            Ver Detalhes
+          </a>
+        </div>
+      `;
+    }
+
+    async function init() {
+      try {
+        const data = await api('get_guardian_students');
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        document.getElementById('guardian-name').textContent = data.guardian.full_name;
+
+        const grid = document.getElementById('students-grid');
+        if (!data.students || data.students.length === 0) {
+          document.getElementById('no-students').classList.remove('hidden');
+        } else {
+          grid.innerHTML = data.students.map(renderStudentCard).join('');
+        }
+      } catch (e) {
+        document.getElementById('loading').innerHTML =
+          `<div class="text-center py-20 text-red-500">Erro ao carregar dados. Por favor recarregue a página.</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+  {% endif %}
+</body>
+</html>
