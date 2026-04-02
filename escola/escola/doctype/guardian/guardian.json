@@ -1,12 +1,11 @@
 {
  "actions": [],
- "autoname": "naming_series:",
+ "autoname": "field:full_name",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "quick_entry": 1,
  "field_order": [
-  "naming_series",
   "section_break_personal",
   "first_name",
   "column_break_1",
@@ -30,15 +29,6 @@
   "notes"
  ],
  "fields": [
-  {
-   "fieldname": "naming_series",
-   "fieldtype": "Select",
-   "label": "Série",
-   "options": "GAR-.####",
-   "default": "GAR-.####",
-   "hidden": 1,
-   "print_hide": 1
-  },
   {
    "fieldname": "section_break_personal",
    "fieldtype": "Section Break",
@@ -167,7 +157,7 @@
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Guardian",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
