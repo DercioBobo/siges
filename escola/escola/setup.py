@@ -65,11 +65,33 @@ _CUSTOM_FIELDS = {
 def after_install():
     create_custom_fields()
     create_default_items()
+    create_portal_roles()
 
 
 def after_migrate():
     create_custom_fields()
     create_default_items()
+    create_portal_roles()
+
+
+_PORTAL_ROLES = [
+    {"role_name": "Encarregado de Educação", "desk_access": 0},
+    {"role_name": "Aluno", "desk_access": 0},
+]
+
+
+def create_portal_roles():
+    """Idempotently create roles used for the parent/student portal."""
+    try:
+        for role_def in _PORTAL_ROLES:
+            if not frappe.db.exists("Role", role_def["role_name"]):
+                frappe.get_doc({"doctype": "Role", **role_def}).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(
+            title="Escola — criação de roles do portal falhou",
+            message=frappe.get_traceback(),
+        )
 
 
 _DEFAULT_ITEMS = [

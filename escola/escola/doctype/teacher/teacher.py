@@ -39,6 +39,16 @@ class Teacher(Document):
             seq = 1
         self.teacher_code = "PROF-{:05d}".format(seq)
 
+    def after_insert(self):
+        try:
+            from escola.escola.portal import provision_portal_user
+            provision_portal_user(self, "Professor")
+        except Exception:
+            frappe.log_error(
+                title="Escola — falha ao criar utilizador do portal (Professor)",
+                message=frappe.get_traceback(),
+            )
+
     def _validate_email(self):
         if self.email and not EMAIL_PATTERN.match(self.email):
             frappe.throw(

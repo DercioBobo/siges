@@ -21,8 +21,11 @@
   "column_break_4",
   "email",
   "address",
+  "section_break_subjects",
+  "teacher_subjects",
   "section_break_system",
   "user_id",
+  "portal_password",
   "column_break_5",
   "is_active",
   "section_break_notes",
@@ -124,10 +127,30 @@
    "label": "Sistema"
   },
   {
+   "fieldname": "section_break_subjects",
+   "fieldtype": "Section Break",
+   "label": "Disciplinas Leccionadas"
+  },
+  {
+   "fieldname": "teacher_subjects",
+   "fieldtype": "Table",
+   "label": "Disciplinas",
+   "options": "Teacher Subject",
+   "in_editable_grid": 1
+  },
+  {
    "fieldname": "user_id",
    "fieldtype": "Link",
-   "label": "Utilizador",
-   "options": "User"
+   "label": "Utilizador do Portal",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "portal_password",
+   "fieldtype": "Data",
+   "label": "Senha Temporária do Portal",
+   "read_only": 1,
+   "description": "Partilhe esta senha com o professor. Peça-lhe que a altere após o primeiro acesso."
   },
   {
    "fieldname": "column_break_5",
