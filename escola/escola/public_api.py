@@ -85,6 +85,23 @@ def get_turma_timetable(turma):
 
 
 @frappe.whitelist(allow_guest=True)
+def get_turma_students(turma):
+    """Return the student roster for a class group. Exposes only name and student code."""
+    if not frappe.db.exists("Class Group", turma):
+        return {"students": [], "total": 0}
+
+    students = frappe.db.sql("""
+        SELECT cgs.student, cgs.student_name, s.student_code
+        FROM `tabClass Group Student` cgs
+        LEFT JOIN `tabStudent` s ON s.name = cgs.student
+        WHERE cgs.parent = %s AND cgs.parentfield = 'students'
+        ORDER BY cgs.student_name
+    """, turma, as_dict=True)
+
+    return {"students": students, "total": len(students)}
+
+
+@frappe.whitelist(allow_guest=True)
 def get_academic_calendar():
     """Return academic year and term dates."""
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")

@@ -212,24 +212,48 @@
       <p class="mt-3 text-slate-500 max-w-lg mx-auto">Seleccione uma turma para consultar o horário semanal completo.</p>
     </div>
 
-    <!-- Filter + search bar -->
-    <div class="reveal flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-8">
-      <!-- Shift tabs -->
-      <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
-        <button onclick="setFilter('all')"   id="filter-all"   class="filter-tab active px-4 py-1.5 rounded-lg text-sm font-medium transition-all">Todas</button>
-        <button onclick="setFilter('Manhã')" id="filter-manha" class="filter-tab px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-700">Manhã</button>
-        <button onclick="setFilter('Tarde')" id="filter-tarde" class="filter-tab px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-700">Tarde</button>
+    <!-- Filter toolbar -->
+    <div class="reveal mb-8 space-y-3">
+      <!-- Row 1: Shift + Search + View toggle -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Shift tabs -->
+        <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
+          <button onclick="setShift('all')"   id="shift-all"   class="shift-tab px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-500">Todas</button>
+          <button onclick="setShift('Manhã')" id="shift-manha" class="shift-tab px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-700">Manhã</button>
+          <button onclick="setShift('Tarde')" id="shift-tarde" class="shift-tab px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-500 hover:text-slate-700">Tarde</button>
+        </div>
+
+        <!-- Search -->
+        <div class="relative flex-1 sm:flex-none">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="search-input" type="text" placeholder="Pesquisar turma ou professor..."
+            oninput="handleSearch(this.value)"
+            class="w-full sm:w-60 pl-9 pr-4 py-2 bg-slate-100 border-0 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#024ba5]/30 transition">
+        </div>
+
+        <!-- View toggle -->
+        <div class="ml-auto flex bg-slate-100 p-1 rounded-xl gap-1">
+          <button id="view-grid-btn" onclick="setView('grid')" title="Vista em grelha"
+                  class="p-2 rounded-lg bg-white shadow-sm text-[#024ba5] transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+            </svg>
+          </button>
+          <button id="view-table-btn" onclick="setView('table')" title="Vista em lista"
+                  class="p-2 rounded-lg text-slate-400 hover:text-slate-600 transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Search -->
-      <div class="relative sm:ml-auto">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-        </svg>
-        <input id="search-input" type="text" placeholder="Pesquisar turma..."
-          oninput="handleSearch(this.value)"
-          class="pl-9 pr-4 py-2 bg-slate-100 border-0 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#024ba5]/30 w-56 transition">
-      </div>
+      <!-- Row 2: Class chips (built dynamically) -->
+      <div id="class-chips" class="hidden flex-wrap gap-2"></div>
     </div>
 
     <!-- Loading -->
@@ -240,8 +264,27 @@
       </div>
     </div>
 
-    <!-- Cards grid -->
+    <!-- Grid view -->
     <div id="turmas-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+    <!-- Table view -->
+    <div id="turmas-table" class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b-2 border-slate-100 bg-slate-50/60">
+              <th class="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Classe</th>
+              <th class="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Turma</th>
+              <th class="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Turno</th>
+              <th class="py-3 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Director de Turma</th>
+              <th class="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Alunos</th>
+              <th class="py-3 px-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Acções</th>
+            </tr>
+          </thead>
+          <tbody id="turmas-tbody"></tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- Empty state -->
     <div id="turmas-empty" class="hidden text-center py-16">
@@ -268,22 +311,61 @@
        class="relative w-full max-w-5xl mx-auto mt-[4vh] mb-[4vh] max-h-[92vh] flex flex-col
               bg-white rounded-2xl shadow-2xl overflow-hidden opacity-0 scale-95">
 
-    <!-- Modal header -->
-    <div class="bg-[#024ba5] px-6 py-4 flex items-center justify-between shrink-0">
-      <div>
-        <h3 id="modal-title" class="text-lg font-bold text-white">Horário</h3>
-        <p id="modal-subtitle" class="text-sm text-blue-200 mt-0.5"></p>
+    <!-- Modal header + tabs -->
+    <div class="bg-[#024ba5] px-6 pt-4 pb-0 shrink-0">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h3 id="modal-title" class="text-lg font-bold text-white">Turma</h3>
+          <p id="modal-subtitle" class="text-sm text-blue-200 mt-0.5"></p>
+        </div>
+        <button onclick="closeModal()"
+                class="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/15 transition-colors mt-0.5 shrink-0">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
-      <button onclick="closeModal()"
-              class="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/15 transition-colors">
-        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
+      <!-- Tab bar -->
+      <div class="flex -mb-px">
+        <button id="modal-tab-horario" data-tab="horario" onclick="switchModalTab('horario')"
+                class="modal-tab-btn flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white border-b-2 border-white transition-all">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Horário
+        </button>
+        <button id="modal-tab-alunos" data-tab="alunos" onclick="switchModalTab('alunos')"
+                class="modal-tab-btn flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-blue-200 border-b-2 border-transparent hover:text-white transition-all">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Alunos
+          <span id="modal-student-count" class="hidden bg-white/20 px-1.5 py-0.5 rounded-md text-xs font-bold"></span>
+        </button>
+      </div>
     </div>
 
-    <!-- Modal body -->
-    <div id="modal-body" class="overflow-auto flex-1 p-5"></div>
+    <!-- Modal body — two panels -->
+    <div class="overflow-auto flex-1 flex flex-col min-h-0">
+      <!-- Horário panel -->
+      <div id="panel-horario" class="p-5"></div>
+      <!-- Alunos panel -->
+      <div id="panel-alunos" class="hidden flex flex-col flex-1 min-h-0">
+        <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-3 z-10">
+          <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input id="student-search" type="text" placeholder="Pesquisar aluno por nome ou número..."
+              oninput="filterStudents(this.value)"
+              class="w-full pl-9 pr-4 py-2 bg-slate-100 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#024ba5]/30 transition">
+          </div>
+        </div>
+        <div id="student-list-wrap" class="overflow-auto flex-1 px-5 py-2"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -544,7 +626,6 @@
     const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const d = await r.json();
     if (!r.ok || d.exc) {
-      // Surface a readable server message if present
       let msg = 'Erro no servidor';
       try { msg = JSON.parse(d._server_messages || '[]').map(m => JSON.parse(m).message).join(' ') || msg; } catch(e) {}
       throw new Error(msg);
@@ -552,14 +633,18 @@
     return d.message;
   }
 
+  // ── Utilities ──────────────────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   // ── Sticky nav ──────────────────────────────────────────────────────────
   const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
-    const scrolled = window.scrollY > 80;
-    navbar.classList.toggle('scrolled', scrolled);
+    navbar.classList.toggle('scrolled', window.scrollY > 80);
   }, { passive: true });
 
-  // Mobile menu
   document.getElementById('mobile-menu-btn').addEventListener('click', () => {
     document.getElementById('mobile-menu').classList.toggle('hidden');
   });
@@ -573,9 +658,11 @@
   }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // ── Turmas ──────────────────────────────────────────────────────────────
+  // ── Turmas state ────────────────────────────────────────────────────────
   let allTurmas = [];
-  let activeFilter = 'all';
+  let activeShift = 'all';
+  let activeClass = 'all';
+  let activeView  = 'grid';
   let searchQuery = '';
 
   const SHIFT_CFG = {
@@ -588,61 +675,121 @@
     return SHIFT_CFG[shift] || { badge: 'bg-slate-100 text-slate-600', bar: 'bg-slate-400', icon: '' };
   }
 
-  function setFilter(filter) {
-    activeFilter = filter;
-    document.querySelectorAll('.filter-tab').forEach(b => {
-      b.classList.toggle('active', false);
-      b.classList.remove('bg-[#024ba5]', 'text-white', 'shadow-sm');
-      b.classList.add('text-slate-500');
+  // ── Shift tabs ──────────────────────────────────────────────────────────
+  function setShift(shift) {
+    activeShift = shift;
+    document.querySelectorAll('.shift-tab').forEach(b => {
+      const isActive = b.id === 'shift-' + (shift === 'all' ? 'all' : shift.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+      b.classList.toggle('bg-[#024ba5]', isActive);
+      b.classList.toggle('text-white', isActive);
+      b.classList.toggle('shadow-sm', isActive);
+      b.classList.toggle('text-slate-500', !isActive);
     });
-    const btn = document.getElementById('filter-' + (filter === 'all' ? 'all' : filter.toLowerCase().replace('ã','a')));
-    if (btn) {
-      btn.classList.add('bg-[#024ba5]', 'text-white', 'shadow-sm');
-      btn.classList.remove('text-slate-500');
+    renderVisible();
+  }
+
+  // ── Class chips ─────────────────────────────────────────────────────────
+  function buildClassChips(turmas) {
+    const classes = [...new Set(turmas.map(t => t.school_class).filter(Boolean))].sort();
+    const wrap = document.getElementById('class-chips');
+    if (classes.length === 0) { wrap.classList.add('hidden'); return; }
+
+    wrap.innerHTML = classes.map(cls => `
+      <button onclick="setClassFilter('${escHtml(cls)}')"
+              data-class="${escHtml(cls)}"
+              class="class-chip px-3 py-1 rounded-full text-xs font-medium border transition-all
+                     border-slate-200 bg-white text-slate-600 hover:border-[#024ba5] hover:text-[#024ba5]">
+        ${escHtml(cls)}
+      </button>`).join('');
+
+    wrap.classList.remove('hidden');
+    wrap.classList.add('flex');
+  }
+
+  function setClassFilter(cls) {
+    activeClass = activeClass === cls ? 'all' : cls;
+    document.querySelectorAll('.class-chip').forEach(b => {
+      const selected = b.dataset.class === activeClass;
+      b.classList.toggle('bg-[#024ba5]', selected);
+      b.classList.toggle('text-white', selected);
+      b.classList.toggle('border-[#024ba5]', selected);
+      b.classList.toggle('bg-white', !selected);
+      b.classList.toggle('text-slate-600', !selected);
+    });
+    renderVisible();
+  }
+
+  // ── View toggle (grid / table) ──────────────────────────────────────────
+  function setView(view) {
+    activeView = view;
+    const gridBtn  = document.getElementById('view-grid-btn');
+    const tableBtn = document.getElementById('view-table-btn');
+    const active   = 'bg-white shadow-sm text-[#024ba5]';
+    const inactive = 'text-slate-400 hover:text-slate-600';
+
+    if (view === 'grid') {
+      gridBtn.className  = gridBtn.className.replace(inactive, '').trim() + ' ' + active;
+      tableBtn.className = tableBtn.className.replace(active, '').trim() + ' ' + inactive;
+    } else {
+      tableBtn.className = tableBtn.className.replace(inactive, '').trim() + ' ' + active;
+      gridBtn.className  = gridBtn.className.replace(active, '').trim() + ' ' + inactive;
     }
     renderVisible();
   }
 
+  // ── Search ──────────────────────────────────────────────────────────────
   function handleSearch(q) {
     searchQuery = q.trim().toLowerCase();
     renderVisible();
   }
 
+  // ── Render dispatcher ───────────────────────────────────────────────────
   function renderVisible() {
-    let filtered = allTurmas.filter(t => {
-      const matchFilter = activeFilter === 'all' || t.shift === activeFilter;
+    const filtered = allTurmas.filter(t => {
+      const matchShift = activeShift === 'all' || t.shift === activeShift;
+      const matchClass = activeClass === 'all' || t.school_class === activeClass;
       const matchSearch = !searchQuery
         || t.name.toLowerCase().includes(searchQuery)
         || (t.school_class || '').toLowerCase().includes(searchQuery)
         || (t.class_teacher || '').toLowerCase().includes(searchQuery);
-      return matchFilter && matchSearch;
+      return matchShift && matchClass && matchSearch;
     });
 
-    const grid = document.getElementById('turmas-grid');
+    const grid  = document.getElementById('turmas-grid');
+    const table = document.getElementById('turmas-table');
     const empty = document.getElementById('turmas-empty');
+
     if (filtered.length === 0) {
-      grid.classList.add('hidden'); empty.classList.remove('hidden');
-    } else {
-      grid.classList.remove('hidden'); empty.classList.add('hidden');
+      grid.classList.add('hidden');
+      table.classList.add('hidden');
+      empty.classList.remove('hidden');
+      return;
+    }
+
+    empty.classList.add('hidden');
+    if (activeView === 'grid') {
+      table.classList.add('hidden');
+      grid.classList.remove('hidden');
       grid.innerHTML = filtered.map(renderTurmaCard).join('');
+    } else {
+      grid.classList.add('hidden');
+      table.classList.remove('hidden');
+      renderTableView(filtered);
     }
   }
 
+  // ── Grid card ───────────────────────────────────────────────────────────
   function renderTurmaCard(t) {
     const cfg = shiftCfg(t.shift);
     const pct = t.max_students > 0 ? Math.min(100, Math.round((t.student_count / t.max_students) * 100)) : 0;
     const capText = t.max_students > 0 ? `${t.student_count || 0} / ${t.max_students}` : `${t.student_count || 0} alunos`;
-
     const initial = (t.school_class || t.name || '?').charAt(0).toUpperCase();
+    const tn = escHtml(t.name);
 
     return `
-      <div class="turma-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer group"
-           onclick="openModal('${escHtml(t.name)}')">
-        <!-- Card top accent -->
+      <div class="turma-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
         <div class="h-1.5 ${cfg.bar}"></div>
-
         <div class="p-5">
-          <!-- Header row -->
           <div class="flex items-start justify-between mb-4">
             <div class="w-12 h-12 rounded-xl bg-[#e8f1fd] flex items-center justify-center">
               <span class="text-[#024ba5] font-bold text-xl">${initial}</span>
@@ -651,14 +798,10 @@
               ${cfg.icon} ${t.shift || '—'}
             </span>
           </div>
-
-          <!-- Class + section -->
           <div class="mb-1">
             <h3 class="font-bold text-slate-800 text-base leading-tight">${escHtml(t.school_class || t.name)}</h3>
             ${t.section_name ? `<p class="text-sm text-slate-400 mt-0.5">Turma ${escHtml(t.section_name)}</p>` : ''}
           </div>
-
-          <!-- Teacher -->
           ${t.class_teacher ? `
           <div class="flex items-center gap-1.5 mt-3 text-xs text-slate-500">
             <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -667,8 +810,6 @@
             </svg>
             <span class="truncate">${escHtml(t.class_teacher)}</span>
           </div>` : ''}
-
-          <!-- Capacity bar -->
           ${t.max_students > 0 ? `
           <div class="mt-4">
             <div class="flex justify-between text-xs text-slate-400 mb-1">
@@ -677,24 +818,67 @@
             <div class="w-full bg-slate-100 rounded-full h-1.5">
               <div class="${cfg.bar} h-1.5 rounded-full transition-all" style="width:${pct}%"></div>
             </div>
-          </div>` : `
-          <div class="mt-3 text-xs text-slate-400">${capText}</div>`}
-
-          <!-- CTA -->
-          <div class="mt-4 pt-4 border-t border-slate-50">
+          </div>` : `<div class="mt-3 text-xs text-slate-400">${capText}</div>`}
+          <div class="mt-4 pt-4 border-t border-slate-50 flex gap-2">
             ${t.has_timetable ? `
-            <div class="flex items-center justify-between text-sm font-medium text-[#024ba5] group-hover:gap-2 transition-all">
-              <span>Ver Horário</span>
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            <button onclick="openModal('${tn}','horario')"
+                    class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#e8f1fd] hover:bg-[#024ba5] text-[#024ba5] hover:text-white text-xs font-semibold transition-all">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
-            </div>` : `
-            <div class="text-xs text-slate-400 italic">Horário não disponível</div>`}
+              Horário
+            </button>` : `
+            <span class="flex-1 flex items-center justify-center text-xs text-slate-400 italic py-2">Sem horário</span>`}
+            <button onclick="openModal('${tn}','alunos')"
+                    class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-all">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Alunos
+            </button>
           </div>
         </div>
       </div>`;
   }
 
+  // ── Table view ──────────────────────────────────────────────────────────
+  function renderTableView(turmas) {
+    const tbody = document.getElementById('turmas-tbody');
+    tbody.innerHTML = turmas.map(t => {
+      const cfg = shiftCfg(t.shift);
+      const capText = t.max_students > 0
+        ? `${t.student_count || 0} / ${t.max_students}`
+        : `${t.student_count || 0}`;
+      const tn = escHtml(t.name);
+      return `
+        <tr class="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+          <td class="px-5 py-3 font-semibold text-slate-800 text-sm">${escHtml(t.school_class || t.name)}</td>
+          <td class="px-4 py-3 text-sm text-slate-500">${t.section_name ? escHtml(t.section_name) : '—'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2.5 py-1 rounded-full text-xs font-medium ${cfg.badge}">${cfg.icon} ${t.shift || '—'}</span>
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-600">${escHtml(t.class_teacher || '—')}</td>
+          <td class="px-4 py-3 text-sm text-slate-500 text-center">${capText}</td>
+          <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              ${t.has_timetable ? `
+              <button onclick="openModal('${tn}','horario')"
+                      class="px-3 py-1.5 rounded-lg bg-[#e8f1fd] hover:bg-[#024ba5] text-[#024ba5] hover:text-white text-xs font-semibold transition-all">
+                Horário
+              </button>` : ''}
+              <button onclick="openModal('${tn}','alunos')"
+                      class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-all">
+                Alunos
+              </button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Load turmas ─────────────────────────────────────────────────────────
   async function loadTurmas() {
     try {
       const data = await fetchApi('get_turmas');
@@ -703,20 +887,19 @@
 
       if (allTurmas.length === 0) {
         document.getElementById('turmas-empty').classList.remove('hidden');
-        document.getElementById('turmas-empty').querySelector('p').textContent =
-          'Nenhuma turma disponível de momento.';
         return;
       }
 
+      buildClassChips(allTurmas);
       document.getElementById('turmas-grid').classList.remove('hidden');
-      setFilter('all');
+      setShift('all');
     } catch(e) {
       document.getElementById('turmas-loading').innerHTML =
         `<div class="text-center text-red-500 text-sm py-8">Erro ao carregar turmas. Tente recarregar a página.</div>`;
     }
   }
 
-  // ── Timetable Modal ──────────────────────────────────────────────────────
+  // ── Modal ────────────────────────────────────────────────────────────────
   const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
   const SHORT_DAYS = ['Seg','Ter','Qua','Qui','Sex'];
   const SUBJECT_COLORS = [
@@ -732,36 +915,88 @@
     'bg-amber-50 text-amber-700 border-amber-200',
   ];
 
-  async function openModal(turmaName) {
+  let _currentModalTurma = null;
+  let _studentsCache = [];
+
+  function openModal(turmaName, initialTab) {
+    _currentModalTurma = turmaName;
+    _studentsCache = [];
+
     const modal = document.getElementById('timetable-modal');
-    const box = document.getElementById('modal-box');
-    const body = document.getElementById('modal-body');
+    const box   = document.getElementById('modal-box');
+
+    // Reset panels
+    const ph = document.getElementById('panel-horario');
+    const pa = document.getElementById('panel-alunos');
+    ph.removeAttribute('data-loaded');
+    pa.removeAttribute('data-loaded');
+    ph.innerHTML = '';
+    document.getElementById('student-list-wrap').innerHTML = '';
+    document.getElementById('student-search').value = '';
 
     document.getElementById('modal-title').textContent = turmaName;
     document.getElementById('modal-subtitle').textContent = '';
-    body.innerHTML = `<div class="flex justify-center py-16">
-      <div class="animate-spin h-9 w-9 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
-    </div>`;
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     requestAnimationFrame(() => {
       modal.style.opacity = '1';
-      box.style.opacity = '1'; box.style.transform = 'scale(1)';
+      box.style.opacity = '1';
+      box.style.transform = 'scale(1)';
     });
+
+    switchModalTab(initialTab || 'horario');
+  }
+
+  function switchModalTab(tab) {
+    const ph = document.getElementById('panel-horario');
+    const pa = document.getElementById('panel-alunos');
+
+    // Update tab button styles
+    document.querySelectorAll('.modal-tab-btn').forEach(b => {
+      const isActive = b.dataset.tab === tab;
+      b.classList.toggle('text-white', isActive);
+      b.classList.toggle('border-white', isActive);
+      b.classList.toggle('font-semibold', isActive);
+      b.classList.toggle('text-blue-200', !isActive);
+      b.classList.toggle('border-transparent', !isActive);
+      b.classList.toggle('font-medium', !isActive);
+    });
+
+    if (tab === 'horario') {
+      pa.classList.add('hidden');
+      ph.classList.remove('hidden');
+      if (!ph.dataset.loaded) {
+        ph.dataset.loaded = '1';
+        loadTimetable(_currentModalTurma, ph);
+      }
+    } else {
+      ph.classList.add('hidden');
+      pa.classList.remove('hidden');
+      if (!pa.dataset.loaded) {
+        pa.dataset.loaded = '1';
+        loadStudents(_currentModalTurma);
+      }
+    }
+  }
+
+  async function loadTimetable(turmaName, panel) {
+    panel.innerHTML = `<div class="flex justify-center py-16">
+      <div class="animate-spin h-9 w-9 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
+    </div>`;
 
     try {
       const data = await fetchApi('get_turma_timetable', { turma: turmaName });
       const info = data.turma_info || {};
-      const cfg = shiftCfg(info.shift);
 
       document.getElementById('modal-title').textContent = info.school_class || turmaName;
       document.getElementById('modal-subtitle').textContent =
-        [info.section_name ? 'Turma ' + info.section_name : '', info.shift, info.class_teacher ? 'Prof. ' + info.class_teacher : '']
+        [info.section_name ? 'Turma ' + info.section_name : '', info.shift,
+         info.class_teacher ? 'Prof. ' + info.class_teacher : '']
         .filter(Boolean).join(' · ');
 
       if (!data.entries || data.entries.length === 0) {
-        body.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+        panel.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
           <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -771,7 +1006,6 @@
         return;
       }
 
-      // Build entry map
       const entryMap = {};
       const subjectColors = {};
       let colorIdx = 0;
@@ -784,7 +1018,7 @@
 
       const daysPresent = DAYS.filter(d => data.entries.some(e => e.day_of_week === d));
 
-      let html = `<div class="overflow-x-auto">
+      let html = `<div class="overflow-x-auto p-5">
         <table class="w-full border-collapse text-sm min-w-[480px]">
           <thead>
             <tr class="border-b-2 border-slate-100">
@@ -799,7 +1033,7 @@
           <tbody>`;
 
       data.time_slots.forEach(slot => {
-        const isBreak = (slot.slot_type || '').toLowerCase().includes('intervalo') || (slot.slot_type || '').toLowerCase().includes('break');
+        const isBreak = (slot.slot_type||'').toLowerCase().includes('intervalo') || (slot.slot_type||'').toLowerCase().includes('break');
         if (isBreak) {
           html += `<tr class="bg-slate-50/80">
             <td colspan="${daysPresent.length + 1}" class="px-4 py-2 text-center text-xs text-slate-400 italic border-y border-slate-100">
@@ -807,7 +1041,6 @@
             </td></tr>`;
           return;
         }
-
         html += `<tr class="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
           <td class="p-3 align-top min-w-[80px]">
             <div class="font-medium text-slate-600 text-xs">${slot.label || slot.name}</div>
@@ -818,7 +1051,7 @@
           if (entry && entry.subject) {
             const cls = subjectColors[entry.subject] || 'bg-slate-50 text-slate-600 border-slate-200';
             html += `<td class="p-1.5 align-top">
-              <div class="border rounded-lg p-2 ${cls}" title="${entry.teacher || ''}">
+              <div class="border rounded-lg p-2 ${cls}" title="${escHtml(entry.teacher || '')}">
                 <div class="text-xs font-semibold leading-tight">${escHtml(entry.subject)}</div>
                 ${entry.teacher ? `<div class="text-xs opacity-60 mt-0.5 truncate">${escHtml(entry.teacher)}</div>` : ''}
               </div></td>`;
@@ -830,21 +1063,85 @@
       });
 
       html += `</tbody></table></div>`;
-      body.innerHTML = html;
+      panel.innerHTML = html;
 
     } catch(e) {
-      body.innerHTML = `<div class="text-center py-12 text-red-500 text-sm">Erro ao carregar horário.</div>`;
+      panel.innerHTML = `<div class="text-center py-12 px-5 text-red-500 text-sm">Erro ao carregar horário.</div>`;
     }
+  }
+
+  async function loadStudents(turmaName) {
+    const wrap = document.getElementById('student-list-wrap');
+    wrap.innerHTML = `<div class="flex justify-center py-12">
+      <div class="animate-spin h-8 w-8 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
+    </div>`;
+
+    try {
+      const data = await fetchApi('get_turma_students', { turma: turmaName });
+      _studentsCache = data.students || [];
+
+      // Update subtitle badge count
+      const sub = document.getElementById('modal-subtitle');
+      if (_studentsCache.length > 0) {
+        const countBadge = ` · ${_studentsCache.length} aluno${_studentsCache.length !== 1 ? 's' : ''}`;
+        if (!sub.textContent.includes('aluno')) sub.textContent += countBadge;
+      }
+
+      renderStudentList('');
+    } catch(e) {
+      wrap.innerHTML = `<div class="text-center py-10 text-red-500 text-sm px-5">Erro ao carregar lista de alunos.</div>`;
+    }
+  }
+
+  function filterStudents(query) {
+    renderStudentList(query.trim().toLowerCase());
+  }
+
+  function renderStudentList(query) {
+    const wrap = document.getElementById('student-list-wrap');
+    const filtered = query
+      ? _studentsCache.filter(s =>
+          (s.student_name || '').toLowerCase().includes(query) ||
+          (s.student_code || '').toLowerCase().includes(query))
+      : _studentsCache;
+
+    if (filtered.length === 0) {
+      wrap.innerHTML = `<div class="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+        <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <p class="text-sm">${query ? 'Nenhum aluno encontrado.' : 'Nenhum aluno inscrito nesta turma.'}</p>
+      </div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="divide-y divide-slate-50">
+        ${filtered.map((s, i) => `
+          <div class="flex items-center gap-4 px-5 py-3 hover:bg-slate-50/60 transition-colors">
+            <div class="w-8 h-8 rounded-full bg-[#e8f1fd] flex items-center justify-center shrink-0">
+              <span class="text-[#024ba5] text-xs font-bold">${i + 1}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-slate-800 truncate">${escHtml(s.student_name || '—')}</div>
+              ${s.student_code ? `<div class="text-xs text-slate-400">${escHtml(s.student_code)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`;
   }
 
   function closeModal() {
     const modal = document.getElementById('timetable-modal');
-    const box = document.getElementById('modal-box');
+    const box   = document.getElementById('modal-box');
     modal.style.opacity = '0';
-    box.style.opacity = '0'; box.style.transform = 'scale(0.95)';
+    box.style.opacity = '0';
+    box.style.transform = 'scale(0.95)';
     setTimeout(() => {
       modal.classList.add('hidden');
       document.body.style.overflow = '';
+      _currentModalTurma = null;
+      _studentsCache = [];
     }, 200);
   }
 
@@ -889,23 +1186,16 @@
           </div>
         </div>`;
       el.classList.remove('hidden');
-
-      // Re-observe new .reveal elements
       el.querySelectorAll('.reveal').forEach(r => observer.observe(r));
     } catch(e) {
       document.getElementById('calendar-loading').classList.add('hidden');
     }
   }
 
-  // ── Utilities ──────────────────────────────────────────────────────────
-  function escHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
   // ── Init ───────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    setFilter('all');     // sets up active tab styling
+    setShift('all');
+    setView('grid');
     loadTurmas();
     loadCalendar();
   });
