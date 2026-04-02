@@ -28,3 +28,4 @@ def get_context(context):
     context.school_name = settings.school_name or "Portal Escolar"
     context.school_logo = settings.school_logo or ""
     context.guardian_full_name = guardian.full_name or ""
+    context.csrf_token = frappe.session.data.get("csrf_token", "")

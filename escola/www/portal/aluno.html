@@ -115,6 +115,7 @@
   <script>
     const STUDENT = "{{ student }}";
     const API_BASE = 'escola.escola.portal_api.';
+    const _csrf = "{{ csrf_token }}";
     const loaded = new Set();
     const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
     const SHORT_DAYS = ['Seg','Ter','Qua','Qui','Sex'];
@@ -125,7 +126,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Frappe-CSRF-Token': frappe.csrf_token,
+          'X-Frappe-CSRF-Token': _csrf,
         },
         body: JSON.stringify(args || {})
       });

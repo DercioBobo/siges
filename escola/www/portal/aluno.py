@@ -50,6 +50,7 @@ def get_context(context):
     settings = frappe.get_single("School Settings")
     context.school_name = settings.school_name or "Portal Escolar"
     context.school_logo = settings.school_logo or ""
+    context.csrf_token = frappe.session.data.get("csrf_token", "")
     context.student = student
     context.student_full_name = s.full_name or student
     context.student_class = s.current_school_class or ""

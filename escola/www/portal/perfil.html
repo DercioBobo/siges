@@ -158,13 +158,14 @@
 
   <script>
     const API_BASE = 'escola.escola.portal_api.';
+    const _csrf = "{{ csrf_token }}";
 
     async function api(method, args) {
       const r = await fetch('/api/method/' + API_BASE + method, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Frappe-CSRF-Token': frappe.csrf_token,
+          'X-Frappe-CSRF-Token': _csrf,
         },
         body: JSON.stringify(args || {})
       });
