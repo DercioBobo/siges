@@ -700,11 +700,19 @@
       const data = await fetchApi('get_turmas');
       allTurmas = data.turmas || [];
       document.getElementById('turmas-loading').classList.add('hidden');
+
+      if (allTurmas.length === 0) {
+        document.getElementById('turmas-empty').classList.remove('hidden');
+        document.getElementById('turmas-empty').querySelector('p').textContent =
+          'Nenhuma turma disponível de momento.';
+        return;
+      }
+
       document.getElementById('turmas-grid').classList.remove('hidden');
       setFilter('all');
     } catch(e) {
       document.getElementById('turmas-loading').innerHTML =
-        `<div class="text-center text-red-500 text-sm">Erro ao carregar turmas.</div>`;
+        `<div class="text-center text-red-500 text-sm py-8">Erro ao carregar turmas. Tente recarregar a página.</div>`;
     }
   }
 

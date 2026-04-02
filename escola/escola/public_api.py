@@ -9,18 +9,32 @@ import frappe
 
 @frappe.whitelist(allow_guest=True)
 def get_turmas():
-    """Return all active class groups for the current academic year."""
+    """Return active class groups. Filters by current_academic_year if set; shows all active turmas otherwise."""
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
-    if not academic_year:
-        return {"turmas": [], "academic_year": None}
 
-    turmas = frappe.db.get_all(
-        "Class Group",
-        filters={"academic_year": academic_year, "is_active": 1},
-        fields=["name", "school_class", "shift", "class_teacher",
-                "student_count", "max_students", "section_name"],
-        order_by="school_class, section_name",
-    )
+    def _fetch(filters):
+        return frappe.db.get_all(
+            "Class Group",
+            filters=filters,
+            fields=["name", "school_class", "shift", "class_teacher",
+                    "student_count", "max_students", "section_name", "academic_year"],
+            order_by="school_class, section_name",
+        )
+
+    # Try with year + is_active first
+    turmas = _fetch({"academic_year": academic_year, "is_active": 1}) if academic_year else []
+
+    # Fall back: year without is_active filter (in case turmas were left at 0)
+    if not turmas and academic_year:
+        turmas = _fetch({"academic_year": academic_year})
+
+    # Final fall back: no year filter — show everything active
+    if not turmas:
+        turmas = _fetch({"is_active": 1})
+
+    # Last resort: truly all turmas
+    if not turmas:
+        turmas = _fetch({})
 
     # Check which turmas have an active timetable
     for t in turmas:
@@ -74,6 +88,16 @@ def get_turma_timetable(turma):
 def get_academic_calendar():
     """Return academic year and term dates."""
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
+
+    # Fall back to the most recent active academic year if School Settings not configured
+    if not academic_year:
+        row = frappe.db.get_all("Academic Year", filters={"is_active": 1},
+                                fields=["name"], order_by="start_date desc", limit=1)
+        if not row:
+            row = frappe.db.get_all("Academic Year", fields=["name"],
+                                    order_by="start_date desc", limit=1)
+        academic_year = row[0].name if row else None
+
     if not academic_year:
         return {"terms": [], "academic_year": None}
 
