@@ -12,12 +12,25 @@ def get_filter_options():
         fields=["name", "term_name", "academic_year"],
         order_by="start_date desc",
     )
-    class_groups = frappe.get_all(
-        "Class Group",
-        filters={"is_active": 1},
-        fields=["name", "group_name", "shift", "school_class"],
-        order_by="group_name asc",
+    # Only return class groups that have at least one active timetable
+    active_cgs = frappe.get_all(
+        "Timetable",
+        filters={"status": "Activo"},
+        fields=["class_group"],
+        distinct=True,
     )
+    active_cg_names = [r.class_group for r in active_cgs if r.class_group]
+
+    if active_cg_names:
+        class_groups = frappe.get_all(
+            "Class Group",
+            filters={"name": ("in", active_cg_names)},
+            fields=["name", "group_name", "shift", "school_class"],
+            order_by="group_name asc",
+        )
+    else:
+        class_groups = []
+
     return {"terms": terms, "class_groups": class_groups}
 
 

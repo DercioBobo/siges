@@ -129,11 +129,6 @@ class TimetablePage {
 						${cg_opts}
 					</select>
 				</div>
-				<div>
-					<button id="tt-go" class="btn btn-primary btn-sm" style="margin-bottom:2px;">
-						<i class="fa fa-search"></i>&nbsp;Ver Horário
-					</button>
-				</div>
 			</div>
 			<style>
 				.tt-label { font-size:11px; color:#6B7280; font-weight:700;
@@ -144,7 +139,12 @@ class TimetablePage {
 		// Auto-select first active term
 		if (terms.length) this.$filters.find("#tt-term").val(terms[0].name);
 
-		this.$filters.find("#tt-go").on("click", () => this._load_timetable());
+		// Auto-load timetable when turma is selected
+		this.$filters.find("#tt-cg").on("change", () => this._load_timetable());
+		// Also reload if term changes after a turma is already selected
+		this.$filters.find("#tt-term").on("change", () => {
+			if (this.$filters.find("#tt-cg").val()) this._load_timetable();
+		});
 	}
 
 	// -----------------------------------------------------------------------
