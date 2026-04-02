@@ -23,26 +23,37 @@ def get_schedule_data():
     result = []
 
     for s in schedules:
-        next_date = _next_trigger_date(s)
-        overdue   = _is_due(s, today)
+        try:
+            next_date = _next_trigger_date(s)
+            overdue   = _is_due(s, today)
+        except Exception:
+            next_date = None
+            overdue   = False
 
-        student_count = frappe.db.count(
-            "Student Group Assignment",
-            {"school_class": s.school_class, "status": "Activa"},
-        )
-        fs_name = frappe.db.get_value(
-            "Fee Structure",
-            {"school_class": s.school_class, "is_active": 1},
-            "name",
-        )
-        expected_per = 0.0
-        if fs_name:
-            lines = frappe.get_all(
-                "Fee Structure Line",
-                filters={"parent": fs_name, "billing_mode": s.billing_mode},
-                fields=["amount"],
+        try:
+            student_count = frappe.db.count(
+                "Student",
+                {"current_school_class": s.school_class, "current_status": "Activo"},
             )
-            expected_per = sum(float(ln.amount or 0) for ln in lines)
+        except Exception:
+            student_count = 0
+
+        expected_per = 0.0
+        try:
+            fs_name = frappe.db.get_value(
+                "Fee Structure",
+                {"school_class": s.school_class, "is_active": 1},
+                "name",
+            )
+            if fs_name:
+                lines = frappe.get_all(
+                    "Fee Structure Line",
+                    filters={"parent": fs_name, "billing_mode": s.billing_mode},
+                    fields=["amount"],
+                )
+                expected_per = sum(float(ln.amount or 0) for ln in lines)
+        except Exception:
+            pass
 
         result.append({
             "name":            s.name,

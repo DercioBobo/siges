@@ -21,7 +21,8 @@
       "Bash(python -c \"import json; d=json.load\\(open\\('escola/escola/doctype/school_class/school_class.json'\\)\\); [print\\(f['fieldname'], f['fieldtype'], f.get\\('label',''\\)\\) for f in d.get\\('fields',[]\\)]\")",
       "Bash(python:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(xargs ls:*)"
     ]
   }
 }

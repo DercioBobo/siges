@@ -189,9 +189,16 @@ def _execute_schedule(schedule, today_date):
     """Create a Billing Cycle and generate invoices for this schedule."""
     from escola.escola.doctype.billing_cycle.billing_cycle import generate_invoices
 
-    due_date      = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
-    month_label   = today_date.strftime("%m/%Y")
+    if not academic_year:
+        frappe.throw(
+            _("Não é possível gerar facturas: o Ano Lectivo actual não está configurado. "
+              "Aceda às Configurações da Escola e defina o campo «Ano Lectivo Actual»."),
+            title=_("Configuração em falta"),
+        )
+
+    due_date    = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
+    month_label = today_date.strftime("%m/%Y")
     cycle_name    = f"{schedule.school_class} · {schedule.billing_mode} · {month_label}"
 
     # Guard against double execution for the same period

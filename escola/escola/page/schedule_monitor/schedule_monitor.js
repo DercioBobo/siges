@@ -46,7 +46,15 @@ class ScheduleMonitor {
 		const r = await frappe.call({
 			method: "escola.escola.page.schedule_monitor.schedule_monitor.get_schedule_data",
 		});
-		if (r.message) this._render(r.message);
+		if (r && r.exc) {
+			this.$body.find("#sm-active").html(
+				`<div class="sm-empty" style="color:var(--red-500);">
+					${__("Erro ao carregar dados. Verifique o registo de erros do servidor.")}
+				</div>`
+			);
+			return;
+		}
+		if (r && r.message) this._render(r.message);
 	}
 
 	_render({ schedules, upcoming }) {
