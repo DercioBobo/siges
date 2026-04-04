@@ -24,11 +24,17 @@
     /* Bottom nav active */
     .bnav-btn.active svg { color:#1e40af; }
     .bnav-btn.active span { color:#1e40af; font-weight:700; }
+    /* Sidebar nav active */
+    .sidenav-btn.active { background:#dbeafe; color:#1e40af; font-weight:600; }
+    .sidenav-btn.active svg { color:#1e40af; }
+    .sidenav-btn:not(.active):hover { background:#f8fafc; }
     /* Score input */
     .score-input { width:72px; text-align:center; }
-    @media (max-width:640px) { .score-input { width:60px; } }
+    @media (max-width:767px) { .score-input { width:60px; } }
     /* Absent toggle */
     .absent-toggle { accent-color:#ef4444; }
+    /* Sidebar */
+    #sidebar { width:224px; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -56,8 +62,8 @@
       {% if school_logo %}
       <img src="{{ school_logo }}" alt="" class="h-8 w-8 rounded-lg object-cover bg-white/20">
       {% endif %}
-      <span class="font-bold text-base leading-tight hidden sm:block">{{ school_name }}</span>
-      <span class="font-bold text-base leading-tight sm:hidden">Portal</span>
+      <span class="font-bold text-base leading-tight hidden md:block">{{ school_name }}</span>
+      <span class="font-bold text-base leading-tight md:hidden">Portal do Professor</span>
     </div>
     <div class="flex items-center gap-2">
       <button onclick="showView('perfil')"
@@ -66,16 +72,16 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
         </svg>
-        <span class="hidden sm:inline">{{ teacher_full_name }}</span>
+        <span class="hidden md:inline">{{ teacher_full_name }}</span>
       </button>
       <a href="/login?action=Logout"
-         class="bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1.5 rounded-xl transition-colors">Sair</a>
+         class="md:hidden bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1.5 rounded-xl transition-colors">Sair</a>
     </div>
   </div>
 </header>
 
 <!-- ═══════════════════════════════════════════════════════ MAIN ══ -->
-<main class="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-8">
+<main id="main-content" class="px-6 py-6 pb-24 md:pb-8 transition-all duration-200" style="max-width:100%;">
 
   <!-- ─── HOME ──────────────────────────────────────────────────── -->
   <div id="view-home" class="view active">
@@ -188,7 +194,7 @@
 </main>
 
 <!-- ═══════════════════════════════════════ BOTTOM NAV (mobile) ══ -->
-<nav class="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-40 safe-bottom">
+<nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-40 safe-bottom">
   <div class="flex">
     <button onclick="showView('home')"    class="bnav-btn active flex-1 flex flex-col items-center py-2 gap-0.5">
       <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,37 +229,90 @@
   </div>
 </nav>
 
-<!-- Desktop sidebar nav -->
-<div class="hidden sm:block fixed left-0 top-14 bottom-0 w-52 bg-white border-r border-slate-100 z-30 pt-4">
-  <nav class="space-y-1 px-3">
-    <button onclick="showView('home')"      class="sidenav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-      <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      Início
-    </button>
-    <button onclick="showView('turmas')"    class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-      <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      As Minhas Turmas
-    </button>
-    <button onclick="showView('horario')"   class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-      <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      Horário
-    </button>
-    <button onclick="showView('pautas')"    class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-      <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Pautas de Notas
-    </button>
-    <button onclick="showView('presencas')" class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-      <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      Presenças
-    </button>
-    <div class="pt-2 border-t border-slate-100 mt-2">
-      <button onclick="showView('perfil')"  class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-        <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-        Perfil
-      </button>
+<!-- ═══════════════════════════════════ DESKTOP SIDEBAR (≥ 768px) ══ -->
+<aside id="sidebar" class="hidden md:flex flex-col fixed left-0 top-14 bottom-0 bg-white border-r border-slate-200 z-30" style="width:224px;">
+
+  <!-- Teacher mini-card -->
+  <div class="px-4 py-3 border-b border-slate-100 shrink-0 bg-slate-50">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-brand-light flex items-center justify-center shrink-0">
+        <span class="text-brand text-xs font-bold" id="sidebar-initial">…</span>
+      </div>
+      <div class="min-w-0">
+        <div class="text-xs font-semibold text-slate-800 truncate" id="sidebar-name">{{ teacher_full_name }}</div>
+        <div class="text-[11px] text-slate-400 truncate">{{ teacher_code }}</div>
+      </div>
     </div>
+  </div>
+
+  <!-- Nav items -->
+  <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+    <button onclick="showView('home')"
+            class="sidenav-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+      </svg>
+      <span>Início</span>
+    </button>
+
+    <button onclick="showView('turmas')"
+            class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <span>As Minhas Turmas</span>
+    </button>
+
+    <button onclick="showView('horario')"
+            class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      <span>Horário</span>
+    </button>
+
+    <button onclick="showView('pautas')"
+            class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <span>Pautas de Notas</span>
+    </button>
+
+    <button onclick="showView('presencas')"
+            class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>Presenças</span>
+    </button>
   </nav>
-</div>
+
+  <!-- Sidebar bottom: profile + logout -->
+  <div class="shrink-0 border-t border-slate-100 px-3 py-3 space-y-0.5">
+    <button onclick="showView('perfil')"
+            class="sidenav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 transition-colors text-left">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+      <span>Perfil</span>
+    </button>
+    <a href="/login?action=Logout"
+       class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">
+      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      <span>Terminar Sessão</span>
+    </a>
+  </div>
+</aside>
 
 <!-- ═══════════════════════════════════════════════════ DRAWER ══ -->
 <!-- Full-screen drawer for grade entry and attendance forms -->
@@ -338,11 +397,6 @@ function showView(name) {
   document.querySelectorAll('.bnav-btn, .sidenav-btn').forEach(b => {
     const isThis = b.getAttribute('onclick')?.includes(`'${name}'`);
     b.classList.toggle('active', isThis);
-    if (b.classList.contains('sidenav-btn')) {
-      b.classList.toggle('bg-brand-light', isThis);
-      b.classList.toggle('text-brand', isThis);
-      b.classList.toggle('text-slate-600', !isThis);
-    }
   });
 
   if (!_loadedViews.has(name)) {
@@ -358,12 +412,14 @@ function showView(name) {
 
 // ── Desktop offset ─────────────────────────────────────────────
 function applyDesktopOffset() {
-  const main = document.querySelector('main');
+  const main = document.getElementById('main-content');
   if (!main) return;
-  if (window.innerWidth >= 640) {
-    main.style.marginLeft = '208px';
+  if (window.innerWidth >= 768) {
+    main.style.marginLeft = '224px';
+    main.style.maxWidth = 'calc(100% - 224px)';
   } else {
     main.style.marginLeft = '';
+    main.style.maxWidth = '';
   }
 }
 window.addEventListener('resize', applyDesktopOffset);
@@ -380,6 +436,15 @@ async function init() {
     _turmas   = dash.turmas || [];
     _terms    = termData.terms || [];
     _currentTerm = termData.current_term || (_terms[0]?.name || null);
+
+    // Populate sidebar teacher info
+    if (dash.teacher) {
+      const first = (dash.teacher.full_name || '').charAt(0).toUpperCase();
+      const siInit = document.getElementById('sidebar-initial');
+      const siName = document.getElementById('sidebar-name');
+      if (siInit) siInit.textContent = first || '?';
+      if (siName) siName.textContent = dash.teacher.full_name || '';
+    }
 
     // Load first view
     loadHome();
