@@ -74,6 +74,10 @@ def generate_invoices(doc_name):
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
     auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
 
+    _MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    mes_referencia = _MESES[getdate(cycle.posting_date).month - 1] if cycle.posting_date else ""
+
     # --- Phase 1: pre-create all customers before touching invoices ---
     # A customer failure skips that student but never leaves invoices in a partial state.
     customer_map = {}
@@ -115,10 +119,14 @@ def generate_invoices(doc_name):
         try:
             si.escola_billing_cycle = cycle.name
             si.escola_student = sga.student
+            si.escola_mes_referencia = mes_referencia
+            si.escola_encarregado = frappe.db.get_value("Student", sga.student, "primary_guardian")
         except Exception:
             pass
 
         for ln in applicable_lines:
+            base_description = ln.description or ln.fee_category or ln.item_code
+            description = "{0} - {1}".format(base_description, mes_referencia) if mes_referencia else base_description
             si.append(
                 "items",
                 {
@@ -126,7 +134,7 @@ def generate_invoices(doc_name):
                     "item_name": ln.description or ln.item_code,
                     "qty": 1,
                     "rate": ln.amount,
-                    "description": ln.description or ln.fee_category,
+                    "description": description,
                 },
             )
 

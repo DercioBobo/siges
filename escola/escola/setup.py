@@ -33,6 +33,27 @@ _CUSTOM_FIELDS = {
             "in_standard_filter": 1,
             "search_index": 1,
         },
+        {
+            "fieldname": "escola_mes_referencia",
+            "fieldtype": "Select",
+            "options": "\nJaneiro\nFevereiro\nMarço\nAbril\nMaio\nJunho\nJulho\nAgosto\nSetembro\nOutubro\nNovembro\nDezembro",
+            "label": "Mês de Referência",
+            "insert_after": "escola_student",
+            "read_only": 1,
+            "no_copy": 1,
+            "in_standard_filter": 1,
+        },
+        {
+            "fieldname": "escola_encarregado",
+            "fieldtype": "Link",
+            "options": "Guardian",
+            "label": "Encarregado (Escola)",
+            "insert_after": "escola_mes_referencia",
+            "fetch_from": "escola_student.primary_guardian",
+            "read_only": 1,
+            "no_copy": 1,
+            "in_standard_filter": 1,
+        },
     ],
     "Customer": [
         {
