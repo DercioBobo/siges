@@ -471,6 +471,45 @@ def get_terms():
 
 
 # ---------------------------------------------------------------------------
+# Subjects for a turma (teacher-filtered)
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_teacher_subjects(turma):
+    """Return subjects the teacher teaches in the given turma (from active timetable)."""
+    teacher = _get_teacher()
+    _assert_teacher_owns_turma(teacher.name, turma)
+
+    # Subjects this teacher teaches in this specific turma
+    rows = frappe.db.sql("""
+        SELECT DISTINCT te.subject
+        FROM `tabTimetable Entry` te
+        JOIN `tabTimetable` t ON t.name = te.parent
+        WHERE te.teacher = %s AND t.class_group = %s AND t.status = 'Activo'
+          AND te.subject IS NOT NULL AND te.subject != ''
+        ORDER BY te.subject
+    """, (teacher.name, turma), as_dict=True)
+
+    subjects = [r.subject for r in rows]
+
+    # If class director with no specific subject assignments, fall back to all subjects in turma timetable
+    if not subjects:
+        cg_teacher = frappe.db.get_value("Class Group", turma, "class_teacher")
+        if cg_teacher == teacher.name:
+            all_rows = frappe.db.sql("""
+                SELECT DISTINCT te.subject
+                FROM `tabTimetable Entry` te
+                JOIN `tabTimetable` t ON t.name = te.parent
+                WHERE t.class_group = %s AND t.status = 'Activo'
+                  AND te.subject IS NOT NULL AND te.subject != ''
+                ORDER BY te.subject
+            """, turma, as_dict=True)
+            subjects = [r.subject for r in all_rows]
+
+    return {"subjects": subjects}
+
+
+# ---------------------------------------------------------------------------
 # Profile / password
 # ---------------------------------------------------------------------------
 

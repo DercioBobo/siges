@@ -35,6 +35,34 @@
     .absent-toggle { accent-color:#ef4444; }
     /* Sidebar */
     #sidebar { width:224px; }
+    /* Desktop content layout — max readable width */
+    @media (min-width:768px) {
+      #main-content { max-width: min(940px, calc(100% - 224px)); }
+    }
+    /* Page section header */
+    .page-header { margin-bottom:1.5rem; }
+    .page-header h2 { font-size:1.25rem; font-weight:700; color:#1e293b; }
+    .page-header p { font-size:.8125rem; color:#64748b; margin-top:.2rem; }
+    /* Input field base */
+    .field { width:100%; padding:.5rem .75rem; background:#f8fafc; border:1px solid #e2e8f0;
+             border-radius:.75rem; font-size:.875rem; outline:none; transition:border-color .15s,box-shadow .15s; }
+    .field:focus { border-color:#93c5fd; box-shadow:0 0 0 3px rgba(147,197,253,.25); }
+    .field:disabled,.field[readonly] { opacity:.65; cursor:default; }
+    label.lbl { display:block; font-size:.6875rem; font-weight:600; color:#64748b; margin-bottom:.3rem; letter-spacing:.02em; text-transform:uppercase; }
+    /* Toast */
+    .toast { position:fixed; bottom:5rem; right:1rem; z-index:200; display:flex; align-items:center;
+             gap:.625rem; padding:.75rem 1rem; border-radius:.875rem; font-size:.8125rem;
+             font-weight:500; color:#fff; box-shadow:0 4px 20px rgba(0,0,0,.18);
+             animation:slideUp .2s ease; max-width:320px; }
+    @media (min-width:768px) { .toast { bottom:1.25rem; right:1.25rem; } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    /* Error / empty state */
+    .state-card { display:flex; flex-direction:column; align-items:center; gap:.75rem;
+                  padding:3rem 1.5rem; text-align:center; }
+    .state-icon { width:3rem; height:3rem; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    /* Divider label */
+    .section-divider { font-size:.6875rem; font-weight:700; color:#94a3b8; text-transform:uppercase;
+                       letter-spacing:.06em; padding:.5rem .75rem .25rem; }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -81,82 +109,92 @@
 </header>
 
 <!-- ═══════════════════════════════════════════════════════ MAIN ══ -->
-<main id="main-content" class="px-6 py-6 pb-24 md:pb-8 transition-all duration-200" style="max-width:100%;">
+<main id="main-content" class="px-4 md:px-8 py-6 pb-24 md:pb-10">
 
   <!-- ─── HOME ──────────────────────────────────────────────────── -->
   <div id="view-home" class="view active">
-    <div id="home-loading" class="flex justify-center py-20">
-      <div class="animate-spin h-9 w-9 border-4 border-brand border-t-transparent rounded-full"></div>
+    <div id="home-loading" class="flex justify-center py-24">
+      <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
     </div>
-    <div id="home-content" class="hidden space-y-6"></div>
+    <div id="home-content" class="hidden space-y-5"></div>
   </div>
 
   <!-- ─── TURMAS ────────────────────────────────────────────────── -->
   <div id="view-turmas" class="view">
-    <h2 class="text-xl font-bold text-slate-800 mb-5">As Minhas Turmas</h2>
-    <div id="turmas-loading" class="flex justify-center py-16">
-      <div class="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full"></div>
+    <div class="page-header">
+      <h2>As Minhas Turmas</h2>
+      <p>Clique numa turma para ver alunos, criar pautas ou registar presenças.</p>
     </div>
-    <div id="turmas-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <div id="turmas-loading" class="flex justify-center py-16">
+      <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
+    </div>
+    <div id="turmas-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
   </div>
 
   <!-- ─── HORÁRIO ───────────────────────────────────────────────── -->
   <div id="view-horario" class="view">
-    <h2 class="text-xl font-bold text-slate-800 mb-5">O Meu Horário</h2>
-    <div id="horario-loading" class="flex justify-center py-16">
-      <div class="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full"></div>
+    <div class="page-header">
+      <h2>O Meu Horário</h2>
+      <p>Horário semanal baseado nas turmas activas onde está atribuído.</p>
     </div>
-    <div id="horario-content" class="hidden"></div>
+    <div id="horario-loading" class="flex justify-center py-16">
+      <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
+    </div>
+    <div id="horario-content" class="hidden overflow-x-auto"></div>
   </div>
 
   <!-- ─── PAUTAS ────────────────────────────────────────────────── -->
   <div id="view-pautas" class="view">
-    <div class="flex items-center justify-between mb-5">
-      <h2 class="text-xl font-bold text-slate-800">Pautas de Notas</h2>
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div class="page-header mb-0">
+        <h2>Pautas de Notas</h2>
+        <p>Crie e edite avaliações por turma e período lectivo.</p>
+      </div>
       <button onclick="openNewGradeEntry()"
-              class="flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-brand-dark transition-colors">
+              class="shrink-0 flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand-dark transition-colors shadow-sm">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
         </svg>
         Nova Pauta
       </button>
     </div>
-    <!-- Filters -->
-    <div class="flex flex-wrap gap-3 mb-5">
-      <select id="pautas-turma" onchange="loadPautas()"
-              class="flex-1 min-w-[160px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+    <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
+      <select id="pautas-turma" onchange="loadPautas()" class="field flex-1 min-w-[150px] bg-slate-50">
         <option value="">Todas as turmas</option>
       </select>
-      <select id="pautas-term" onchange="loadPautas()"
-              class="flex-1 min-w-[160px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <select id="pautas-term" onchange="loadPautas()" class="field flex-1 min-w-[150px] bg-slate-50">
         <option value="">Todos os períodos</option>
       </select>
     </div>
-    <div id="pautas-loading" class="hidden flex justify-center py-10">
-      <div class="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full"></div>
+    <div id="pautas-loading" class="hidden justify-center py-10">
+      <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
     </div>
-    <div id="pautas-list" class="space-y-3"></div>
+    <div id="pautas-list" class="space-y-2.5"></div>
   </div>
 
   <!-- ─── PRESENÇAS ─────────────────────────────────────────────── -->
   <div id="view-presencas" class="view">
-    <h2 class="text-xl font-bold text-slate-800 mb-5">Registo de Presenças</h2>
-    <div class="flex flex-wrap gap-3 mb-5">
-      <select id="att-turma" onchange="loadAttendanceView()"
-              class="flex-1 min-w-[160px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+    <div class="page-header">
+      <h2>Registo de Presenças</h2>
+      <p>Faltas justificadas e injustificadas por turma e período.</p>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
+      <select id="att-turma" onchange="loadAttendanceView()" class="field flex-1 min-w-[150px] bg-slate-50">
         <option value="">Seleccione a turma</option>
       </select>
-      <select id="att-term" onchange="loadAttendanceView()"
-              class="flex-1 min-w-[160px] px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+      <select id="att-term" onchange="loadAttendanceView()" class="field flex-1 min-w-[150px] bg-slate-50">
         <option value="">Seleccione o período</option>
       </select>
     </div>
-    <div id="att-content" class="space-y-4"></div>
+    <div id="att-content"></div>
   </div>
 
   <!-- ─── PERFIL ────────────────────────────────────────────────── -->
   <div id="view-perfil" class="view">
-    <h2 class="text-xl font-bold text-slate-800 mb-5">Perfil</h2>
+    <div class="page-header">
+      <h2>Perfil</h2>
+      <p>As suas informações e configurações de acesso.</p>
+    </div>
     <div class="max-w-md space-y-4">
       <!-- Info card -->
       <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
@@ -378,12 +416,50 @@ function esc(str) {
 }
 
 function showToast(msg, ok=true) {
+  document.querySelectorAll('.toast').forEach(x => x.remove());
+  const icon = ok
+    ? `<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`
+    : `<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>`;
   const t = document.createElement('div');
-  t.className = `fixed top-4 right-4 z-[100] px-4 py-3 rounded-xl text-white text-sm font-medium shadow-lg transition-all
-    ${ok ? 'bg-green-600' : 'bg-red-600'}`;
-  t.textContent = msg;
+  t.className = `toast ${ok ? 'bg-emerald-600' : 'bg-red-600'}`;
+  t.innerHTML = icon + `<span>${esc(msg)}</span>`;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 2800);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(8px)'; t.style.transition='all .3s'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+function errorHtml(msg, retryCall) {
+  return `<div class="state-card">
+    <div class="state-icon bg-red-50">
+      <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="text-sm font-semibold text-slate-700">Ocorreu um erro</div>
+      <div class="text-xs text-slate-400 mt-0.5 max-w-xs">${esc(msg)}</div>
+    </div>
+    ${retryCall ? `<button onclick="${retryCall}" class="text-xs text-brand font-semibold hover:underline">Tentar novamente</button>` : ''}
+  </div>`;
+}
+
+function emptyHtml(msg, actionHtml) {
+  return `<div class="state-card">
+    <div class="state-icon bg-slate-100">
+      <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+      </svg>
+    </div>
+    <div class="text-sm text-slate-500">${msg}</div>
+    ${actionHtml || ''}
+  </div>`;
+}
+
+function spinnerHtml() {
+  return `<div class="flex justify-center py-14">
+    <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
+  </div>`;
 }
 
 // ── Navigation ─────────────────────────────────────────────────
@@ -414,13 +490,7 @@ function showView(name) {
 function applyDesktopOffset() {
   const main = document.getElementById('main-content');
   if (!main) return;
-  if (window.innerWidth >= 768) {
-    main.style.marginLeft = '224px';
-    main.style.maxWidth = 'calc(100% - 224px)';
-  } else {
-    main.style.marginLeft = '';
-    main.style.maxWidth = '';
-  }
+  main.style.marginLeft = window.innerWidth >= 768 ? '224px' : '';
 }
 window.addEventListener('resize', applyDesktopOffset);
 applyDesktopOffset();
@@ -450,8 +520,7 @@ async function init() {
     loadHome();
     _loadedViews.add('home');
   } catch(e) {
-    document.getElementById('home-loading').innerHTML =
-      `<div class="text-center text-red-500 text-sm py-10">${esc(e.message)}</div>`;
+    document.getElementById('home-loading').innerHTML = errorHtml(e.message, 'init()');
   }
 }
 
@@ -468,17 +537,32 @@ function loadHome() {
   // Stats
   const statsHtml = `
     <div class="grid grid-cols-3 gap-3">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
-        <div class="text-2xl font-extrabold text-brand">${d.stats.total_turmas}</div>
-        <div class="text-xs text-slate-500 mt-1">Turmas</div>
+      <div class="bg-white rounded-2xl px-4 py-3.5 border border-slate-100 shadow-sm flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+          <svg class="h-4.5 w-4.5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:1.125rem;height:1.125rem"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </div>
+        <div>
+          <div class="text-xl font-bold text-slate-800">${d.stats.total_turmas}</div>
+          <div class="text-xs text-slate-500">Turmas</div>
+        </div>
       </div>
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
-        <div class="text-2xl font-extrabold text-brand">${d.stats.total_students}</div>
-        <div class="text-xs text-slate-500 mt-1">Alunos</div>
+      <div class="bg-white rounded-2xl px-4 py-3.5 border border-slate-100 shadow-sm flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+          <svg class="text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:1.125rem;height:1.125rem"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-xl font-bold text-slate-800">${d.stats.total_students}</div>
+          <div class="text-xs text-slate-500">Alunos</div>
+        </div>
       </div>
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center ${d.stats.at_risk > 0 ? 'border-orange-200' : ''}">
-        <div class="text-2xl font-extrabold ${d.stats.at_risk > 0 ? 'text-orange-500' : 'text-brand'}">${d.stats.at_risk}</div>
-        <div class="text-xs text-slate-500 mt-1">Em Risco</div>
+      <div class="bg-white rounded-2xl px-4 py-3.5 border ${d.stats.at_risk>0?'border-orange-200':'border-slate-100'} shadow-sm flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl ${d.stats.at_risk>0?'bg-orange-50':'bg-slate-100'} flex items-center justify-center shrink-0">
+          <svg class="${d.stats.at_risk>0?'text-orange-500':'text-slate-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:1.125rem;height:1.125rem"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-xl font-bold ${d.stats.at_risk>0?'text-orange-600':'text-slate-800'}">${d.stats.at_risk}</div>
+          <div class="text-xs text-slate-500">Em Risco</div>
+        </div>
       </div>
     </div>`;
 
@@ -534,37 +618,51 @@ function loadHome() {
   }
 
   // Turma quick cards
-  const turmaCards = _turmas.slice(0,6).map(t => {
+  const turmaCards = _turmas.slice(0,4).map(t => {
     const cfg = shiftCfg(t.shift);
     return `
-      <div class="bg-white rounded-xl p-3 shadow-sm border border-slate-100 cursor-pointer hover:shadow-md transition-shadow"
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
            onclick="openTurmaDrawer('${esc(t.name)}')">
-        <div class="h-1 ${cfg.bar} rounded-full mb-2"></div>
-        <div class="font-semibold text-slate-800 text-sm truncate">${esc(t.school_class||t.name)}</div>
-        ${t.section_name?`<div class="text-xs text-slate-400">Turma ${esc(t.section_name)}</div>`:''}
-        <div class="mt-1.5 flex items-center justify-between">
-          <span class="text-xs px-1.5 py-0.5 rounded-full ${cfg.badge}">${cfg.icon} ${esc(t.shift||'—')}</span>
-          <span class="text-xs text-slate-400">${t.student_count||0} alunos</span>
+        <div class="h-1.5 ${cfg.bar}"></div>
+        <div class="p-3">
+          <div class="font-semibold text-slate-800 text-sm truncate">${esc(t.school_class||t.name)}</div>
+          ${t.section_name?`<div class="text-xs text-slate-400 mt-0.5">Turma ${esc(t.section_name)}</div>`:''}
+          <div class="mt-2 flex items-center justify-between">
+            <span class="text-xs px-1.5 py-0.5 rounded-full ${cfg.badge}">${cfg.icon} ${esc(t.shift||'—')}</span>
+            <span class="text-xs text-slate-400">${t.student_count||0} al.</span>
+          </div>
         </div>
       </div>`;
   }).join('');
 
+  const firstName = esc((d.teacher.full_name||'').split(' ')[0]);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
   el.innerHTML = `
-    <div class="mb-5">
-      <h2 class="text-xl font-bold text-slate-800">Bom dia, ${esc((d.teacher.full_name||'').split(' ')[0])} 👋</h2>
-      <p class="text-slate-500 text-sm mt-0.5">${d.academic_year || ''}</p>
-    </div>
-    ${statsHtml}
-    <div class="mt-5">${todayHtml}</div>
-    ${_turmas.length ? `
-    <div class="mt-5">
-      <div class="flex items-center justify-between mb-3">
-        <span class="font-semibold text-slate-700 text-sm">As Minhas Turmas</span>
-        ${_turmas.length>6?`<button onclick="showView('turmas')" class="text-xs text-brand hover:underline">Ver todas →</button>`:''}
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-800">${greet}, ${firstName} 👋</h2>
+        <p class="text-slate-500 text-sm mt-0.5">${d.academic_year || 'Portal do Professor'}</p>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${turmaCards}</div>
-    </div>` : ''}
-    ${recentHtml ? `<div class="mt-5">${recentHtml}</div>` : ''}
+    </div>
+
+    ${statsHtml}
+
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="space-y-5">
+        ${todayHtml}
+        ${_turmas.length ? `
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold text-slate-600 uppercase tracking-wide" style="font-size:.6875rem;letter-spacing:.05em;">As Minhas Turmas</span>
+            ${_turmas.length>4?`<button onclick="showView('turmas')" class="text-xs text-brand hover:underline font-medium">Ver todas →</button>`:''}
+          </div>
+          <div class="grid grid-cols-2 gap-3">${turmaCards}</div>
+        </div>` : ''}
+      </div>
+      ${recentHtml ? `<div>${recentHtml}</div>` : '<div></div>'}
+    </div>
   `;
   el.classList.remove('hidden');
 }
@@ -575,21 +673,21 @@ function renderTurmas() {
   document.getElementById('turmas-loading').classList.add('hidden');
 
   if (!_turmas.length) {
-    grid.innerHTML = `<div class="col-span-full text-center py-16 text-slate-400 text-sm">Nenhuma turma atribuída.</div>`;
+    grid.innerHTML = `<div class="col-span-full">${emptyHtml('Nenhuma turma atribuída. Contacte o administrador.')}</div>`;
   } else {
     grid.innerHTML = _turmas.map(t => {
       const cfg = shiftCfg(t.shift);
       return `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all">
           <div class="h-1.5 ${cfg.bar}"></div>
           <div class="p-4">
             <div class="flex items-start justify-between mb-3">
-              <div class="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center">
-                <span class="text-brand font-bold">${esc((t.school_class||t.name).charAt(0))}</span>
+              <div class="w-10 h-10 rounded-xl bg-brand-light flex items-center justify-center">
+                <span class="text-brand font-bold text-sm">${esc((t.school_class||t.name).charAt(0))}</span>
               </div>
-              ${t.is_director ? `<span class="text-xs bg-brand-light text-brand font-semibold px-2 py-0.5 rounded-full">Director</span>` : ''}
+              ${t.is_director ? `<span class="text-[11px] bg-brand text-white font-semibold px-2 py-0.5 rounded-full">Director</span>` : ''}
             </div>
-            <div class="font-bold text-slate-800 text-sm">${esc(t.school_class||t.name)}</div>
+            <div class="font-bold text-slate-800 text-sm leading-snug">${esc(t.school_class||t.name)}</div>
             ${t.section_name?`<div class="text-xs text-slate-400 mt-0.5">Turma ${esc(t.section_name)}</div>`:''}
             <div class="mt-2 flex flex-wrap items-center gap-1.5">
               <span class="text-xs px-2 py-0.5 rounded-full ${cfg.badge}">${cfg.icon} ${esc(t.shift||'—')}</span>
@@ -601,13 +699,13 @@ function renderTurmas() {
                 📋 Pautas
               </button>
               <button onclick="openAttForTurma('${esc(t.name)}')"
-                      class="text-xs font-semibold py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+                      class="text-xs font-semibold py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
                 ✓ Presenças
               </button>
             </div>
             <button onclick="openTurmaDrawer('${esc(t.name)}')"
-                    class="mt-2 w-full text-xs font-medium py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
-              Ver Lista de Alunos
+                    class="mt-2 w-full text-xs font-medium py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+              Ver Alunos
             </button>
           </div>
         </div>`;
@@ -642,8 +740,7 @@ async function openTurmaDrawer(turma) {
     const students = data.students || [];
 
     if (!students.length) {
-      document.getElementById('drawer-body').innerHTML =
-        `<div class="text-center py-12 text-slate-400 text-sm">Nenhum aluno inscrito.</div>`;
+      document.getElementById('drawer-body').innerHTML = emptyHtml('Nenhum aluno inscrito nesta turma.');
       return;
     }
 
@@ -694,8 +791,7 @@ async function openTurmaDrawer(turma) {
         </button>
       </div>`;
   } catch(e) {
-    document.getElementById('drawer-body').innerHTML =
-      `<div class="text-center py-10 text-red-500 text-sm">${esc(e.message)}</div>`;
+    document.getElementById('drawer-body').innerHTML = errorHtml(e.message);
   }
 }
 
@@ -781,8 +877,7 @@ async function loadHorario() {
     el.innerHTML = html;
     el.classList.remove('hidden');
   } catch(e) {
-    document.getElementById('horario-loading').innerHTML =
-      `<div class="text-center text-red-500 text-sm py-10">${esc(e.message)}</div>`;
+    document.getElementById('horario-loading').innerHTML = errorHtml(e.message, 'loadHorario()');
   }
 }
 
@@ -815,7 +910,7 @@ async function loadPautas() {
   const loading = document.getElementById('pautas-loading');
 
   if (!turma || !term) {
-    list.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">Seleccione a turma e o período.</div>`;
+    list.innerHTML = emptyHtml('Seleccione a turma e o período para ver as pautas.');
     return;
   }
 
@@ -828,33 +923,39 @@ async function loadPautas() {
     const entries = data.entries || [];
 
     if (!entries.length) {
-      list.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">Nenhuma pauta encontrada.<br>
-        <button onclick="openNewGradeEntry()" class="mt-3 text-brand text-sm font-semibold hover:underline">+ Criar primeira pauta</button>
-      </div>`;
+      list.innerHTML = emptyHtml('Nenhuma pauta encontrada para esta turma e período.',
+        `<button onclick="openNewGradeEntry()" class="text-sm font-semibold text-brand border border-brand px-4 py-2 rounded-xl hover:bg-brand hover:text-white transition-colors">+ Criar primeira pauta</button>`);
       return;
     }
 
-    list.innerHTML = entries.map(e => `
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-md transition-shadow cursor-pointer"
+    list.innerHTML = entries.map(e => {
+      const total = (e.total_approved||0) + (e.total_failed||0);
+      const pct = total ? Math.round((e.total_approved||0)/total*100) : null;
+      return `
+      <div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
            onclick="openEditGradeEntry('${esc(e.name)}')">
         <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="font-semibold text-slate-800">${esc(e.assessment_name)}</div>
-            <div class="text-xs text-slate-400 mt-0.5">${esc(e.evaluation_type)}${e.subject?' · '+esc(e.subject):''}</div>
-          </div>
-          <div class="text-right shrink-0">
-            <div class="text-xs text-slate-400">${e.assessment_date||''}</div>
-            <div class="text-xs mt-1">
-              <span class="text-green-600 font-semibold">${e.total_approved||0} ✓</span>
-              <span class="mx-1 text-slate-300">·</span>
-              <span class="text-red-500 font-semibold">${e.total_failed||0} ✗</span>
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold text-slate-800 group-hover:text-brand transition-colors truncate">${esc(e.assessment_name)}</div>
+            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">${esc(e.evaluation_type)}</span>
+              ${e.subject?`<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">${esc(e.subject)}</span>`:''}
             </div>
           </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs text-slate-400 mb-1">${e.assessment_date||''}</div>
+            <div class="flex items-center gap-2 justify-end">
+              <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">${e.total_approved||0} ✓</span>
+              <span class="text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">${e.total_failed||0} ✗</span>
+            </div>
+            ${pct!==null?`<div class="text-[10px] text-slate-400 mt-1">${pct}% aprovação</div>`:''}
+          </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) {
     loading.classList.add('hidden');
-    list.innerHTML = `<div class="text-center text-red-500 text-sm py-6">${esc(e.message)}</div>`;
+    list.innerHTML = errorHtml(e.message, 'loadPautas()');
   }
 }
 
@@ -863,46 +964,51 @@ async function openNewGradeEntry() {
   const term  = document.getElementById('pautas-term').value;
 
   openDrawer('Nova Pauta de Notas', '');
-  document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(turma, term);
+  document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(turma, term, null);
   document.getElementById('drawer-footer').innerHTML = `
     <button onclick="submitGradeEntry()"
             class="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
       Guardar Pauta
     </button>`;
 
-  // Load students into table once turma selected
-  if (turma) await loadGradeEntryStudents(turma);
+  if (turma) {
+    await Promise.all([
+      loadGradeEntrySubjects(turma, null),
+      loadGradeEntryStudents(turma, null),
+    ]);
+  } else {
+    const sel = document.getElementById('ge-subject');
+    if (sel) sel.innerHTML = `<option value="">— Seleccione a turma primeiro —</option>`;
+  }
 }
 
 async function openEditGradeEntry(entryName) {
-  openDrawer('Editar Pauta', '');
-  document.getElementById('drawer-body').innerHTML = `
-    <div class="flex justify-center py-10">
-      <div class="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full"></div>
-    </div>`;
+  openDrawer('A carregar…', '');
+  document.getElementById('drawer-body').innerHTML = spinnerHtml();
 
   try {
     const data = await api('get_grade_entry_rows', { entry_name: entryName });
     const e = data.entry;
     document.getElementById('drawer-title').textContent = e.assessment_name;
-    document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(e.class_group, e.academic_term, e, data.rows);
+    document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(e.class_group, e.academic_term, e);
     document.getElementById('drawer-footer').innerHTML = `
       <button onclick="submitGradeEntry('${esc(e.assessment_name)}')"
               class="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
         Guardar Alterações
       </button>`;
+    // Load subjects dropdown and student rows (with pre-filled scores)
+    await Promise.all([
+      loadGradeEntrySubjects(e.class_group, e.subject),
+      loadGradeEntryStudents(e.class_group, data.rows),
+    ]);
   } catch(err) {
-    document.getElementById('drawer-body').innerHTML =
-      `<div class="text-center text-red-500 text-sm py-8">${esc(err.message)}</div>`;
+    document.getElementById('drawer-body').innerHTML = errorHtml(err.message, `openEditGradeEntry('${entryName}')`);
   }
 }
 
-function buildGradeEntryForm(turma, term, existing, existingRows) {
-  const turmaLabel = _turmas.find(t=>t.name===turma);
-  const termLabel  = _terms.find(t=>t.name===term);
-
+function buildGradeEntryForm(turma, term, existing) {
   const turmaOpts = _turmas.map(t =>
-    `<option value="${esc(t.name)}" ${turma&&t.name===turma?'selected':''}>${esc(t.school_class||t.name)}${t.section_name?' — T'+t.section_name:''}</option>`
+    `<option value="${esc(t.name)}" ${turma&&t.name===turma?'selected':''}>${esc(t.school_class||t.name)}${t.section_name?' — '+t.section_name:''}</option>`
   ).join('');
   const termOpts = _terms.map(t =>
     `<option value="${esc(t.name)}" ${term&&t.name===term?'selected':''}>${esc(t.term_name||t.name)}</option>`
@@ -910,65 +1016,64 @@ function buildGradeEntryForm(turma, term, existing, existingRows) {
   const evalOpts = EVAL_TYPES.map(e =>
     `<option value="${esc(e)}" ${existing&&e===existing.evaluation_type?'selected':''}>${e}</option>`
   ).join('');
+  const dis = existing ? 'disabled' : '';
 
   return `
-    <div class="space-y-4">
-      <!-- Header fields -->
+    <div class="space-y-3 pb-2">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Turma *</label>
-          <select id="ge-turma" onchange="onGeTurmaChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" ${existing?'disabled':''}>
+          <label class="lbl">Turma *</label>
+          <select id="ge-turma" onchange="onGeTurmaChange()" class="field" ${dis}>
             <option value="">Seleccionar…</option>${turmaOpts}
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Período *</label>
-          <select id="ge-term" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" ${existing?'disabled':''}>
+          <label class="lbl">Período *</label>
+          <select id="ge-term" class="field" ${dis}>
             <option value="">Seleccionar…</option>${termOpts}
           </select>
         </div>
       </div>
+
+      <div>
+        <label class="lbl">Nome da Avaliação *</label>
+        <input id="ge-name" type="text" value="${existing?esc(existing.assessment_name):''}"
+               placeholder="Ex.: Teste 1, Trabalho de Grupo…" class="field" ${existing?'readonly':''}>
+      </div>
+
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Tipo *</label>
-          <select id="ge-type" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+          <label class="lbl">Tipo *</label>
+          <select id="ge-type" class="field">
             <option value="">Seleccionar…</option>${evalOpts}
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Nota Máxima</label>
-          <input id="ge-max" type="number" value="${existing?existing.max_score:SCALE_MAX}" min="0" max="100" step="0.5"
-                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
-        </div>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">Nome da Avaliação *</label>
-        <input id="ge-name" type="text" value="${existing?esc(existing.assessment_name):''}" placeholder="Ex.: Teste 1, Trabalho de Grupo…"
-               class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-               ${existing?'readonly':''}>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Disciplina</label>
-          <input id="ge-subject" type="text" value="${existing?esc(existing.subject):''}" placeholder="Deixar vazio = todas"
-                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">Data</label>
-          <input id="ge-date" type="date" value="${existing?existing.assessment_date:new Date().toISOString().split('T')[0]}"
-                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+          <label class="lbl">Data</label>
+          <input id="ge-date" type="date" value="${existing?existing.assessment_date:new Date().toISOString().split('T')[0]}" class="field">
         </div>
       </div>
 
-      <!-- Students table -->
-      <div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Disciplina</label>
+          <select id="ge-subject" class="field">
+            <option value="">A carregar…</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Nota Máxima</label>
+          <input id="ge-max" type="number" value="${existing?existing.max_score:SCALE_MAX}" min="0" max="100" step="0.5" class="field">
+        </div>
+      </div>
+
+      <div class="pt-1">
         <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-semibold text-slate-500">Notas dos Alunos</label>
-          <span class="text-xs text-slate-400">Nota máx: <span id="ge-max-display">${existing?existing.max_score:SCALE_MAX}</span></span>
+          <span class="lbl mb-0">Notas dos Alunos</span>
+          <span class="text-xs text-slate-400">Máx: <strong id="ge-max-display" class="text-slate-600">${existing?existing.max_score:SCALE_MAX}</strong></span>
         </div>
         <div id="ge-students-wrap">
-          ${turma ? '<div class="text-xs text-slate-400 text-center py-4">A carregar alunos…</div>' :
-                    '<div class="text-xs text-slate-400 text-center py-4">Seleccione a turma para ver os alunos.</div>'}
+          ${turma ? spinnerHtml() : emptyHtml('Seleccione a turma para ver os alunos.')}
         </div>
       </div>
     </div>`;
@@ -976,67 +1081,112 @@ function buildGradeEntryForm(turma, term, existing, existingRows) {
 
 async function onGeTurmaChange() {
   const turma = document.getElementById('ge-turma').value;
-  if (turma) await loadGradeEntryStudents(turma);
+  if (!turma) return;
+  await Promise.all([
+    loadGradeEntrySubjects(turma, null),
+    loadGradeEntryStudents(turma, null),
+  ]);
+}
+
+async function loadGradeEntrySubjects(turma, currentSubject) {
+  const sel = document.getElementById('ge-subject');
+  if (!sel) return;
+  sel.innerHTML = `<option value="">A carregar…</option>`;
+  try {
+    const data = await api('get_teacher_subjects', { turma });
+    const subjects = data.subjects || [];
+    sel.innerHTML = `<option value="">— Todas as disciplinas —</option>` +
+      subjects.map(s => `<option value="${esc(s)}" ${s===currentSubject?'selected':''}>${esc(s)}</option>`).join('');
+    if (!subjects.length) {
+      sel.innerHTML = `<option value="">Sem disciplinas no horário activo</option>`;
+    }
+  } catch(e) {
+    sel.innerHTML = `<option value="">Erro ao carregar disciplinas</option>`;
+  }
 }
 
 async function loadGradeEntryStudents(turma, existingRows) {
   const wrap = document.getElementById('ge-students-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">A carregar…</div>`;
+  wrap.innerHTML = spinnerHtml();
 
   try {
     const data = await api('get_turma_students', { turma });
     const students = data.students || [];
+
+    if (!students.length) {
+      wrap.innerHTML = emptyHtml('Nenhum aluno inscrito nesta turma.');
+      return;
+    }
+
     const maxEl = document.getElementById('ge-max');
     const maxScore = parseFloat(maxEl?.value || SCALE_MAX);
 
-    // Merge existing rows data if editing
     const rowMap = {};
     (existingRows||[]).forEach(r => { rowMap[r.student] = r; });
 
+    // Re-apply max display on score change
     const updateMaxDisplay = () => {
       const v = parseFloat(document.getElementById('ge-max')?.value || SCALE_MAX);
-      document.getElementById('ge-max-display').textContent = v;
+      const el = document.getElementById('ge-max-display');
+      if (el) el.textContent = v;
     };
+    maxEl?.removeEventListener('input', updateMaxDisplay);
     maxEl?.addEventListener('input', updateMaxDisplay);
 
+    const scoreStyle = (row) => {
+      if (!row || row.is_absent) return '';
+      const v = parseFloat(row.score);
+      if (isNaN(v)) return '';
+      return v >= MIN_PASS ? 'color:#166534;font-weight:600' : 'color:#991b1b;font-weight:600';
+    };
+
     wrap.innerHTML = `
-      <div class="overflow-x-auto rounded-xl border border-slate-100">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-100">
-              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Aluno</th>
-              <th class="px-3 py-2 text-center text-xs font-semibold text-slate-500 w-24">Nota</th>
-              <th class="px-3 py-2 text-center text-xs font-semibold text-slate-500 w-16">S/Nota</th>
-            </tr>
-          </thead>
-          <tbody id="ge-tbody">
-            ${students.map(s => {
-              const existing = rowMap[s.student] || {};
-              return `
-              <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50/60" data-student="${esc(s.student)}">
-                <td class="px-3 py-2">
-                  <div class="text-sm font-medium text-slate-700 truncate max-w-[180px]">${esc(s.student_name||s.student)}</div>
-                  ${s.student_code?`<div class="text-xs text-slate-400">${esc(s.student_code)}</div>`:''}
-                </td>
-                <td class="px-2 py-2 text-center">
-                  <input type="number" min="0" max="${maxScore}" step="0.5"
-                         value="${existing.score!=null?existing.score:''}"
-                         class="score-input px-2 py-1.5 bg-slate-100 border-0 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand/30 ${existing.is_absent?'opacity-30':''}"
-                         ${existing.is_absent?'disabled':''}
-                         oninput="updateGradeColor(this)">
-                </td>
-                <td class="px-2 py-2 text-center">
-                  <input type="checkbox" class="absent-toggle w-4 h-4 rounded" ${existing.is_absent?'checked':''}
-                         onchange="toggleAbsent(this)">
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+      <div class="rounded-xl border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50 px-3 py-2 border-b border-slate-200 flex text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+          <span class="flex-1">Aluno</span>
+          <span class="w-20 text-center">Nota</span>
+          <span class="w-12 text-center">Falta</span>
+        </div>
+        <div id="ge-tbody" class="divide-y divide-slate-100">
+          ${students.map((s, i) => {
+            const row = rowMap[s.student] || {};
+            const absent = !!row.is_absent;
+            return `
+            <div class="flex items-center px-3 py-2 hover:bg-slate-50 transition-colors ${i%2===0?'':'bg-slate-50/30'}"
+                 data-student="${esc(s.student)}">
+              <div class="flex-1 min-w-0 pr-2">
+                <div class="text-sm font-medium text-slate-700 truncate">${esc(s.student_name||s.student)}</div>
+                ${s.student_code?`<div class="text-xs text-slate-400">${esc(s.student_code)}</div>`:''}
+              </div>
+              <div class="w-20 flex justify-center">
+                <input type="number" min="0" max="${maxScore}" step="0.5"
+                       value="${row.score!=null&&!absent?row.score:''}"
+                       style="${scoreStyle(row)}"
+                       class="score-input px-2 py-1 bg-white border border-slate-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand/30 ${absent?'opacity-30':''}"
+                       ${absent?'disabled':''}
+                       oninput="updateGradeColor(this)">
+              </div>
+              <div class="w-12 flex justify-center">
+                <input type="checkbox" class="absent-toggle w-4 h-4 rounded cursor-pointer" ${absent?'checked':''}
+                       onchange="toggleAbsent(this)">
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="bg-slate-50 px-3 py-2 border-t border-slate-200 text-xs text-slate-400">
+          ${students.length} aluno${students.length!==1?'s':''}
+          · <span class="text-emerald-600 font-medium">verde ≥ ${MIN_PASS}</span>
+          · <span class="text-red-600 font-medium">vermelho &lt; ${MIN_PASS}</span>
+        </div>
       </div>`;
+
+    // Apply initial colors to pre-filled scores
+    wrap.querySelectorAll('input[type="number"]').forEach(inp => {
+      if (inp.value !== '') updateGradeColor(inp);
+    });
   } catch(e) {
-    wrap.innerHTML = `<div class="text-xs text-red-500 text-center py-4">${esc(e.message)}</div>`;
+    wrap.innerHTML = errorHtml(e.message);
   }
 }
 
@@ -1054,12 +1204,12 @@ function updateGradeColor(input) {
 }
 
 function toggleAbsent(cb) {
-  const row = cb.closest('tr');
-  const scoreInput = row.querySelector('input[type="number"]');
+  const row = cb.closest('[data-student]');
+  const scoreInput = row?.querySelector('input[type="number"]');
   if (scoreInput) {
     scoreInput.disabled = cb.checked;
     scoreInput.classList.toggle('opacity-30', cb.checked);
-    if (cb.checked) scoreInput.value = '';
+    if (cb.checked) { scoreInput.value = ''; scoreInput.style.color=''; scoreInput.style.fontWeight=''; }
   }
 }
 
@@ -1069,7 +1219,7 @@ async function submitGradeEntry(overrideAssessmentName) {
   const type    = document.getElementById('ge-type')?.value;
   const aname   = overrideAssessmentName || document.getElementById('ge-name')?.value?.trim();
   const max     = document.getElementById('ge-max')?.value;
-  const subject = document.getElementById('ge-subject')?.value?.trim();
+  const subject = document.getElementById('ge-subject')?.value || '';
   const date    = document.getElementById('ge-date')?.value;
 
   if (!turma||!term||!type||!aname) {
@@ -1078,10 +1228,10 @@ async function submitGradeEntry(overrideAssessmentName) {
   }
 
   const rows = [];
-  document.querySelectorAll('#ge-tbody tr[data-student]').forEach(tr => {
-    const student = tr.dataset.student;
-    const scoreInput = tr.querySelector('input[type="number"]');
-    const absentCb  = tr.querySelector('input[type="checkbox"]');
+  document.querySelectorAll('#ge-tbody [data-student]').forEach(el => {
+    const student = el.dataset.student;
+    const scoreInput = el.querySelector('input[type="number"]');
+    const absentCb  = el.querySelector('input[type="checkbox"]');
     rows.push({
       student,
       subject: subject || '',
@@ -1126,11 +1276,11 @@ async function loadAttendanceView() {
   const el    = document.getElementById('att-content');
 
   if (!turma || !term) {
-    el.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">Seleccione a turma e o período.</div>`;
+    el.innerHTML = emptyHtml('Seleccione a turma e o período para registar presenças.');
     return;
   }
 
-  el.innerHTML = `<div class="flex justify-center py-10"><div class="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full"></div></div>`;
+  el.innerHTML = spinnerHtml();
 
   try {
     const data = await api('get_attendance', { turma, term });
@@ -1192,7 +1342,7 @@ async function loadAttendanceView() {
         </div>
       </div>`;
   } catch(e) {
-    el.innerHTML = `<div class="text-center text-red-500 text-sm py-8">${esc(e.message)}</div>`;
+    el.innerHTML = errorHtml(e.message, 'loadAttendanceView()');
   }
 }
 
