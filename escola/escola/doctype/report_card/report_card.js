@@ -52,10 +52,22 @@ frappe.ui.form.on("Report Card", {
     },
 
     class_group(frm) {
-        // Clear fetched fields so fetch_from can repopulate from new class_group
-        frm.set_value("academic_year", null);
-        frm.set_value("school_class", null);
         set_queries(frm);
+        if (!frm.doc.class_group) return;
+        frappe.db.get_value("Class Group", frm.doc.class_group, ["academic_year", "school_class"], (r) => {
+            if (!r) return;
+            // Set directly on frm.doc to avoid triggering academic_year/school_class
+            // event handlers which would clear class_group and cause a cascade.
+            if (r.academic_year) {
+                frm.doc.academic_year = r.academic_year;
+                frm.refresh_field("academic_year");
+            }
+            if (r.school_class) {
+                frm.doc.school_class = r.school_class;
+                frm.refresh_field("school_class");
+            }
+            set_queries(frm);
+        });
     },
 
     student(frm) {

@@ -38,6 +38,10 @@ doc_events = {
         "on_update_after_submit": "escola.escola.doctype.billing_cycle.penalty.on_sales_invoice_update",
         "on_cancel":              "escola.escola.doctype.billing_cycle.penalty.on_sales_invoice_update",
     },
+    "Annual Assessment": {
+        # Auto-generate/update Report Cards whenever assessment rows are saved
+        "on_update": "escola.escola.doctype.report_card.report_card.generate_for_assessment_hook",
+    },
 }
 
 # -----------------------------------------------------------------
@@ -70,6 +74,7 @@ scheduler_events = {
         "escola.escola.doctype.billing_cycle.penalty.apply_all_pending_penalties",
         "escola.escola.doctype.student.student.update_all_student_ages",
         "escola.escola.doctype.billing_schedule.billing_schedule.run_due_schedules",
+        "escola.escola.doctype.report_card.report_card.refresh_all_report_cards",
     ],
 }
 

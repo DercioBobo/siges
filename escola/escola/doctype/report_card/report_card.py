@@ -58,61 +58,198 @@ class ReportCard(Document):
             self.overall_average = 0
 
 
-@frappe.whitelist()
-def load_assessment(doc_name):
+# ---------------------------------------------------------------------------
+# Core data builder (shared by load_assessment and auto-generation)
+# ---------------------------------------------------------------------------
+
+def _build_report_card_data(annual_name, student, school_class):
     """
-    Fetch Annual Assessment rows and Promotion decision for the student
-    on this Report Card. Returns a dict that the JS side uses to populate
-    the child table and summary fields.
+    Re-run grade calculation for a single student and return structured data
+    ready to populate a Report Card. Returns None if no data found.
     """
-    doc = frappe.get_doc("Report Card", doc_name)
+    from escola.escola.doctype.annual_assessment.annual_assessment import get_student_assessment_detail
 
-    if not doc.student or not doc.academic_year or not doc.class_group:
-        frappe.throw(_("Preencha o Aluno, o Ano Lectivo e a Turma antes de carregar a avaliação."))
+    result = get_student_assessment_detail(annual_name, student)
+    if result.get("error"):
+        return None
 
-    annual = frappe.db.get_value(
-        "Annual Assessment",
-        {
-            "class_group": doc.class_group,
-            "academic_year": doc.academic_year,
-        },
-        "name",
+    detail = result.get("detail") or {}
+    if not detail:
+        return None
+
+    min_passing = float(
+        frappe.db.get_value("School Class", school_class, "minimum_passing_grade")
+        or frappe.db.get_single_value("School Settings", "minimum_passing_grade")
+        or 10
     )
-    if not annual:
-        return {"error": "no_annual_assessment"}
 
-    assessment_rows = frappe.get_all(
-        "Annual Assessment Row",
-        filters={"parent": annual, "student": doc.student},
-        fields=["subject", "final_grade", "result", "remarks"],
-        order_by="subject asc",
-    )
-    if not assessment_rows:
-        return {"error": "no_student_data"}
+    rows = []
+    for subject in sorted(detail.keys()):
+        avg = detail[subject].get("avg")
+        if avg is None:
+            continue
+        rows.append({
+            "subject": subject,
+            "final_grade": round(avg, 2),
+            "result": "Aprovado" if avg >= min_passing else "Reprovado",
+            "remarks": "",
+        })
 
-    # Look up promotion decision for this student
+    annual_doc = frappe.get_doc("Annual Assessment", annual_name)
+
     final_decision = None
     promotion = frappe.db.get_value(
         "Student Promotion",
-        {
-            "class_group": doc.class_group,
-            "academic_year": doc.academic_year,
-        },
+        {"class_group": annual_doc.class_group, "academic_year": annual_doc.academic_year},
         "name",
     )
     if promotion:
         decision = frappe.db.get_value(
             "Student Promotion Row",
-            {"parent": promotion, "student": doc.student},
+            {"parent": promotion, "student": student},
             "decision",
         )
         if decision:
             final_decision = decision
 
-    primary_guardian = frappe.db.get_value("Student", doc.student, "primary_guardian")
+    return {
+        "rows": rows,
+        "final_decision": final_decision,
+        "primary_guardian": frappe.db.get_value("Student", student, "primary_guardian"),
+        "academic_year": annual_doc.academic_year,
+        "school_class": annual_doc.school_class,
+        "class_group": annual_doc.class_group,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Manual load (called from form button)
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def load_assessment(doc_name):
+    """Populate Report Card subject rows from live Grade Entry data."""
+    doc = frappe.get_doc("Report Card", doc_name)
+
+    if not doc.student or not doc.academic_year or not doc.class_group:
+        frappe.throw(_("Preencha o Aluno, o Ano Lectivo e a Turma antes de carregar a avaliação."))
+
+    annual_name = frappe.db.get_value(
+        "Annual Assessment",
+        {"class_group": doc.class_group, "academic_year": doc.academic_year},
+        "name",
+    )
+    if not annual_name:
+        return {"error": "no_annual_assessment"}
+
+    data = _build_report_card_data(annual_name, doc.student, doc.school_class)
+    if not data:
+        return {"error": "no_student_data"}
 
     return {
-        "rows": assessment_rows,
-        "final_decision": final_decision,
-        "primary_guardian": primary_guardian,
+        "rows": data["rows"],
+        "final_decision": data["final_decision"],
+        "primary_guardian": data["primary_guardian"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Auto-generation: create or update Report Cards for all students
+# ---------------------------------------------------------------------------
+
+def generate_for_assessment(annual_name):
+    """
+    Create or update one Report Card per student in an Annual Assessment.
+    Called from on_update hook and daily scheduler.
+    """
+    annual_doc = frappe.get_doc("Annual Assessment", annual_name)
+    students = [row.student for row in (annual_doc.assessment_rows or [])]
+
+    if not students:
+        return
+
+    created, updated, skipped = 0, 0, 0
+
+    for student in students:
+        try:
+            data = _build_report_card_data(annual_name, student, annual_doc.school_class)
+            if not data or not data["rows"]:
+                skipped += 1
+                continue
+
+            existing = frappe.db.get_value(
+                "Report Card",
+                {"student": student, "academic_year": annual_doc.academic_year},
+                "name",
+            )
+
+            if existing:
+                rc = frappe.get_doc("Report Card", existing)
+                rc.set("report_card_rows", [])
+                for row in data["rows"]:
+                    rc.append("report_card_rows", row)
+                if data["final_decision"]:
+                    rc.final_decision = data["final_decision"]
+                if data["primary_guardian"] and not rc.primary_guardian:
+                    rc.primary_guardian = data["primary_guardian"]
+                rc.save(ignore_permissions=True)
+                updated += 1
+            else:
+                rc = frappe.new_doc("Report Card")
+                rc.student = student
+                rc.academic_year = annual_doc.academic_year
+                rc.school_class = annual_doc.school_class
+                rc.class_group = annual_doc.class_group
+                rc.primary_guardian = data["primary_guardian"]
+                rc.final_decision = data["final_decision"]
+                for row in data["rows"]:
+                    rc.append("report_card_rows", row)
+                rc.insert(ignore_permissions=True)
+                created += 1
+
+        except Exception:
+            frappe.log_error(
+                title=f"Escola — falha ao gerar Boletim para {student}",
+                message=frappe.get_traceback(),
+            )
+            skipped += 1
+
+    frappe.db.commit()
+    return {"created": created, "updated": updated, "skipped": skipped}
+
+
+def generate_for_assessment_hook(doc, method=None):
+    """Doc event wrapper — called by hooks.py on Annual Assessment on_update."""
+    if not (doc.assessment_rows):
+        return
+    try:
+        generate_for_assessment(doc.name)
+    except Exception:
+        frappe.log_error(
+            title=f"Escola — falha ao gerar Boletins para {doc.name}",
+            message=frappe.get_traceback(),
+        )
+
+
+def refresh_all_report_cards():
+    """
+    Daily scheduler: refresh all Report Cards from current Grade Entry data.
+    Only processes assessments that have rows (i.e. have been calculated).
+    """
+    assessments = frappe.get_all(
+        "Annual Assessment",
+        filters={},
+        fields=["name"],
+    )
+    for a in assessments:
+        try:
+            # Skip assessments with no rows
+            has_rows = frappe.db.exists("Annual Assessment Row", {"parent": a.name})
+            if not has_rows:
+                continue
+            generate_for_assessment(a.name)
+        except Exception:
+            frappe.log_error(
+                title=f"Escola — falha ao actualizar Boletins para {a.name}",
+                message=frappe.get_traceback(),
+            )
