@@ -148,6 +148,19 @@ def calculate_assessment(doc_name):
     return {"rows": result_rows, "details": details, "terms": term_labels}
 
 
+@frappe.whitelist()
+def get_student_assessment_detail(doc_name, student):
+    """Return subject-level assessment detail for a single student."""
+    result = calculate_assessment(doc_name)
+    if result.get("error"):
+        return result
+    return {
+        "detail": result.get("details", {}).get(student),
+        "row": next((r for r in result.get("rows", []) if r["student"] == student), None),
+        "terms": result.get("terms"),
+    }
+
+
 class AnnualAssessment(Document):
     def validate(self):
         self._validate_class_group_compatibility()
