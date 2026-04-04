@@ -97,6 +97,80 @@ def get_student_academic_history(student):
     return sorted(years.values(), key=lambda x: x["academic_year"], reverse=True)
 
 
+@frappe.whitelist()
+def get_student_invoices(student):
+    """Return all non-cancelled Sales Invoices for a student with summary totals."""
+    from frappe.utils import getdate, today
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            si.name,
+            si.posting_date,
+            si.due_date,
+            si.grand_total,
+            si.outstanding_amount,
+            si.docstatus,
+            si.escola_mes_referencia,
+            si.escola_billing_cycle,
+            bc.billing_mode
+        FROM `tabSales Invoice` si
+        LEFT JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
+        WHERE si.escola_student = %s
+          AND si.docstatus != 2
+        ORDER BY si.posting_date DESC
+        """,
+        student,
+        as_dict=True,
+    )
+
+    today_date = getdate(today())
+    invoices = []
+    for r in rows:
+        paid = float(r.grand_total or 0) - float(r.outstanding_amount or 0)
+        is_overdue = (
+            r.docstatus == 1
+            and float(r.outstanding_amount or 0) > 0
+            and r.due_date
+            and getdate(r.due_date) < today_date
+        )
+        if r.docstatus == 0:
+            status = "Rascunho"
+        elif float(r.outstanding_amount or 0) == 0:
+            status = "Paga"
+        elif is_overdue:
+            status = "Em Atraso"
+        else:
+            status = "Emitida"
+
+        invoices.append({
+            "name":              r.name,
+            "posting_date":      frappe.utils.formatdate(r.posting_date),
+            "due_date":          frappe.utils.formatdate(r.due_date) if r.due_date else "—",
+            "grand_total":       float(r.grand_total or 0),
+            "outstanding":       float(r.outstanding_amount or 0),
+            "paid":              round(paid, 2),
+            "status":            status,
+            "mes_referencia":    r.escola_mes_referencia or "—",
+            "billing_mode":      r.billing_mode or "—",
+            "billing_cycle":     r.escola_billing_cycle or "",
+        })
+
+    total_invoiced   = sum(i["grand_total"]  for i in invoices)
+    total_paid       = sum(i["paid"]         for i in invoices)
+    total_outstanding = sum(i["outstanding"] for i in invoices)
+
+    return {
+        "invoices": invoices,
+        "summary": {
+            "total_invoiced":    round(total_invoiced, 2),
+            "total_paid":        round(total_paid, 2),
+            "total_outstanding": round(total_outstanding, 2),
+            "count":             len(invoices),
+        },
+    }
+
+
 def _calc_age(date_of_birth):
     if not date_of_birth:
         return None

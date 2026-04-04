@@ -62,6 +62,27 @@ function _inject_student_styles() {
 .sam-ico { font-size: 22px; line-height: 1; }
 .sam-lbl { font-size: 12px; font-weight: 600; line-height: 1.3; }
 
+/* ── Invoice modal ───────────────────────────── */
+.sinv-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+.sinv-card { border-radius:10px; padding:14px 16px; }
+.sinv-card-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; opacity:.75; margin-bottom:6px; }
+.sinv-card-val { font-size:22px; font-weight:800; line-height:1; }
+.sinv-table { width:100%; border-collapse:collapse; font-size:13px; }
+.sinv-table thead tr { background:#f1f5f9; }
+.sinv-table th { padding:8px 12px; text-align:left; font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.06em; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+.sinv-table th.num { text-align:right; }
+.sinv-table td { padding:9px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.sinv-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+.sinv-table tr:last-child td { border-bottom:none; }
+.sinv-table tr:hover td { background:#f8fafc; }
+.sinv-badge { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px; white-space:nowrap; }
+.sinv-link { color:#2563eb; text-decoration:none; font-weight:600; }
+.sinv-link:hover { text-decoration:underline; }
+.sinv-empty { text-align:center; padding:40px; color:#9ca3af; font-size:14px; }
+.sinv-footer { margin-top:14px; text-align:right; }
+.sinv-footer a { font-size:12px; color:#6366f1; text-decoration:none; }
+.sinv-footer a:hover { text-decoration:underline; }
+
 /* ── Timeline modal ──────────────────────────── */
 .stl-item { display: flex; gap: 16px; position: relative; }
 .stl-item:not(:last-child) { padding-bottom: 24px; }
@@ -144,7 +165,7 @@ function _show_actions_modal(frm) {
 		d.hide();
 		switch (a) {
 			case "boletins":          frappe.set_route("List", "Report Card", { student: frm.doc.name }); break;
-			case "facturas":          frappe.set_route("List", "Sales Invoice", { escola_student: frm.doc.name }); break;
+			case "facturas":          _show_invoices_modal(frm); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
 			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
@@ -369,6 +390,117 @@ function _render_history_compact(data) {
   <span style="display:flex;gap:10px;flex-wrap:wrap;margin-left:auto;">${tags.join('<span style="color:var(--border-color);">·</span>')}</span>
 </div>`;
 	}).join("");
+}
+
+// ---------------------------------------------------------------------------
+// Invoices modal
+// ---------------------------------------------------------------------------
+
+async function _show_invoices_modal(frm) {
+	_inject_student_styles();
+
+	const d = new frappe.ui.Dialog({
+		title: `🧾 ${__("Facturas")} · ${frm.doc.full_name}`,
+		size:  "extra-large",
+	});
+	d.$body.css("padding", "0");
+	d.$body.html(`<div style="padding:24px;color:#9ca3af;font-size:13px;">${__("A carregar facturas…")}</div>`);
+	d.set_secondary_action_label(__("Fechar"));
+	d.set_secondary_action(() => d.hide());
+	d.$wrapper.find(".btn-modal-primary").hide();
+	d.show();
+
+	const r = await frappe.call({
+		method: "escola.escola.doctype.student.student.get_student_invoices",
+		args:   { student: frm.doc.name },
+	});
+
+	if (r.exc || !r.message) {
+		d.$body.html(`<div class="sinv-empty">${__("Não foi possível carregar as facturas.")}</div>`);
+		return;
+	}
+
+	const { invoices, summary } = r.message;
+	d.$body.html(_render_invoices(invoices, summary, frm.doc.name));
+}
+
+const _INV_STATUS = {
+	"Paga":      { bg: "#dcfce7", fg: "#166534" },
+	"Emitida":   { bg: "#dbeafe", fg: "#1e40af" },
+	"Em Atraso": { bg: "#fee2e2", fg: "#991b1b" },
+	"Rascunho":  { bg: "#f3f4f6", fg: "#6b7280" },
+};
+
+function _render_invoices(invoices, summary, student_name) {
+	const fmt = v => format_currency(v);
+
+	// Summary cards
+	const summaryHtml = `
+<div class="sinv-summary">
+  <div class="sinv-card" style="background:#eff6ff;color:#1e40af;">
+    <div class="sinv-card-label">${__("Total Facturado")}</div>
+    <div class="sinv-card-val">${fmt(summary.total_invoiced)}</div>
+    <div style="font-size:11px;margin-top:4px;opacity:.7;">${summary.count} ${__("factura(s)")}</div>
+  </div>
+  <div class="sinv-card" style="background:#f0fdf4;color:#166534;">
+    <div class="sinv-card-label">${__("Total Pago")}</div>
+    <div class="sinv-card-val">${fmt(summary.total_paid)}</div>
+  </div>
+  <div class="sinv-card" style="background:${summary.total_outstanding > 0 ? "#fef2f2" : "#f8fafc"};color:${summary.total_outstanding > 0 ? "#991b1b" : "#374151"};">
+    <div class="sinv-card-label">${__("Em Aberto")}</div>
+    <div class="sinv-card-val">${fmt(summary.total_outstanding)}</div>
+  </div>
+</div>`;
+
+	if (!invoices.length) {
+		return `<div style="padding:24px;">${summaryHtml}<div class="sinv-empty">${__("Nenhuma factura encontrada.")}</div></div>`;
+	}
+
+	const rows = invoices.map(inv => {
+		const st = _INV_STATUS[inv.status] || { bg: "#f3f4f6", fg: "#6b7280" };
+		const outstanding_html = inv.outstanding > 0
+			? `<span style="color:#dc2626;font-weight:600;">${fmt(inv.outstanding)}</span>`
+			: `<span style="color:#9ca3af;">—</span>`;
+		return `<tr>
+			<td>
+				<a class="sinv-link" href="/app/sales-invoice/${encodeURIComponent(inv.name)}" target="_blank">${frappe.utils.escape_html(inv.name)}</a>
+			</td>
+			<td>${inv.mes_referencia !== "—" ? `<span style="font-weight:500;">${frappe.utils.escape_html(inv.mes_referencia)}</span>` : "<span style='color:#9ca3af;'>—</span>"}</td>
+			<td style="color:#374151;">${inv.posting_date}</td>
+			<td style="color:${inv.status === 'Em Atraso' ? '#dc2626' : '#374151'};">${inv.due_date}</td>
+			<td class="num">${fmt(inv.grand_total)}</td>
+			<td class="num">${fmt(inv.paid)}</td>
+			<td class="num">${outstanding_html}</td>
+			<td><span class="sinv-badge" style="background:${st.bg};color:${st.fg};">${__(inv.status)}</span></td>
+		</tr>`;
+	}).join("");
+
+	const listUrl = `/app/sales-invoice?escola_student=${encodeURIComponent(student_name)}`;
+
+	return `
+<div style="padding:24px;">
+  ${summaryHtml}
+  <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;">
+    <table class="sinv-table">
+      <thead>
+        <tr>
+          <th>${__("Factura")}</th>
+          <th>${__("Mês")}</th>
+          <th>${__("Emissão")}</th>
+          <th>${__("Vencimento")}</th>
+          <th class="num">${__("Total")}</th>
+          <th class="num">${__("Pago")}</th>
+          <th class="num">${__("Em Aberto")}</th>
+          <th>${__("Estado")}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div class="sinv-footer">
+    <a href="${listUrl}" target="_blank">↗ ${__("Abrir lista completa")}</a>
+  </div>
+</div>`;
 }
 
 // ---------------------------------------------------------------------------
