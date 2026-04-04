@@ -77,8 +77,7 @@
     <!-- Desktop links -->
     <div class="hidden md:flex items-center gap-1">
       <a href="#turmas"    class="nav-link px-3 py-2 rounded-lg text-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors">Turmas</a>
-      <a href="#horarios"  class="nav-link px-3 py-2 rounded-lg text-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors">Horários</a>
-      <a href="#avaliacao" class="nav-link px-3 py-2 rounded-lg text-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors">Avaliação</a>
+      <a href="#pesquisar" class="nav-link px-3 py-2 rounded-lg text-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors">Pesquisar Aluno</a>
       <a href="#contacto"  class="nav-link px-3 py-2 rounded-lg text-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors">Contacto</a>
     </div>
 
@@ -105,8 +104,7 @@
   <div id="mobile-menu" class="hidden md:hidden bg-[#024ba5]/95 backdrop-blur-sm border-t border-white/10 mt-2">
     <div class="max-w-6xl mx-auto px-5 py-3 flex flex-col gap-1">
       <a href="#turmas"    onclick="closeMobileMenu()" class="px-3 py-2.5 text-sm text-white/90 rounded-lg hover:bg-white/10">Turmas</a>
-      <a href="#horarios"  onclick="closeMobileMenu()" class="px-3 py-2.5 text-sm text-white/90 rounded-lg hover:bg-white/10">Horários</a>
-      <a href="#avaliacao" onclick="closeMobileMenu()" class="px-3 py-2.5 text-sm text-white/90 rounded-lg hover:bg-white/10">Avaliação</a>
+      <a href="#pesquisar" onclick="closeMobileMenu()" class="px-3 py-2.5 text-sm text-white/90 rounded-lg hover:bg-white/10">Pesquisar Aluno</a>
       <a href="#contacto"  onclick="closeMobileMenu()" class="px-3 py-2.5 text-sm text-white/90 rounded-lg hover:bg-white/10">Contacto</a>
       {% if guardian_portal_enabled %}
       <a href="/portal" class="mt-1 px-3 py-2.5 text-sm font-medium bg-white text-[#024ba5] rounded-xl text-center">Área Privada →</a>
@@ -370,119 +368,30 @@
 </div>
 
 
-<!-- ═══════════════════════════════════════════════════ CALENDÁRIO ══ -->
-<section id="horarios" class="py-20 bg-[#f0f6ff]">
-  <div class="max-w-6xl mx-auto px-5">
-    <div class="reveal text-center mb-12">
-      <span class="text-sm font-semibold text-[#024ba5] uppercase tracking-widest">Calendário</span>
-      <h2 class="mt-2 text-3xl sm:text-4xl font-bold text-slate-800">Períodos Lectivos</h2>
+<!-- ══════════════════════════════════════════════ PESQUISAR ALUNO ══ -->
+<section id="pesquisar" class="py-20 bg-[#f0f6ff]">
+  <div class="max-w-2xl mx-auto px-5">
+
+    <div class="reveal text-center mb-10">
+      <span class="text-sm font-semibold text-[#024ba5] uppercase tracking-widest">Estudantes</span>
+      <h2 class="mt-2 text-3xl sm:text-4xl font-bold text-slate-800">Encontrar Turma</h2>
+      <p class="mt-3 text-slate-500 max-w-md mx-auto">Pesquise pelo nome do aluno para saber em que turma está matriculado.</p>
     </div>
 
-    <div id="calendar-loading" class="flex justify-center py-8">
-      <div class="animate-spin h-8 w-8 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
-    </div>
-    <div id="calendar-content" class="hidden"></div>
-  </div>
-</section>
-
-
-<!-- ══════════════════════════════════════════════════ AVALIAÇÃO ══ -->
-<section id="avaliacao" class="py-20 bg-white">
-  <div class="max-w-6xl mx-auto px-5">
-
-    <div class="reveal text-center mb-12">
-      <span class="text-sm font-semibold text-[#024ba5] uppercase tracking-widest">Sistema de Avaliação</span>
-      <h2 class="mt-2 text-3xl sm:text-4xl font-bold text-slate-800">Como Funciona a Avaliação</h2>
-      <p class="mt-3 text-slate-500 max-w-lg mx-auto">Escala de {{ grading_scale_max | int }}, com três períodos lectivos que contribuem para a média anual.</p>
+    <!-- Search box -->
+    <div class="reveal relative">
+      <svg class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input id="student-turma-search" type="text" placeholder="Nome do aluno (mínimo 3 letras)…"
+        oninput="handleStudentSearch(this.value)"
+        autocomplete="off"
+        class="w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-2xl text-slate-700 placeholder-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#024ba5]/30 focus:border-[#024ba5]/50 transition text-base">
     </div>
 
-    <div class="reveal grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+    <!-- Results area -->
+    <div id="student-search-results" class="mt-4 space-y-3"></div>
 
-      <!-- Grade scale visual -->
-      <div class="bg-slate-50 rounded-2xl p-6 sm:p-8">
-        <h3 class="font-semibold text-slate-700 mb-6">Escala de Classificação (0 – {{ grading_scale_max | int }})</h3>
-
-        <!-- Visual bar -->
-        <div class="relative h-10 rounded-xl overflow-hidden flex mb-4">
-          {% set scale = grading_scale_max %}
-          {% set retido_pct = (recurso_threshold / scale * 100) | round(1) %}
-          {% set recurso_pct = ((minimum_passing_grade - recurso_threshold) / scale * 100) | round(1) %}
-          {% set aprov_pct = ((scale - minimum_passing_grade) / scale * 100) | round(1) %}
-          <div class="bg-red-400 h-full flex items-center justify-center text-white text-xs font-bold" style="width:{{ retido_pct }}%">
-            <span class="truncate px-1">{{ "%.0f"|format(recurso_threshold) }}</span>
-          </div>
-          <div class="bg-amber-400 h-full flex items-center justify-center text-white text-xs font-bold" style="width:{{ recurso_pct }}%">
-            <span class="truncate px-1">{{ "%.0f"|format(minimum_passing_grade) }}</span>
-          </div>
-          <div class="bg-green-400 h-full flex-1 flex items-center justify-center text-white text-xs font-bold">
-            <span>{{ grading_scale_max | int }}</span>
-          </div>
-        </div>
-
-        <!-- Legend -->
-        <div class="space-y-3 mt-5">
-          <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
-            <span class="w-3 h-3 rounded-full bg-red-400 mt-0.5 shrink-0"></span>
-            <div>
-              <div class="text-sm font-semibold text-red-700">Retido — 0 a {{ "%.0f"|format(recurso_threshold - 0.1) }}</div>
-              <div class="text-xs text-red-600/80 mt-0.5">Não qualifica para exame de recurso. Reprovação directa.</div>
-            </div>
-          </div>
-          <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-            <span class="w-3 h-3 rounded-full bg-amber-400 mt-0.5 shrink-0"></span>
-            <div>
-              <div class="text-sm font-semibold text-amber-700">Recurso — {{ "%.0f"|format(recurso_threshold) }} a {{ "%.0f"|format(minimum_passing_grade - 0.1) }}</div>
-              <div class="text-xs text-amber-600/80 mt-0.5">Admitido a exame de recurso para aprovação.</div>
-            </div>
-          </div>
-          <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
-            <span class="w-3 h-3 rounded-full bg-green-400 mt-0.5 shrink-0"></span>
-            <div>
-              <div class="text-sm font-semibold text-green-700">Aprovado — {{ "%.0f"|format(minimum_passing_grade) }} a {{ grading_scale_max | int }}</div>
-              <div class="text-xs text-green-600/80 mt-0.5">Aprovação directa. Transição para a classe seguinte.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Term structure + evaluation types -->
-      <div class="space-y-6">
-
-        <!-- Term structure -->
-        <div class="bg-slate-50 rounded-2xl p-6">
-          <h3 class="font-semibold text-slate-700 mb-4">Estrutura do Ano Lectivo</h3>
-          <div class="flex items-center gap-2 mb-4">
-            <div class="flex-1 bg-[#024ba5] text-white text-center text-sm font-semibold py-3 rounded-xl">1º Período</div>
-            <span class="text-slate-300 font-bold">+</span>
-            <div class="flex-1 bg-[#024ba5] text-white text-center text-sm font-semibold py-3 rounded-xl">2º Período</div>
-            <span class="text-slate-300 font-bold">+</span>
-            <div class="flex-1 bg-[#024ba5] text-white text-center text-sm font-semibold py-3 rounded-xl">3º Período</div>
-          </div>
-          <div class="flex justify-center">
-            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </div>
-          <div class="mt-2 bg-[#e8f1fd] rounded-xl py-3 text-center text-sm font-semibold text-[#024ba5]">
-            Média Anual → Resultado Final
-          </div>
-        </div>
-
-        <!-- Evaluation types -->
-        <div class="bg-slate-50 rounded-2xl p-6">
-          <h3 class="font-semibold text-slate-700 mb-4">Tipos de Avaliação</h3>
-          <div class="grid grid-cols-2 gap-2">
-            {% for tipo in ['Trabalho', 'Teste', 'Exame', 'Oral', 'Avaliação Contínua', 'Outro'] %}
-            <div class="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-sm border border-slate-100">
-              <div class="w-2 h-2 rounded-full bg-[#024ba5]"></div>
-              <span class="text-sm text-slate-600">{{ tipo }}</span>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-
-      </div>
-    </div>
   </div>
 </section>
 
@@ -597,7 +506,7 @@
       </div>
       <div class="flex items-center gap-6 text-sm text-blue-200">
         <a href="#turmas"    class="hover:text-white transition-colors">Turmas</a>
-        <a href="#avaliacao" class="hover:text-white transition-colors">Avaliação</a>
+        <a href="#pesquisar" class="hover:text-white transition-colors">Pesquisar Aluno</a>
         <a href="#contacto"  class="hover:text-white transition-colors">Contacto</a>
         {% if guardian_portal_enabled %}
         <a href="/portal" class="font-semibold text-white hover:text-blue-100 transition-colors">Área Privada →</a>
@@ -1147,48 +1056,78 @@
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  // ── Academic Calendar ──────────────────────────────────────────────────
-  async function loadCalendar() {
-    try {
-      const data = await fetchApi('get_academic_calendar');
-      const el = document.getElementById('calendar-content');
-      document.getElementById('calendar-loading').classList.add('hidden');
+  // ── Student search ─────────────────────────────────────────────────────
+  const SHIFT_LABEL = { 'Manhã': '☀️ Manhã', 'Tarde': '🌅 Tarde', 'Noite': '🌙 Noite' };
+  let _studentSearchTimer = null;
 
-      if (!data.terms || data.terms.length === 0) {
-        el.innerHTML = `<p class="text-center text-slate-400 text-sm">Informação do calendário não disponível.</p>`;
-        el.classList.remove('hidden');
+  function handleStudentSearch(value) {
+    clearTimeout(_studentSearchTimer);
+    const q = value.trim();
+    const results = document.getElementById('student-search-results');
+
+    if (q.length === 0) { results.innerHTML = ''; return; }
+    if (q.length < 3) {
+      results.innerHTML = `<p class="text-center text-slate-400 text-sm py-4">Continue a escrever…</p>`;
+      return;
+    }
+
+    results.innerHTML = `<div class="flex justify-center py-6">
+      <div class="animate-spin h-7 w-7 border-4 border-[#024ba5] border-t-transparent rounded-full"></div>
+    </div>`;
+
+    _studentSearchTimer = setTimeout(() => _doStudentSearch(q), 350);
+  }
+
+  async function _doStudentSearch(q) {
+    const results = document.getElementById('student-search-results');
+    try {
+      const data = await fetchApi('search_student', { query: q });
+      const list = data.results || [];
+
+      if (list.length === 0) {
+        results.innerHTML = `
+          <div class="text-center py-10">
+            <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <p class="text-slate-500 text-sm font-medium">Nenhum aluno encontrado para "<b>${escHtml(q)}</b>"</p>
+            <p class="text-slate-400 text-xs mt-1">Verifique o nome e tente novamente.</p>
+          </div>`;
         return;
       }
 
-      const colors = ['bg-[#024ba5]', 'bg-[#0369a1]', 'bg-[#0284c7]'];
-      el.innerHTML = `
-        <div class="max-w-3xl mx-auto">
-          ${data.ay_start || data.ay_end ? `
-          <p class="text-center text-sm text-slate-500 mb-6">
-            ${data.academic_year} &nbsp;·&nbsp; ${data.ay_start} a ${data.ay_end}
-          </p>` : ''}
-          <div class="grid grid-cols-1 sm:grid-cols-${Math.min(data.terms.length, 3)} gap-4">
-            ${data.terms.map((t, i) => `
-              <div class="reveal bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="${colors[i % colors.length]} px-5 py-3">
-                  <p class="font-bold text-white">${escHtml(t.term_name)}</p>
+      const cfg = s => SHIFT_CFG[s] || { badge: 'bg-slate-100 text-slate-600', icon: '' };
+
+      results.innerHTML = `
+        <p class="text-xs text-slate-400 text-right mb-2">${list.length} resultado${list.length !== 1 ? 's' : ''}</p>
+        <div class="space-y-3">
+          ${list.map(s => {
+            const sc = cfg(s.shift);
+            const turmaLabel = [s.school_class, s.section_name ? 'Turma ' + s.section_name : ''].filter(Boolean).join(' — ');
+            return `
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+              <div class="w-11 h-11 rounded-xl bg-[#e8f1fd] flex items-center justify-center shrink-0">
+                <span class="text-[#024ba5] font-bold text-lg">${escHtml((s.student_name || '?').charAt(0).toUpperCase())}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-slate-800 text-sm truncate">${escHtml(s.student_name || '—')}</div>
+                ${s.student_code ? `<div class="text-xs text-slate-400 mt-0.5">${escHtml(s.student_code)}</div>` : ''}
+              </div>
+              <div class="text-right shrink-0">
+                <div class="font-semibold text-slate-700 text-sm">${escHtml(turmaLabel || s.class_group || '—')}</div>
+                <div class="flex items-center justify-end gap-2 mt-1 flex-wrap">
+                  ${s.shift ? `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.badge}">${sc.icon} ${escHtml(s.shift)}</span>` : ''}
+                  ${s.class_teacher ? `<span class="text-xs text-slate-400 truncate max-w-[120px]">Prof. ${escHtml(s.class_teacher)}</span>` : ''}
                 </div>
-                <div class="px-5 py-4">
-                  ${t.start_date ? `<div class="flex items-center gap-2 text-sm text-slate-600">
-                    <svg class="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    <span>${t.start_date} → ${t.end_date || '?'}</span>
-                  </div>` : '<p class="text-xs text-slate-400">Datas a definir</p>'}
-                </div>
-              </div>`).join('')}
-          </div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>`;
-      el.classList.remove('hidden');
-      el.querySelectorAll('.reveal').forEach(r => observer.observe(r));
     } catch(e) {
-      document.getElementById('calendar-loading').classList.add('hidden');
+      results.innerHTML = `<p class="text-center text-red-500 text-sm py-4">Erro ao pesquisar. Tente novamente.</p>`;
     }
   }
 
@@ -1197,7 +1136,6 @@
     setShift('all');
     setView('grid');
     loadTurmas();
-    loadCalendar();
   });
 </script>
 

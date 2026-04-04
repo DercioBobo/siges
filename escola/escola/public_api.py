@@ -102,6 +102,62 @@ def get_turma_students(turma):
 
 
 @frappe.whitelist(allow_guest=True)
+def search_student(query):
+    """
+    Search students by name and return their current class group.
+    Public-safe: only exposes student_name, student_code, turma, shift.
+    Requires at least 3 characters.
+    """
+    if not query or len(query.strip()) < 3:
+        return {"results": []}
+
+    academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
+    q = "%" + query.strip() + "%"
+
+    if academic_year:
+        results = frappe.db.sql("""
+            SELECT
+                cgs.student_name,
+                s.student_code,
+                cg.name  AS class_group,
+                cg.school_class,
+                cg.shift,
+                cg.section_name,
+                cg.class_teacher,
+                cg.academic_year
+            FROM `tabClass Group Student` cgs
+            JOIN `tabClass Group` cg ON cg.name = cgs.parent
+            LEFT JOIN `tabStudent` s ON s.name = cgs.student
+            WHERE cgs.student_name LIKE %s
+              AND cg.is_active = 1
+              AND cg.academic_year = %s
+            ORDER BY cgs.student_name
+            LIMIT 20
+        """, (q, academic_year), as_dict=True)
+    else:
+        results = frappe.db.sql("""
+            SELECT
+                cgs.student_name,
+                s.student_code,
+                cg.name  AS class_group,
+                cg.school_class,
+                cg.shift,
+                cg.section_name,
+                cg.class_teacher,
+                cg.academic_year
+            FROM `tabClass Group Student` cgs
+            JOIN `tabClass Group` cg ON cg.name = cgs.parent
+            LEFT JOIN `tabStudent` s ON s.name = cgs.student
+            WHERE cgs.student_name LIKE %s
+              AND cg.is_active = 1
+            ORDER BY cgs.student_name
+            LIMIT 20
+        """, (q,), as_dict=True)
+
+    return {"results": results}
+
+
+@frappe.whitelist(allow_guest=True)
 def get_academic_calendar():
     """Return academic year and term dates."""
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
