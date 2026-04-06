@@ -105,7 +105,7 @@ class TimetablePage {
 		const classes = opts.class_groups || [];
 
 		const year_opts = years.map(
-			y => `<option value="${y.name}">${y.year || y.name}</option>`
+			y => `<option value="${y.name}">${y.year_name || y.name}</option>`
 		).join("");
 
 		const cg_opts = classes.map(
