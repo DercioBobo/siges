@@ -12,7 +12,11 @@ frappe.ui.form.on("Timetable", {
 		const grid = frm.fields_dict.timetable_entries.grid;
 		grid.toggle_enable("day_of_week", true);
 		grid.df.in_editable_grid = 1;
-		grid.toggle_editable_grid(true);
+		// Open the grid dialog when clicking any row instead of the Frappe row modal
+		grid.wrapper.off("click.opengrid").on("click.opengrid", ".data-row", function (e) {
+			if ($(e.target).closest("button, input[type=checkbox]").length) return;
+			_open_grid_dialog(frm);
+		});
 
 		// Prefill academic_year on new docs from School Settings
 		if (frm.is_new() && !frm.doc.academic_year) {

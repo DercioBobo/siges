@@ -344,17 +344,10 @@ class TimetablePage {
 	}
 
 	_html_cell(cell) {
-		const color      = this._subject_color(cell.subject_code, cell.color);
-		const double_bar = cell.is_double
-			? `border-bottom:3px solid ${color};`
-			: "";
-		const double_tag = cell.is_double
-			? `<div style="font-size:9px;color:#94A3B8;margin-top:3px;">◆ dupla</div>`
-			: "";
+		const color = this._subject_color(cell.subject_code, cell.color);
 
 		return `
-			<td style="background:white;border-radius:6px;padding:5px 3px;
-			           vertical-align:middle;${double_bar}">
+			<td style="background:white;border-radius:6px;padding:5px 3px;vertical-align:middle;">
 				<div style="background:${color}1A;border-left:3px solid ${color};
 				            border-radius:4px;padding:6px 8px;min-height:54px;">
 					<div style="font-size:13px;font-weight:800;color:${color};
@@ -364,7 +357,6 @@ class TimetablePage {
 					<div style="font-size:10px;color:#6B7280;margin-top:2px;line-height:1.3;">
 						${frappe.utils.escape_html(cell.teacher || "")}
 					</div>
-					${double_tag}
 				</div>
 			</td>
 		`;
