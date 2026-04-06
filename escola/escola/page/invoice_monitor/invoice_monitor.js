@@ -1,5 +1,3 @@
-frappe.pages["invoice-monitor"] = {};
-
 frappe.pages["invoice-monitor"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
