@@ -9,7 +9,10 @@ frappe.ui.form.on("Timetable", {
 
 	refresh(frm) {
 		_set_time_slot_filter(frm);
-		frm.fields_dict.timetable_entries.grid.toggle_enable("day_of_week", true);
+		const grid = frm.fields_dict.timetable_entries.grid;
+		grid.toggle_enable("day_of_week", true);
+		grid.df.in_editable_grid = 1;
+		grid.toggle_editable_grid(true);
 
 		// Prefill academic_year on new docs from School Settings
 		if (frm.is_new() && !frm.doc.academic_year) {

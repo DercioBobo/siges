@@ -8,8 +8,8 @@ def get_filter_options():
     """Return active academic years and class groups for the filter bar."""
     years = frappe.get_all(
         "Academic Year",
-        fields=["name", "year"],
-        order_by="year desc",
+        fields=["name", "year_name"],
+        order_by="year_name desc",
     )
     # Only return class groups that have at least one active timetable
     active_cgs = frappe.get_all(
