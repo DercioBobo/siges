@@ -79,8 +79,8 @@ async function _open_grid_dialog(frm) {
 	if (frm.doc.shift) slotFilters.shift = frm.doc.shift;
 	const slots = await frappe.db.get_list("Time Slot", {
 		filters: slotFilters,
-		fields: ["name", "label", "start_time", "end_time", "sort_order", "slot_type"],
-		order_by: "sort_order asc, name asc",
+		fields: ["name", "label", "slot_type"],
+		order_by: "name asc",
 		limit: 100,
 	});
 
@@ -129,15 +129,12 @@ async function _open_grid_dialog(frm) {
 	let rows = "";
 	slots.forEach(slot => {
 		const label = slot.label || slot.name;
-		const t0 = (slot.start_time || "").substring(0, 5);
-		const t1 = (slot.end_time || "").substring(0, 5);
 		const isBreak = slot.slot_type && slot.slot_type !== "Aula";
 		const rowStyle = isBreak ? "background:#f8f9fa;" : "";
 
 		rows += `<tr style="${rowStyle}">
 			<td style="white-space:nowrap;font-weight:500;padding:4px 8px;min-width:90px">
 				${frappe.utils.escape_html(label)}
-				${t0 ? `<br><small class="text-muted">${t0}–${t1}</small>` : ""}
 			</td>`;
 
 		DAYS.forEach(day => {
