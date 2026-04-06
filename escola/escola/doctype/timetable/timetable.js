@@ -5,33 +5,23 @@ frappe.ui.form.on("Timetable", {
 	onload(frm) {
 		_set_time_slot_filter(frm);
 		frm.set_query("class_group", () => ({ filters: { is_active: 1 } }));
-		frm.set_query("academic_term", () => ({ filters: { is_active: 1 } }));
-
-		if (frm.is_new() && !frm.doc.academic_term) {
-			const today = frappe.datetime.get_today();
-			frappe.db.get_list("Academic Term", {
-				filters: [
-					["is_active", "=", 1],
-					["start_date", "<=", today],
-					["end_date", ">=", today],
-				],
-				fields: ["name"],
-				limit: 1,
-			}).then(rows => {
-				if (rows && rows.length) {
-					frm.set_value("academic_term", rows[0].name);
-				}
-			});
-		}
 	},
 
 	refresh(frm) {
 		_set_time_slot_filter(frm);
 		frm.fields_dict.timetable_entries.grid.toggle_enable("day_of_week", true);
 
-		frm.add_custom_button(__("Preencher em Grade"), () => {
+		// Prefill academic_year on new docs from School Settings
+		if (frm.is_new() && !frm.doc.academic_year) {
+			frappe.db.get_single_value("School Settings", "current_academic_year").then(val => {
+				if (val) frm.set_value("academic_year", val);
+			});
+		}
+
+		// Primary action button
+		frm.page.set_primary_action(__("Preencher em Grade"), () => {
 			_open_grid_dialog(frm);
-		});
+		}, "edit");
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Ver Horário"), () => {
@@ -49,6 +39,10 @@ frappe.ui.form.on("Timetable", {
 					frm.refresh_field("timetable_entries");
 				}
 			});
+			// Auto-open grid on new docs once class_group (and thus shift) is set
+			if (frm.is_new()) {
+				setTimeout(() => _open_grid_dialog(frm), 400);
+			}
 		}
 	},
 });

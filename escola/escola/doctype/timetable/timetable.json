@@ -9,7 +9,7 @@
   "section_break_id",
   "class_group",
   "column_break_1",
-  "academic_term",
+  "academic_year",
   "column_break_2",
   "shift",
   "column_break_3",
@@ -47,10 +47,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "academic_term",
+   "fieldname": "academic_year",
    "fieldtype": "Link",
-   "label": "Período Lectivo",
-   "options": "Academic Term",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1

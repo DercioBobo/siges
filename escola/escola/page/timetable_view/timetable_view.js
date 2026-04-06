@@ -101,11 +101,11 @@ class TimetablePage {
 	}
 
 	_render_filters(opts) {
-		const terms   = opts.terms        || [];
+		const years   = opts.years        || [];
 		const classes = opts.class_groups || [];
 
-		const term_opts = terms.map(
-			t => `<option value="${t.name}">${t.term_name}</option>`
+		const year_opts = years.map(
+			y => `<option value="${y.name}">${y.year || y.name}</option>`
 		).join("");
 
 		const cg_opts = classes.map(
@@ -116,10 +116,10 @@ class TimetablePage {
 		this.$filters.html(`
 			<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
 				<div>
-					<label class="tt-label">PERÍODO LECTIVO</label>
-					<select id="tt-term" class="form-control" style="min-width:200px;">
-						<option value="">— Selecione o Período —</option>
-						${term_opts}
+					<label class="tt-label">ANO LECTIVO</label>
+					<select id="tt-year" class="form-control" style="min-width:200px;">
+						<option value="">— Selecione o Ano —</option>
+						${year_opts}
 					</select>
 				</div>
 				<div>
@@ -136,13 +136,15 @@ class TimetablePage {
 			</style>
 		`);
 
-		// Auto-select first active term
-		if (terms.length) this.$filters.find("#tt-term").val(terms[0].name);
+		// Auto-select current academic year from School Settings
+		frappe.db.get_single_value("School Settings", "current_academic_year").then(val => {
+			if (val) this.$filters.find("#tt-year").val(val);
+		});
 
 		// Auto-load timetable when turma is selected
 		this.$filters.find("#tt-cg").on("change", () => this._load_timetable());
-		// Also reload if term changes after a turma is already selected
-		this.$filters.find("#tt-term").on("change", () => {
+		// Also reload if year changes after a turma is already selected
+		this.$filters.find("#tt-year").on("change", () => {
 			if (this.$filters.find("#tt-cg").val()) this._load_timetable();
 		});
 	}
@@ -152,11 +154,11 @@ class TimetablePage {
 	// -----------------------------------------------------------------------
 
 	_load_timetable() {
-		const term = this.$filters.find("#tt-term").val();
+		const year = this.$filters.find("#tt-year").val();
 		const cg   = this.$filters.find("#tt-cg").val();
 
-		if (!term || !cg) {
-			frappe.msgprint(__("Selecione o Período Lectivo e a Turma."));
+		if (!year || !cg) {
+			frappe.msgprint(__("Selecione o Ano Lectivo e a Turma."));
 			return;
 		}
 
@@ -169,7 +171,7 @@ class TimetablePage {
 
 		frappe.call({
 			method: "escola.escola.page.timetable_view.timetable_view.get_timetable_data",
-			args: { class_group: cg, academic_term: term },
+			args: { class_group: cg, academic_year: year },
 			callback: (r) => {
 				if (r.exc) return;
 				this._render(r.message);

@@ -5,12 +5,11 @@ from collections import Counter
 
 @frappe.whitelist()
 def get_filter_options():
-    """Return active academic terms and class groups for the filter bar."""
-    terms = frappe.get_all(
-        "Academic Term",
-        filters={"is_active": 1},
-        fields=["name", "term_name", "academic_year"],
-        order_by="start_date desc",
+    """Return active academic years and class groups for the filter bar."""
+    years = frappe.get_all(
+        "Academic Year",
+        fields=["name", "year"],
+        order_by="year desc",
     )
     # Only return class groups that have at least one active timetable
     active_cgs = frappe.get_all(
@@ -31,11 +30,11 @@ def get_filter_options():
     else:
         class_groups = []
 
-    return {"terms": terms, "class_groups": class_groups}
+    return {"years": years, "class_groups": class_groups}
 
 
 @frappe.whitelist()
-def get_timetable_data(class_group, academic_term):
+def get_timetable_data(class_group, academic_year):
     """
     Return everything the JS renderer needs to draw the timetable grid.
     - time_slots: ordered list filtered by the turma's shift
@@ -52,7 +51,7 @@ def get_timetable_data(class_group, academic_term):
 
     timetable = frappe.db.get_value(
         "Timetable",
-        {"class_group": class_group, "academic_term": academic_term, "status": "Activo"},
+        {"class_group": class_group, "academic_year": academic_year, "status": "Activo"},
         ["name", "status"],
         as_dict=True,
     )

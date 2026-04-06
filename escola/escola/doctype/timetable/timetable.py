@@ -21,7 +21,7 @@ class Timetable(Document):
             "Timetable",
             {
                 "class_group":    self.class_group,
-                "academic_term":  self.academic_term,
+                "academic_year":  self.academic_year,
                 "status":         "Activo",
                 "name":           ("!=", self.name or ""),
             },
@@ -89,7 +89,7 @@ class Timetable(Document):
             "Timetable",
             filters={
                 "class_group":   self.class_group,
-                "academic_term": self.academic_term,
+                "academic_year": self.academic_year,
                 "status":        "Activo",
                 "name":          ("!=", self.name or ""),
             },
