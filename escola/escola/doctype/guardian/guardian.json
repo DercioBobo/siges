@@ -25,6 +25,8 @@
   "column_break_4",
   "is_active",
   "portal_access",
+  "section_break_students",
+  "students_html",
   "section_break_notes",
   "notes"
  ],
@@ -140,6 +142,16 @@
    "label": "Acesso ao Portal",
    "default": "1",
    "description": "Desactive para bloquear o acesso deste encarregado ao portal do encarregado."
+  },
+  {
+   "fieldname": "section_break_students",
+   "fieldtype": "Section Break",
+   "label": "Educandos"
+  },
+  {
+   "fieldname": "students_html",
+   "fieldtype": "HTML",
+   "label": "Educandos"
   },
   {
    "fieldname": "section_break_notes",
