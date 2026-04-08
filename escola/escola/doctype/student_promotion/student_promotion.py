@@ -12,9 +12,9 @@ def generate_promotion(doc_name):
     """
     Load promotion decisions from Annual Assessment.
 
-    - Aprovado  → result == "Aprovado" and next_class exists
+    - Promovido → result == "Aprovado" and next_class exists
     - Concluído → result == "Aprovado" and no next_class (final class)
-    - Reprovado → result == "Reprovado"
+    - Retido    → result == "Reprovado"
     """
     doc = frappe.get_doc("Student Promotion", doc_name)
 
@@ -42,9 +42,9 @@ def generate_promotion(doc_name):
     for row in ann_rows:
         aa_result = (row.result or "").strip()
         if aa_result == "Aprovado":
-            decision = "Concluído" if is_final else "Aprovado"
+            decision = "Concluído" if is_final else "Promovido"
         else:
-            decision = "Reprovado"
+            decision = "Retido"
 
         result_rows.append({
             "student":     row.student,
@@ -68,9 +68,9 @@ def get_promotion_turma_options(promotion_name):
     """
     doc = frappe.get_doc("Student Promotion", promotion_name)
 
-    aprovados  = [r for r in doc.promotion_rows if r.decision == "Aprovado"]
+    aprovados  = [r for r in doc.promotion_rows if r.decision == "Promovido"]
     concluidos = [r for r in doc.promotion_rows if r.decision == "Concluído"]
-    reprovados = [r for r in doc.promotion_rows if r.decision == "Reprovado"]
+    reprovados = [r for r in doc.promotion_rows if r.decision == "Retido"]
 
     default_cap = int(
         frappe.db.get_single_value("School Settings", "default_max_students_per_class") or 0
@@ -176,11 +176,11 @@ def execute_promotion_plan(promotion_name, plan):
                     idx += 1
 
     aprovados  = sorted(
-        [r for r in doc.promotion_rows if r.decision == "Aprovado"],
+        [r for r in doc.promotion_rows if r.decision == "Promovido"],
         key=lambda r: r.student,
     )
     reprovados = sorted(
-        [r for r in doc.promotion_rows if r.decision == "Reprovado"],
+        [r for r in doc.promotion_rows if r.decision == "Retido"],
         key=lambda r: r.student,
     )
 

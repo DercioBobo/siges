@@ -128,9 +128,9 @@ async function do_generate(frm) {
 	frm.refresh_field("promotion_rows");
 	frm.dirty();
 
-	const approved  = msg.filter(r => r.decision === "Aprovado").length;
+	const approved  = msg.filter(r => r.decision === "Promovido").length;
 	const concluded = msg.filter(r => r.decision === "Concluído").length;
-	const retained  = msg.filter(r => r.decision === "Reprovado").length;
+	const retained  = msg.filter(r => r.decision === "Retido").length;
 	frappe.show_alert({
 		message: __("{0} aprovado(s) · {1} concluído(s) · {2} reprovado(s). Guarde para confirmar.",
 			[approved, concluded, retained]),

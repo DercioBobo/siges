@@ -47,7 +47,7 @@
    "fieldname": "decision",
    "fieldtype": "Select",
    "label": "Decisão",
-   "options": "\nAprovado\nReprovado\nConcluído",
+   "options": "\nPromovido\nRetido\nConcluído",
    "in_list_view": 1,
    "columns": 2
   },
