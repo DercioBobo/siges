@@ -59,9 +59,16 @@ fixtures = [
 app_include_js = ["/assets/escola/js/escola_utils.js"]
 
 # -----------------------------------------------------------------
-# Website — not used yet
+# Website
 # -----------------------------------------------------------------
 # website_route_rules = []
+
+# Redirect portal-only users to their respective portals after login
+# instead of the desk (which they have no access to).
+role_home_page = {
+    "Encarregado de Educação": "/portal",
+    "Professor": "/portal-professor",
+}
 
 # -----------------------------------------------------------------
 # Scheduled tasks

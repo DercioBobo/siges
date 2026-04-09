@@ -78,7 +78,7 @@
     </div>
     <h2 class="text-xl font-bold text-slate-800 mb-2">Acesso Negado</h2>
     <p class="text-slate-500 text-sm mb-6">Não existe nenhum professor activo associado à sua conta.</p>
-    <a href="/login?action=Logout" class="inline-block bg-brand text-white text-sm font-medium px-5 py-2.5 rounded-xl">Sair</a>
+    <a href="/portal-logout" class="inline-block bg-brand text-white text-sm font-medium px-5 py-2.5 rounded-xl">Sair</a>
   </div>
 </div>
 {% else %}
@@ -102,7 +102,7 @@
         </svg>
         <span class="hidden md:inline">{{ teacher_full_name }}</span>
       </button>
-      <a href="/login?action=Logout"
+      <a href="/portal-logout"
          class="md:hidden bg-white/15 hover:bg-white/25 text-white text-sm px-3 py-1.5 rounded-xl transition-colors">Sair</a>
     </div>
   </div>
@@ -341,7 +341,7 @@
       </svg>
       <span>Perfil</span>
     </button>
-    <a href="/login?action=Logout"
+    <a href="/portal-logout"
        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">
       <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
