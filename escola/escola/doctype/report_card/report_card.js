@@ -41,14 +41,35 @@ frappe.ui.form.on("Report Card", {
     },
 
     academic_year(frm) {
-        frm.set_value("school_class", null);
-        frm.set_value("class_group", null);
-        set_queries(frm);
+        // Clear class_group only if it belongs to a different academic year
+        if (frm.doc.class_group) {
+            frappe.db.get_value("Class Group", frm.doc.class_group, "academic_year", (r) => {
+                if (r && r.academic_year !== frm.doc.academic_year) {
+                    frm.doc.class_group  = null;
+                    frm.doc.school_class = null;
+                    frm.refresh_field("class_group");
+                    frm.refresh_field("school_class");
+                }
+                set_queries(frm);
+            });
+        } else {
+            set_queries(frm);
+        }
     },
 
     school_class(frm) {
-        frm.set_value("class_group", null);
-        set_queries(frm);
+        // Clear class_group only if it belongs to a different school class
+        if (frm.doc.class_group) {
+            frappe.db.get_value("Class Group", frm.doc.class_group, "school_class", (r) => {
+                if (r && r.school_class !== frm.doc.school_class) {
+                    frm.doc.class_group = null;
+                    frm.refresh_field("class_group");
+                }
+                set_queries(frm);
+            });
+        } else {
+            set_queries(frm);
+        }
     },
 
     class_group(frm) {
@@ -56,8 +77,8 @@ frappe.ui.form.on("Report Card", {
         if (!frm.doc.class_group) return;
         frappe.db.get_value("Class Group", frm.doc.class_group, ["academic_year", "school_class"], (r) => {
             if (!r) return;
-            // Set directly on frm.doc to avoid triggering academic_year/school_class
-            // event handlers which would clear class_group and cause a cascade.
+            // Use frm.doc + refresh_field (not set_value) to avoid re-triggering
+            // the academic_year / school_class onChange cascade.
             if (r.academic_year) {
                 frm.doc.academic_year = r.academic_year;
                 frm.refresh_field("academic_year");

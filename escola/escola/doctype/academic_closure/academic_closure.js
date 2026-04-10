@@ -45,6 +45,8 @@ frappe.ui.form.on("Academic Closure", {
                         frappe.call({
                             method: "escola.escola.doctype.academic_closure.academic_closure.create_report_cards",
                             args: { doc_name: frm.doc.name },
+                            freeze: true,
+                            freeze_message: __("A criar/actualizar Boletins…"),
                             callback(r) {
                                 if (r.exc) return;
                                 const msg = r.message;
@@ -52,18 +54,21 @@ frappe.ui.form.on("Academic Closure", {
                                     frappe.msgprint(__("Não existem alunos no Fecho para criar Boletins."));
                                     return;
                                 }
+                                if (msg.error === "no_annual_assessment") {
+                                    frappe.msgprint(__("Não existe Avaliação Anual para esta Turma e Ano Lectivo."));
+                                    return;
+                                }
                                 const created = (msg.created || []).length;
-                                const skipped = (msg.skipped || []).length;
-                                if (created > 0) {
-                                    frappe.show_alert({
-                                        message: __(
-                                            "{0} Boletim(ns) criado(s). {1} já existiam e foram ignorados.",
-                                            [created, skipped]
-                                        ),
-                                        indicator: "green",
-                                    });
+                                const updated = (msg.updated || []).length;
+                                const errors  = (msg.errors  || []).length;
+                                if (created > 0 || updated > 0) {
+                                    let text = __("{0} Boletim(ns) criado(s), {1} actualizado(s).", [created, updated]);
+                                    if (errors) text += " " + __("{0} erro(s) — verifique os logs.", [errors]);
+                                    frappe.show_alert({ message: text, indicator: "green" });
+                                } else if (errors > 0) {
+                                    frappe.msgprint(__("{0} erro(s) ao processar Boletins. Verifique os logs do servidor.", [errors]));
                                 } else {
-                                    frappe.msgprint(__("Todos os alunos desta turma já possuem um Boletim."));
+                                    frappe.msgprint(__("Nenhum Boletim processado."));
                                 }
                             },
                         });

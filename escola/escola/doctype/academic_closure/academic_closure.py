@@ -79,7 +79,7 @@ def load_promotions(doc_name):
     promo_rows = frappe.get_all(
         "Student Promotion Row",
         filters={"parent": promotion},
-        fields=["student", "decision", "total_failed_subjects", "remarks"],
+        fields=["student", "decision", "remarks"],
         order_by="student asc",
     )
     if not promo_rows:
@@ -111,7 +111,6 @@ def load_promotions(doc_name):
         {
             "student": r.student,
             "final_decision": r.decision,
-            "total_failed_subjects": r.total_failed_subjects or 0,
             "overall_average": avg_map.get(r.student, 0),
             "remarks": r.remarks or "",
         }
@@ -124,10 +123,14 @@ def load_promotions(doc_name):
 @frappe.whitelist()
 def create_report_cards(doc_name):
     """
-    Create one Report Card document per student in the closure_rows,
-    skipping students who already have a Report Card for this academic_year.
-    Returns lists of created and skipped names.
+    Create or update one Report Card per student in closure_rows.
+    - New students: full Report Card is created with subject rows + final_decision.
+    - Existing students: subject rows are refreshed and final_decision is updated.
+    Per-subject data is re-calculated from Grade Entry via _build_report_card_data,
+    since Annual Assessment Row only stores per-student aggregates, not per-subject rows.
     """
+    from escola.escola.doctype.report_card.report_card import _build_report_card_data
+
     doc = frappe.get_doc("Academic Closure", doc_name)
 
     if not doc.closure_rows:
@@ -135,60 +138,59 @@ def create_report_cards(doc_name):
 
     annual = frappe.db.get_value(
         "Annual Assessment",
-        {
-            "class_group": doc.class_group,
-            "academic_year": doc.academic_year,
-        },
+        {"class_group": doc.class_group, "academic_year": doc.academic_year},
         "name",
     )
+    if not annual:
+        return {"error": "no_annual_assessment"}
 
-    created = []
-    skipped = []
+    created, updated, errors = [], [], []
 
     for row in doc.closure_rows:
-        existing = frappe.db.get_value(
-            "Report Card",
-            {
-                "student": row.student,
-                "academic_year": doc.academic_year,
-            },
-            "name",
-        )
-        if existing:
-            skipped.append(row.student)
-            continue
+        try:
+            data = _build_report_card_data(annual, row.student, doc.school_class)
+            if not data or not data["rows"]:
+                errors.append(row.student)
+                continue
 
-        assessment_rows = []
-        if annual:
-            assessment_rows = frappe.get_all(
-                "Annual Assessment Row",
-                filters={"parent": annual, "student": row.student},
-                fields=["subject", "final_grade", "result", "remarks"],
-                order_by="subject asc",
+            # Closure row is authoritative for the final decision
+            final_decision = row.final_decision or data.get("final_decision")
+
+            existing = frappe.db.get_value(
+                "Report Card",
+                {"student": row.student, "academic_year": doc.academic_year},
+                "name",
             )
 
-        primary_guardian = frappe.db.get_value("Student", row.student, "primary_guardian")
+            if existing:
+                rc = frappe.get_doc("Report Card", existing)
+                rc.set("report_card_rows", [])
+                for r in data["rows"]:
+                    rc.append("report_card_rows", r)
+                if final_decision:
+                    rc.final_decision = final_decision
+                if data["primary_guardian"] and not rc.primary_guardian:
+                    rc.primary_guardian = data["primary_guardian"]
+                rc.save(ignore_permissions=True)
+                updated.append(row.student)
+            else:
+                rc = frappe.new_doc("Report Card")
+                rc.student = row.student
+                rc.academic_year = doc.academic_year
+                rc.school_class = doc.school_class
+                rc.class_group = doc.class_group
+                rc.primary_guardian = data["primary_guardian"]
+                rc.final_decision = final_decision
+                for r in data["rows"]:
+                    rc.append("report_card_rows", r)
+                rc.insert(ignore_permissions=False)
+                created.append(rc.name)
 
-        rc = frappe.new_doc("Report Card")
-        rc.student = row.student
-        rc.academic_year = doc.academic_year
-        rc.school_class = doc.school_class
-        rc.class_group = doc.class_group
-        rc.primary_guardian = primary_guardian
-        rc.final_decision = row.final_decision
-
-        for ar in assessment_rows:
-            rc.append(
-                "report_card_rows",
-                {
-                    "subject": ar.subject,
-                    "final_grade": ar.final_grade,
-                    "result": ar.result,
-                    "remarks": ar.remarks or "",
-                },
+        except Exception:
+            frappe.log_error(
+                title=f"Escola — falha ao criar/actualizar Boletim para {row.student}",
+                message=frappe.get_traceback(),
             )
+            errors.append(row.student)
 
-        rc.insert(ignore_permissions=False)
-        created.append(rc.name)
-
-    return {"created": created, "skipped": skipped}
+    return {"created": created, "updated": updated, "errors": errors}
