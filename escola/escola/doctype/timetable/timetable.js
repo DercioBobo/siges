@@ -99,12 +99,8 @@ async function _open_grid_dialog(frm) {
 			limit: 1,
 		});
 		if (curricula.length) {
-			const lines = await frappe.db.get_list("Class Curriculum Line", {
-				filters: { parent: curricula[0].name },
-				fields: ["subject"],
-				limit: 100,
-			});
-			subjects = lines.map(l => l.subject).filter(Boolean);
+			const currDoc = await frappe.db.get_doc("Class Curriculum", curricula[0].name);
+			subjects = (currDoc.subject_lines || []).map(l => l.subject).filter(Boolean);
 		}
 	}
 	if (!subjects.length) {
