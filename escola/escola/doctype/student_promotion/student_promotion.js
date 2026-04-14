@@ -73,7 +73,7 @@ frappe.ui.form.on("Student Promotion", {
 	},
 
 	async next_academic_year(frm) {
-		// Validate: next year must be strictly after the origin year
+		// Validate: next year must differ from and not overlap the origin year
 		if (!frm.doc.next_academic_year || !frm.doc.academic_year) return;
 		if (frm.doc.next_academic_year === frm.doc.academic_year) {
 			frappe.msgprint(__("O Ano Lectivo Seguinte não pode ser igual ao Ano Lectivo de Origem."));
@@ -84,8 +84,9 @@ frappe.ui.form.on("Student Promotion", {
 			frappe.db.get_value("Academic Year", frm.doc.academic_year,      "end_date"),
 			frappe.db.get_value("Academic Year", frm.doc.next_academic_year, "start_date"),
 		]);
-		const originEnd  = origin?.end_date   || origin;
-		const nextStart  = next?.start_date   || next;
+		// Use || null so a missing/null date stays falsy (avoids object coercion bug)
+		const originEnd = (origin  && origin.end_date)   || null;
+		const nextStart = (next    && next.start_date)   || null;
 		if (originEnd && nextStart && nextStart <= originEnd) {
 			frappe.msgprint(__("O Ano Lectivo Seguinte deve ser posterior ao Ano Lectivo de Origem."));
 			frm.set_value("next_academic_year", null);
