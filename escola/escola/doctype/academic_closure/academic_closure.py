@@ -54,6 +54,35 @@ class AcademicClosure(Document):
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_input
+def get_class_groups_with_promotions(doctype, txt, searchfield, start, page_len, filters):
+    """Custom search: only Class Groups that have a Student Promotion (optionally filtered by academic_year)."""
+    import json
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+    filters = filters or {}
+
+    academic_year = filters.get("academic_year")
+    values = {"txt": f"%{txt}%", "start": int(start), "page_len": int(page_len)}
+
+    conds = ["cg.is_active = 1", f"cg.`{searchfield}` LIKE %(txt)s"]
+    if academic_year:
+        conds.append("sp.academic_year = %(academic_year)s")
+        values["academic_year"] = academic_year
+
+    sql = """
+        SELECT DISTINCT cg.name
+        FROM `tabClass Group` cg
+        INNER JOIN `tabStudent Promotion` sp ON sp.class_group = cg.name
+        WHERE {where}
+        ORDER BY cg.name
+        LIMIT %(start)s, %(page_len)s
+    """.format(where=" AND ".join(conds))
+
+    return frappe.db.sql(sql, values)
+
+
+@frappe.whitelist()
 def load_promotions(doc_name):
     """Thin wrapper — delegates to load_promotions_by_params using the saved doc."""
     doc = frappe.get_doc("Academic Closure", doc_name)
@@ -114,6 +143,55 @@ def load_promotions_by_params(class_group, academic_year):
                 "remarks":        r.remarks or "",
             }
             for r in promo_rows
+        ]
+    }
+
+
+@frappe.whitelist()
+def load_students_for_closure(class_group, academic_year):
+    """
+    Load active students for a closure from Student Group Assignment.
+    Used for auto-fill when a turma is selected — does not require a Student Promotion.
+    Also enriches with averages from Annual Assessment if one exists.
+    """
+    sgas = frappe.get_all(
+        "Student Group Assignment",
+        filters={"class_group": class_group, "academic_year": academic_year, "status": "Activa"},
+        fields=["student"],
+        order_by="student asc",
+    )
+    if not sgas:
+        return {"error": "no_students"}
+
+    # Optionally enrich with averages from Annual Assessment
+    avg_map = {}
+    annual = frappe.db.get_value(
+        "Annual Assessment",
+        {"class_group": class_group, "academic_year": academic_year},
+        "name",
+    )
+    if annual:
+        ann_rows = frappe.get_all(
+            "Annual Assessment Row",
+            filters={"parent": annual},
+            fields=["student", "final_grade"],
+        )
+        by_student = {}
+        for r in ann_rows:
+            by_student.setdefault(r.student, []).append(r.final_grade)
+        for student, grades in by_student.items():
+            avg_map[student] = round(sum(grades) / len(grades), 1) if grades else 0
+
+    return {
+        "rows": [
+            {
+                "student":               s.student,
+                "final_decision":        "",
+                "total_failed_subjects": 0,
+                "overall_average":       avg_map.get(s.student, 0),
+                "remarks":               "",
+            }
+            for s in sgas
         ]
     }
 

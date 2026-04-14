@@ -60,19 +60,12 @@ frappe.ui.form.on("Academic Closure", {
 	},
 
 	// school_class auto-fills via fetch_from; academic_year is set by auto_fill_academic_year.
-	// This handler only needs to trigger the row auto-load.
 	class_group(frm) {
 		set_queries(frm);
-		if (frm.doc.class_group && frm.doc.academic_year) {
-			_try_auto_load(frm);
-		}
 	},
 
 	academic_year(frm) {
 		set_queries(frm);
-		if (frm.doc.class_group && frm.doc.academic_year) {
-			_try_auto_load(frm);
-		}
 	},
 });
 
@@ -113,37 +106,11 @@ function _sync_closure_students(frm) {
 // ---------------------------------------------------------------------------
 
 function set_queries(frm) {
-	const cg_filters = { is_active: 1 };
-	if (frm.doc.academic_year) cg_filters.academic_year = frm.doc.academic_year;
-	if (frm.doc.school_class)  cg_filters.school_class  = frm.doc.school_class;
-	frm.set_query("class_group",  () => ({ filters: cg_filters }));
+	frm.set_query("class_group", () => ({
+		query: "escola.escola.doctype.academic_closure.academic_closure.get_class_groups_with_promotions",
+		filters: { academic_year: frm.doc.academic_year || "" },
+	}));
 	frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
-}
-
-// ---------------------------------------------------------------------------
-// Auto-load on class_group change (silent — no confirm, no error dialogs)
-// ---------------------------------------------------------------------------
-
-async function _try_auto_load(frm) {
-	if (!frm.doc.class_group || !frm.doc.academic_year) return;
-	// Only auto-load when the table is empty (don't clobber existing data)
-	if (frm.doc.closure_rows && frm.doc.closure_rows.length > 0) return;
-
-	const r = await frappe.call({
-		method: "escola.escola.doctype.academic_closure.academic_closure.load_promotions_by_params",
-		args: {
-			class_group:   frm.doc.class_group,
-			academic_year: frm.doc.academic_year,
-		},
-	});
-
-	if (r.exc || !r.message) return;
-	const data = r.message;
-
-	// If no promotion exists yet, just leave the table empty — user will fill later
-	if (data.error) return;
-
-	_apply_promotion_data(frm, data, /* silent */ true);
 }
 
 // ---------------------------------------------------------------------------
