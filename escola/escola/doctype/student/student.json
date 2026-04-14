@@ -33,6 +33,7 @@
   "current_school_class",
   "column_break_9",
   "current_class_group",
+  "renovation_status_html",
   "section_break_guardian",
   "primary_guardian",
   "section_break_history",
@@ -204,6 +205,11 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "renovation_status_html",
+   "fieldtype": "HTML",
+   "label": "Estado de Renovação"
+  },
+  {
    "fieldname": "section_break_guardian",
    "fieldtype": "Section Break",
    "label": "Encarregado Principal"
@@ -237,11 +243,12 @@
   }
  ],
  "links": [
-  {"group": "Académico", "link_doctype": "Student Group Assignment", "link_fieldname": "student"},
-  {"group": "Académico", "link_doctype": "Report Card",              "link_fieldname": "student"},
-  {"group": "Académico", "link_doctype": "Inscricao",                "link_fieldname": "student"},
-  {"group": "Académico", "link_doctype": "Troca De Turma",           "link_fieldname": "student"},
-  {"group": "Académico", "link_doctype": "Student Transfer",         "link_fieldname": "student"}
+  {"group": "Académico", "link_doctype": "Student Group Assignment",  "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Report Card",               "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Inscricao",                 "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Renovacao De Matricula",    "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Troca De Turma",            "link_fieldname": "student"},
+  {"group": "Académico", "link_doctype": "Student Transfer",          "link_fieldname": "student"}
  ],
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",

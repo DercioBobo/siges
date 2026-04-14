@@ -1,249 +1,211 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import add_days, getdate, today
 
 
-@frappe.whitelist()
-def get_students_for_renewal(class_group, academic_year):
-    """Return active students in class_group with their current renewal status."""
-    sgas = frappe.get_all(
-        "Student Group Assignment",
-        filters={
-            "class_group": class_group,
-            "academic_year": academic_year,
-            "status": "Activa",
-        },
-        fields=["student"],
-        order_by="student asc",
-    )
-
-    result = []
-    for sga in sgas:
-        s = frappe.db.get_value(
-            "Student",
-            sga.student,
-            ["student_code", "full_name", "financial_status", "current_status"],
-            as_dict=True,
-        )
-        if not s:
-            continue
-        # Check if already marked in class group student table
-        cgs = frappe.db.get_value(
-            "Class Group Student",
-            {"parent": class_group, "student": sga.student},
-            ["renovacao", "data_renovacao", "renovacao_ref"],
-            as_dict=True,
-        )
-        result.append(
-            {
-                "student": sga.student,
-                "student_code": s.student_code or "",
-                "full_name": s.full_name or sga.student,
-                "financial_status": s.financial_status or "",
-                "current_status": s.current_status or "",
-                "renovacao": (cgs.renovacao if cgs else "") or "",
-            }
-        )
-
-    result.sort(key=lambda x: x["full_name"])
-    return result
-
+# ---------------------------------------------------------------------------
+# Document class
+# ---------------------------------------------------------------------------
 
 class RenovacaoDeMatricula(Document):
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
 
     def validate(self):
         self._validate_years()
         self._validate_not_duplicate()
-        self._compute_totals()
 
     def on_submit(self):
-        self._execute_renewal()
-        self.db_set("status", "Concluída")
+        inv = _create_renewal_invoice(self)
+        if inv:
+            self.db_set("sales_invoice", inv.name)
+            frappe.msgprint(
+                _("Renovação confirmada. Factura <b><a href='/app/sales-invoice/{0}'>{0}</a></b> criada.").format(inv.name),
+                title=_("Renovação concluída"),
+                indicator="green",
+            )
+        else:
+            frappe.msgprint(
+                _("Renovação confirmada. Configure o <b>Item da Taxa de Renovação</b> em Configurações da Escola para gerar a factura automaticamente."),
+                title=_("Renovação concluída — sem factura"),
+                indicator="orange",
+            )
 
     def on_cancel(self):
-        self._revert_renewal()
-        self.db_set("status", "Cancelada")
+        if self.sales_invoice:
+            inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
+            if inv_status == 0:
+                # Draft — safe to delete
+                frappe.delete_doc("Sales Invoice", self.sales_invoice, ignore_permissions=True)
+                self.db_set("sales_invoice", None)
+                frappe.msgprint(_("Factura de renovação eliminada."), indicator="orange")
+            else:
+                frappe.msgprint(
+                    _("A factura <b>{0}</b> já está submetida. Cancele-a manualmente se necessário.").format(
+                        self.sales_invoice
+                    ),
+                    title=_("Factura não cancelada"),
+                    indicator="orange",
+                )
 
-    # ------------------------------------------------------------------
-    # Validation
     # ------------------------------------------------------------------
 
     def _validate_years(self):
-        if self.academic_year == self.target_academic_year:
-            frappe.throw(
-                _("O Ano Lectivo de Destino deve ser diferente do Ano Lectivo de Origem."),
-                title=_("Anos lectivos inválidos"),
-            )
+        if self.academic_year and self.target_academic_year:
+            if self.academic_year == self.target_academic_year:
+                frappe.throw(
+                    _("O Ano Lectivo de Renovação deve ser diferente do Ano Lectivo de Origem."),
+                    title=_("Anos lectivos inválidos"),
+                )
 
     def _validate_not_duplicate(self):
         existing = frappe.db.get_value(
             "Renovacao De Matricula",
             {
-                "class_group": self.class_group,
-                "academic_year": self.academic_year,
-                "target_academic_year": self.target_academic_year,
-                "status": "Concluída",
-                "name": ("!=", self.name),
+                "student":               self.student,
+                "academic_year":         self.academic_year,
+                "target_academic_year":  self.target_academic_year,
+                "docstatus":             ("!=", 2),   # not cancelled
+                "name":                  ("!=", self.name),
             },
             "name",
         )
         if existing:
             frappe.throw(
                 _(
-                    "Já existe uma Renovacao de Matricula concluída para esta turma "
-                    "neste percurso de anos: <b>{0}</b>."
-                ).format(existing),
+                    "Já existe uma Renovação de Matrícula para o aluno <b>{0}</b> "
+                    "neste percurso de anos: <b><a href='/app/renovacao-de-matricula/{1}'>{1}</a></b>."
+                ).format(self.student, existing),
                 title=_("Renovação duplicada"),
             )
 
-    def _compute_totals(self):
-        rows = self.renovation_students or []
-        self.total_students = len(rows)
-        self.total_renewed = sum(1 for r in rows if r.renovacao == "Sim")
-        self.total_not_renewed = sum(1 for r in rows if r.renovacao == "Não")
 
-    # ------------------------------------------------------------------
-    # Submit
-    # ------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Invoice creation helper
+# ---------------------------------------------------------------------------
 
-    def _execute_renewal(self):
-        today = frappe.utils.today()
-        created_sgas = []
+def _create_renewal_invoice(doc):
+    """Create a Sales Invoice for the renewal fee. Returns the invoice or None."""
+    from escola.escola.doctype.student.student import ensure_customer_for_student
 
-        for row in self.renovation_students:
-            if not row.renovacao:
-                continue  # skip rows not yet decided
+    settings = frappe.get_single("School Settings")
+    item_code = settings.get("renewal_fee_item_code")
+    if not item_code:
+        return None
 
-            # Update Class Group Student record
-            cgs_name = frappe.db.get_value(
-                "Class Group Student",
-                {"parent": self.class_group, "student": row.student},
-                "name",
-            )
-            if cgs_name:
-                frappe.db.set_value(
-                    "Class Group Student",
-                    cgs_name,
-                    {
-                        "renovacao": row.renovacao,
-                        "data_renovacao": self.renewal_date or today,
-                        "renovacao_ref": self.name,
-                    },
-                )
-
-            if row.renovacao != "Sim":
-                continue
-
-            # Create SGA for target year if a target turma is known
-            target_cg = row.target_class_group or self.target_class_group
-            if not target_cg:
-                continue
-
-            # Skip if SGA already exists
-            if frappe.db.exists(
-                "Student Group Assignment",
-                {
-                    "student": row.student,
-                    "academic_year": self.target_academic_year,
-                    "class_group": target_cg,
-                    "status": "Activa",
-                },
-            ):
-                continue
-
-            to_sc = frappe.db.get_value("Class Group", target_cg, "school_class")
-            new_sga = frappe.get_doc(
-                {
-                    "doctype": "Student Group Assignment",
-                    "student": row.student,
-                    "academic_year": self.target_academic_year,
-                    "school_class": to_sc,
-                    "class_group": target_cg,
-                    "assignment_date": self.renewal_date or today,
-                    "status": "Activa",
-                    "notes": _(
-                        "Criada automaticamente pela Renovacao de Matricula {0}."
-                    ).format(self.name),
-                }
-            )
-            new_sga.flags.ignore_permissions = True
-            new_sga.insert()
-            created_sgas.append(target_cg)
-
-        renewed = self.total_renewed or 0
-        not_renewed = self.total_not_renewed or 0
-        msg_parts = [
-            _("<b>{0}</b> aluno(s) marcado(s) para renovação.").format(renewed),
-            _("<b>{0}</b> aluno(s) não renova(m).").format(not_renewed),
-        ]
-        if created_sgas:
-            msg_parts.append(
-                _("{0} alocação(ões) criada(s) para <b>{1}</b>.").format(
-                    len(created_sgas), self.target_academic_year
-                )
-            )
-        frappe.msgprint(
-            "<br>".join(msg_parts),
-            title=_("Renovação concluída"),
-            indicator="green",
+    try:
+        customer = ensure_customer_for_student(doc.student)
+    except Exception as e:
+        frappe.throw(
+            _("Não foi possível obter o cliente do aluno: {0}").format(str(e)),
+            title=_("Erro ao criar factura"),
         )
 
-    # ------------------------------------------------------------------
-    # Cancel
-    # ------------------------------------------------------------------
+    company = (
+        frappe.db.get_single_value("School Settings", "default_company")
+        or frappe.db.get_single_value("Global Defaults", "default_company")
+    )
+    due_days   = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
+    today_date = today()
+    due_date   = add_days(today_date, due_days)
+    auto_submit = int(frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0)
+    fee_amount  = float(settings.get("renewal_fee_amount") or 0)
+    description = _("Renovação de Matrícula {0}").format(doc.target_academic_year)
 
-    def _revert_renewal(self):
-        for row in self.renovation_students:
-            if not row.renovacao:
-                continue
+    si = frappe.new_doc("Sales Invoice")
+    si.customer     = customer
+    si.company      = company
+    si.posting_date = today_date
+    si.due_date     = due_date
+    si.remarks      = description
 
-            # Reset Class Group Student record
-            cgs_name = frappe.db.get_value(
-                "Class Group Student",
-                {
-                    "parent": self.class_group,
-                    "student": row.student,
-                    "renovacao_ref": self.name,
-                },
-                "name",
-            )
-            if cgs_name:
-                frappe.db.set_value(
-                    "Class Group Student",
-                    cgs_name,
-                    {"renovacao": "", "data_renovacao": None, "renovacao_ref": ""},
-                )
+    try:
+        si.escola_student = doc.student
+    except Exception:
+        pass
 
-            if row.renovacao != "Sim":
-                continue
+    si.append("items", {
+        "item_code":  item_code,
+        "item_name":  description,
+        "description": description,
+        "qty":        1,
+        "rate":       fee_amount,
+    })
 
-            # Deactivate any SGA created by this renewal
-            target_cg = row.target_class_group or self.target_class_group
-            if not target_cg:
-                continue
+    si.insert(ignore_permissions=True)
+    if auto_submit:
+        si.submit()
 
-            sga_name = frappe.db.get_value(
-                "Student Group Assignment",
-                {
-                    "student": row.student,
-                    "academic_year": self.target_academic_year,
-                    "class_group": target_cg,
-                    "status": "Activa",
-                },
-                "name",
-            )
-            if sga_name:
-                notes = frappe.db.get_value("Student Group Assignment", sga_name, "notes") or ""
-                if self.name in notes:
-                    frappe.db.set_value(
-                        "Student Group Assignment", sga_name, "status", "Encerrada"
-                    )
+    return si
 
-        frappe.msgprint(
-            _("Renovação cancelada. Marcações de renovação revertidas."),
-            title=_("Renovação cancelada"),
-            indicator="orange",
-        )
+
+# ---------------------------------------------------------------------------
+# Whitelisted helpers (called from JS)
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_next_academic_year(academic_year):
+    """
+    Return the Academic Year whose start date falls immediately after
+    the given year's end date (within a 90-day window).
+    Returns None when not found.
+    """
+    end_date = frappe.db.get_value("Academic Year", academic_year, "year_end_date")
+    if not end_date:
+        return None
+
+    next_start_min = add_days(end_date, 1)
+    next_start_max = add_days(end_date, 90)
+
+    result = frappe.db.sql(
+        """SELECT name FROM `tabAcademic Year`
+           WHERE year_start_date BETWEEN %s AND %s
+           ORDER BY year_start_date ASC LIMIT 1""",
+        (next_start_min, next_start_max),
+        as_dict=True,
+    )
+    return result[0]["name"] if result else None
+
+
+@frappe.whitelist()
+def get_student_renewal_status(student):
+    """
+    Returns renovation status for the student only when today is within the
+    configured renewal period in School Settings. Returns None otherwise.
+
+    Used by the Student form to show/hide the renewal badge.
+    """
+    settings = frappe.get_single("School Settings")
+    period_start  = settings.get("renewal_period_start")
+    period_end    = settings.get("renewal_period_end")
+    current_year  = settings.get("current_academic_year")
+
+    if not period_start or not period_end or not current_year:
+        return None
+
+    today_date = getdate(today())
+    if not (getdate(period_start) <= today_date <= getdate(period_end)):
+        return None
+
+    # Find the next year for the current year
+    next_year = get_next_academic_year(current_year)
+
+    # Check if this student already has a submitted renewal
+    renewal = frappe.db.get_value(
+        "Renovacao De Matricula",
+        {
+            "student":              student,
+            "academic_year":        current_year,
+            "docstatus":            1,   # submitted
+        },
+        ["name", "target_academic_year", "renewal_date"],
+        as_dict=True,
+    )
+
+    return {
+        "in_period":        True,
+        "period_start":     str(period_start),
+        "period_end":       str(period_end),
+        "current_year":     current_year,
+        "next_year":        next_year,
+        "renewal":          renewal,  # None or {name, target_academic_year, renewal_date}
+    }

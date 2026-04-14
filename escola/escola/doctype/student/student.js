@@ -22,6 +22,7 @@ frappe.ui.form.on("Student", {
 			_set_financial_indicator(frm);
 			_load_financial_summary(frm);
 			_load_academic_history(frm);
+			_load_renewal_status(frm);
 
 			const $btn = frm.add_custom_button(__("Acções"), () => _show_actions_modal(frm));
 			$btn.removeClass("btn-default").addClass("btn-primary");
@@ -61,6 +62,26 @@ function _inject_student_styles() {
 .sam-card:active { transform: translateY(0); box-shadow: none; }
 .sam-ico { font-size: 22px; line-height: 1; }
 .sam-lbl { font-size: 12px; font-weight: 600; line-height: 1.3; }
+
+/* ── Renewal status banner ───────────────────── */
+.srn-banner {
+	display: flex; align-items: center; gap: 10px;
+	padding: 10px 14px; border-radius: 8px; margin: 4px 0 8px;
+	font-size: 13px; font-weight: 500;
+}
+.srn-banner.renewed  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.srn-banner.pending  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.srn-icon { font-size: 16px; flex-shrink: 0; }
+.srn-text { flex: 1; }
+.srn-text b { display: block; }
+.srn-text small { opacity: .75; font-size: 11px; }
+.srn-link {
+	font-size: 12px; font-weight: 600; padding: 4px 10px;
+	border-radius: 6px; text-decoration: none; white-space: nowrap;
+	cursor: pointer; border: none; outline: none;
+}
+.srn-banner.renewed .srn-link { background: #059669; color: #fff; }
+.srn-banner.pending .srn-link { background: #d97706; color: #fff; }
 
 /* ── Invoice modal ───────────────────────────── */
 .sinv-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
@@ -121,10 +142,21 @@ function _show_actions_modal(frm) {
 	const isActive   = !status || status === "Activo";
 	const isInactive = status === "Transferido" || status === "Desistente";
 
+	// Show renewal card only when in active renewal period
+	const inRenewalPeriod = frm._renewal_status && frm._renewal_status.in_period;
+	const alreadyRenewed  = inRenewalPeriod && frm._renewal_status.renewal;
+
 	const ver = [
 		{ id: "boletins",  ico: "📋", label: __("Boletins"),         color: "#4f46e5", bg: "#eef2ff" },
 		{ id: "facturas",  ico: "🧾", label: __("Facturas"),          color: "#059669", bg: "#d1fae5" },
 		{ id: "historial", ico: "🕐", label: __("Ver Historial"),     color: "#7c3aed", bg: "#f5f3ff" },
+		...(inRenewalPeriod ? [{
+			id:    alreadyRenewed ? "ver-renovacao" : "nova-renovacao",
+			ico:   alreadyRenewed ? "✓" : "🔄",
+			label: alreadyRenewed ? __("Ver Renovação") : __("Renovar Matrícula"),
+			color: alreadyRenewed ? "#059669" : "#b45309",
+			bg:    alreadyRenewed ? "#d1fae5"  : "#fffbeb",
+		}] : []),
 	];
 
 	const acoes = [
@@ -172,6 +204,12 @@ function _show_actions_modal(frm) {
 			case "transferencia":     frappe.new_doc("Student Transfer", { student: frm.doc.name }); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
 			case "reactivar":         reactivate_dialog(frm); break;
+			case "nova-renovacao":
+				if (frm._renewal_status) _open_new_renewal(frm, frm._renewal_status);
+				break;
+			case "ver-renovacao":
+				frappe.set_route("List", "Renovacao De Matricula", { student: frm.doc.name });
+				break;
 		}
 	});
 
@@ -390,6 +428,77 @@ function _render_history_compact(data) {
   <span style="display:flex;gap:10px;flex-wrap:wrap;margin-left:auto;">${tags.join('<span style="color:var(--border-color);">·</span>')}</span>
 </div>`;
 	}).join("");
+}
+
+// ---------------------------------------------------------------------------
+// Renewal status badge
+// ---------------------------------------------------------------------------
+
+async function _load_renewal_status(frm) {
+	const fd = frm.fields_dict["renovation_status_html"];
+	if (!fd) return;
+
+	fd.$wrapper.html(""); // clear while loading
+
+	const r = await frappe.call({
+		method: "escola.escola.doctype.renovacao_de_matricula.renovacao_de_matricula.get_student_renewal_status",
+		args:   { student: frm.doc.name },
+	});
+
+	if (r.exc || !r.message) {
+		fd.$wrapper.html("");
+		return;
+	}
+
+	_inject_student_styles();
+	const d = r.message;
+	frm._renewal_status = d;
+
+	if (d.renewal) {
+		// Already renewed
+		const date_fmt = frappe.datetime.str_to_user(d.renewal.renewal_date);
+		fd.$wrapper.html(`
+		<div class="srn-banner renewed">
+			<span class="srn-icon">✓</span>
+			<div class="srn-text">
+				<b>${__("Matrícula renovada para {0}", [d.renewal.target_academic_year])}</b>
+				<small>${__("Renovado em {0}", [date_fmt])}</small>
+			</div>
+			<button class="srn-link" data-action="view-renewal" data-name="${frappe.utils.escape_html(d.renewal.name)}">
+				${__("Ver →")}
+			</button>
+		</div>`);
+	} else {
+		// Pending renewal
+		const period_end_fmt = frappe.datetime.str_to_user(d.period_end);
+		fd.$wrapper.html(`
+		<div class="srn-banner pending">
+			<span class="srn-icon">⚠</span>
+			<div class="srn-text">
+				<b>${__("Matrícula por renovar para {0}", [d.next_year || d.current_year])}</b>
+				<small>${__("Período de renovações aberto até {0}", [period_end_fmt])}</small>
+			</div>
+			<button class="srn-link" data-action="new-renewal">
+				${__("Renovar Agora")}
+			</button>
+		</div>`);
+	}
+
+	fd.$wrapper.find("[data-action=view-renewal]").on("click", function () {
+		frappe.set_route("Form", "Renovacao De Matricula", $(this).data("name"));
+	});
+
+	fd.$wrapper.find("[data-action=new-renewal]").on("click", function () {
+		_open_new_renewal(frm, d);
+	});
+}
+
+function _open_new_renewal(frm, renewal_data) {
+	frappe.new_doc("Renovacao De Matricula", {
+		student:             frm.doc.name,
+		academic_year:       renewal_data.current_year,
+		target_academic_year: renewal_data.next_year || "",
+	});
 }
 
 // ---------------------------------------------------------------------------

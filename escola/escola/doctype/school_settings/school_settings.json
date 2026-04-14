@@ -28,6 +28,12 @@
   "section_enrollment",
   "enrollment_requires_guardian",
   "default_max_students_per_class",
+  "section_renewal",
+  "renewal_period_start",
+  "renewal_period_end",
+  "column_break_renewal",
+  "renewal_fee_item_code",
+  "renewal_fee_amount",
   "section_billing",
   "default_company",
   "default_income_account",
@@ -195,6 +201,41 @@
    "label": "Capacidade Padrão por Turma",
    "default": "0",
    "description": "Capacidade máxima padrão ao criar novas turmas. 0 = sem limite."
+  },
+  {
+   "fieldname": "section_renewal",
+   "fieldtype": "Section Break",
+   "label": "Renovações de Matrícula"
+  },
+  {
+   "fieldname": "renewal_period_start",
+   "fieldtype": "Date",
+   "label": "Início do Período de Renovações",
+   "description": "Data a partir da qual o período de renovações está aberto. Fora deste período, o indicador de renovação não aparece nos alunos."
+  },
+  {
+   "fieldname": "renewal_period_end",
+   "fieldtype": "Date",
+   "label": "Fim do Período de Renovações",
+   "description": "Data até à qual o período de renovações está aberto."
+  },
+  {
+   "fieldname": "column_break_renewal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "renewal_fee_item_code",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Item da Taxa de Renovação",
+   "description": "Item utilizado na factura gerada automaticamente ao confirmar uma Renovação de Matrícula."
+  },
+  {
+   "fieldname": "renewal_fee_amount",
+   "fieldtype": "Currency",
+   "label": "Valor da Taxa de Renovação",
+   "default": "0",
+   "description": "Valor cobrado na taxa de renovação. 0 = taxa calculada a partir da tabela de preços do item."
   },
   {
    "fieldname": "section_billing",
