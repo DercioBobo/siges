@@ -59,32 +59,20 @@ frappe.ui.form.on("Academic Closure", {
 		}
 	},
 
-	// Turma is the entry point — fills Ano Lectivo then auto-loads.
-	// school_class is handled automatically by fetch_from on the JSON field.
-	async class_group(frm) {
-		if (!frm.doc.class_group) {
-			frm.set_value("academic_year", null);
-			set_queries(frm);
-			return;
-		}
-
-		const cg = await frappe.db.get_value(
-			"Class Group", frm.doc.class_group, ["academic_year"]
-		);
-		const academic_year = cg && cg.academic_year;
-		if (academic_year) {
-			frm.set_value("academic_year", academic_year);
-		}
+	// school_class auto-fills via fetch_from; academic_year is set by auto_fill_academic_year.
+	// This handler only needs to trigger the row auto-load.
+	class_group(frm) {
 		set_queries(frm);
-
-		// Use the fetched value directly — frm.doc may not reflect set_value yet
-		if (frm.doc.class_group && academic_year) {
+		if (frm.doc.class_group && frm.doc.academic_year) {
 			_try_auto_load(frm);
 		}
 	},
 
 	academic_year(frm) {
 		set_queries(frm);
+		if (frm.doc.class_group && frm.doc.academic_year) {
+			_try_auto_load(frm);
+		}
 	},
 });
 
@@ -137,6 +125,7 @@ function set_queries(frm) {
 // ---------------------------------------------------------------------------
 
 async function _try_auto_load(frm) {
+	if (!frm.doc.class_group || !frm.doc.academic_year) return;
 	// Only auto-load when the table is empty (don't clobber existing data)
 	if (frm.doc.closure_rows && frm.doc.closure_rows.length > 0) return;
 
