@@ -7,9 +7,11 @@
  "field_order": [
   "naming_series",
   "sb_identificacao",
-  "academic_year",
-  "school_class",
   "class_group",
+  "cb_col1",
+  "school_class",
+  "cb_col2",
+  "academic_year",
   "sb_resumo",
   "total_students",
   "promoted_students",
@@ -35,12 +37,16 @@
    "label": "Identificação"
   },
   {
-   "fieldname": "academic_year",
+   "fieldname": "class_group",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Ano Lectivo",
-   "options": "Academic Year",
+   "label": "Turma",
+   "options": "Class Group",
    "reqd": 1
+  },
+  {
+   "fieldname": "cb_col1",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "school_class",
@@ -48,16 +54,19 @@
    "in_list_view": 1,
    "label": "Classe",
    "options": "School Class",
-   "reqd": 1,
-   "fetch_from": "class_group.school_class",
-   "fetch_if_empty": 1
+   "read_only": 1,
+   "fetch_from": "class_group.school_class"
   },
   {
-   "fieldname": "class_group",
+   "fieldname": "cb_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Turma",
-   "options": "Class Group",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
    "reqd": 1
   },
   {

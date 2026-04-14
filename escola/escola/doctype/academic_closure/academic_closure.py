@@ -55,22 +55,23 @@ class AcademicClosure(Document):
 
 @frappe.whitelist()
 def load_promotions(doc_name):
-    """
-    Fetch Student Promotion rows for the class_group + academic_year on
-    this Academic Closure. Also tries to pull per-student averages from
-    Annual Assessment if available.
-    """
+    """Thin wrapper — delegates to load_promotions_by_params using the saved doc."""
     doc = frappe.get_doc("Academic Closure", doc_name)
-
     if not doc.class_group or not doc.academic_year:
         frappe.throw(_("Preencha o Ano Lectivo e a Turma antes de carregar as promoções."))
+    return load_promotions_by_params(doc.class_group, doc.academic_year)
 
+
+@frappe.whitelist()
+def load_promotions_by_params(class_group, academic_year):
+    """
+    Fetch Student Promotion rows for the given class_group + academic_year.
+    Also pulls per-student averages from Annual Assessment when available.
+    Can be called before the Academic Closure document is saved.
+    """
     promotion = frappe.db.get_value(
         "Student Promotion",
-        {
-            "class_group": doc.class_group,
-            "academic_year": doc.academic_year,
-        },
+        {"class_group": class_group, "academic_year": academic_year},
         "name",
     )
     if not promotion:
@@ -85,14 +86,11 @@ def load_promotions(doc_name):
     if not promo_rows:
         return {"error": "no_rows"}
 
-    # Build per-student average map from Annual Assessment rows
+    # Per-student averages from Annual Assessment
     avg_map = {}
     annual = frappe.db.get_value(
         "Annual Assessment",
-        {
-            "class_group": doc.class_group,
-            "academic_year": doc.academic_year,
-        },
+        {"class_group": class_group, "academic_year": academic_year},
         "name",
     )
     if annual:
@@ -107,17 +105,17 @@ def load_promotions(doc_name):
         for student, grades in by_student.items():
             avg_map[student] = round(sum(grades) / len(grades), 1) if grades else 0
 
-    result_rows = [
-        {
-            "student": r.student,
-            "final_decision": r.decision,
-            "overall_average": avg_map.get(r.student, 0),
-            "remarks": r.remarks or "",
-        }
-        for r in promo_rows
-    ]
-
-    return {"rows": result_rows}
+    return {
+        "rows": [
+            {
+                "student":        r.student,
+                "final_decision": r.decision,
+                "overall_average": avg_map.get(r.student, 0),
+                "remarks":        r.remarks or "",
+            }
+            for r in promo_rows
+        ]
+    }
 
 
 @frappe.whitelist()
