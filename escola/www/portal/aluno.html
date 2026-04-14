@@ -414,100 +414,86 @@
     // ── BOLETIM ───────────────────────────────────────────────────────────────
     async function renderBoletim(panel) {
       const d = await api('get_student_boletim', { student: STUDENT });
-      const aa = d.annual_assessment;
-      const rc = d.report_card;
-      const rows = d.report_card_rows || [];
 
-      if (!aa && !rc) {
-        panel.innerHTML = card('Boletim', empty(`Nenhum boletim disponível para o ano lectivo ${d.academic_year || 'actual'}.`));
+      if (d.error || !d.years || !d.years.length) {
+        panel.innerHTML = empty('Sem dados académicos disponíveis para este aluno.');
         return;
       }
 
-      let html = `<div class="space-y-5">`;
+      panel.innerHTML = `<div class="space-y-5">${d.years.map(renderBoletimYear).join('')}</div>`;
+    }
 
-      // Annual summary card
-      if (aa) {
-        const avg = v => v !== null && v !== undefined ? `<span class="font-semibold text-slate-800">${parseFloat(v).toFixed(1)}</span>` : '<span class="text-slate-300">—</span>';
-        html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6">
-          <h3 class="text-base font-semibold text-slate-700 mb-4">Resumo Anual</h3>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
-              <div class="text-xs text-slate-500 mb-1">1º Período</div>
-              <div class="text-2xl">${avg(aa.term_1_average)}</div>
-            </div>
-            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
-              <div class="text-xs text-slate-500 mb-1">2º Período</div>
-              <div class="text-2xl">${avg(aa.term_2_average)}</div>
-            </div>
-            <div class="bg-[#e8f1fd] rounded-xl p-4 text-center">
-              <div class="text-xs text-slate-500 mb-1">3º Período</div>
-              <div class="text-2xl">${avg(aa.term_3_average)}</div>
-            </div>
-            <div class="bg-[#024ba5] rounded-xl p-4 text-center">
-              <div class="text-xs text-blue-200 mb-1">Média Final</div>
-              <div class="text-2xl text-white font-bold">${avg(aa.final_grade)}</div>
-            </div>
+    function renderBoletimYear(yr) {
+      const fmt = v => v == null ? '—' : parseFloat(v).toFixed(1);
+
+      // Decision badge
+      const decColors = {
+        'Promovido': 'bg-green-100 text-green-700',
+        'Concluído': 'bg-blue-100 text-blue-700',
+        'Retido':    'bg-red-100 text-red-700',
+      };
+      const decBadge = yr.final_decision
+        ? `<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${decColors[yr.final_decision] || 'bg-slate-100 text-slate-600'}">${yr.final_decision}</span>`
+        : '';
+      const absBadge = yr.total_absences != null
+        ? `<span class="text-xs text-slate-400">${yr.total_absences} falta(s)</span>` : '';
+
+      // Term headers
+      const termHeaders = yr.term_labels.map(t =>
+        `<th class="py-2.5 px-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">${t}</th>`
+      ).join('');
+
+      // Subject rows
+      const subjectRows = yr.subjects.map(s => {
+        const termCells = s.term_grades.map(g =>
+          `<td class="py-2.5 px-3 text-center text-sm text-slate-600">${fmt(g)}</td>`
+        ).join('');
+        const ann = s.annual_average;
+        const annCls = ann != null && ann < 10 ? 'text-red-600 font-bold' : 'text-[#024ba5] font-semibold';
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50/40">
+          <td class="py-2.5 px-4 text-sm font-medium text-slate-700">${s.subject}</td>
+          ${termCells}
+          <td class="py-2.5 px-3 text-center text-sm ${annCls} bg-blue-50/50">${fmt(ann)}</td>
+        </tr>`;
+      }).join('');
+
+      // Average footer row
+      const avgCells = yr.term_averages.map(a =>
+        `<td class="py-2.5 px-3 text-center text-xs font-bold text-[#024ba5]">${fmt(a)}</td>`
+      ).join('');
+      const ov = yr.overall_average;
+      const ovCls = ov != null && ov < 10 ? 'text-red-600' : 'text-[#024ba5]';
+
+      return `
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-5 py-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-base font-bold text-slate-800">${yr.academic_year}</span>
+            ${yr.school_class ? `<span class="px-2.5 py-0.5 bg-[#e8f1fd] text-[#024ba5] rounded-md text-xs font-medium">${yr.school_class}</span>` : ''}
+            ${yr.class_group ? `<span class="text-xs text-slate-400">${yr.class_group}</span>` : ''}
           </div>
-          <div class="flex flex-wrap items-center gap-4">
-            <div><span class="text-xs text-slate-400 mr-2">Resultado:</span>${resultBadge(aa.result)}</div>
-            ${aa.total_absences != null ? `<div><span class="text-xs text-slate-400 mr-2">Faltas totais:</span><span class="font-medium text-slate-700">${aa.total_absences}</span></div>` : ''}
-            ${aa.remarks ? `<div class="text-xs text-slate-500 italic">${aa.remarks}</div>` : ''}
-          </div>
-        </div>`;
-      }
-
-      // Report card rows
-      if (rc && rows.length > 0) {
-        let tableRows = rows.map(r => `
-          <tr class="border-b border-slate-50 hover:bg-slate-50/50">
-            <td class="py-3 px-4 text-sm text-slate-700">${r.subject}</td>
-            <td class="py-3 px-4 text-center">
-              <span class="font-semibold ${(r.final_grade||0) >= 10 ? 'text-green-700':'text-red-600'}">${r.final_grade !== null ? parseFloat(r.final_grade).toFixed(1) : '—'}</span>
-            </td>
-            <td class="py-3 px-4 text-center">${resultBadge(r.result)}</td>
-            <td class="py-3 px-4 text-xs text-slate-400">${r.remarks || ''}</td>
-          </tr>`).join('');
-
-        let footer = '';
-        if (rc.overall_average != null) {
-          footer = `<tfoot><tr class="bg-slate-50 font-semibold">
-            <td class="py-3 px-4 text-sm">Média Geral</td>
-            <td class="py-3 px-4 text-center text-[#024ba5] font-bold">${parseFloat(rc.overall_average).toFixed(1)}</td>
-            <td class="py-3 px-4 text-center">${resultBadge(rc.final_decision)}</td>
-            <td></td>
-          </tr></tfoot>`;
-        }
-
-        html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-slate-700">Classificações por Disciplina</h3>
-            <span class="text-xs text-slate-400">${d.academic_year || ''}</span>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr class="border-b border-slate-100">
-                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Disciplina</th>
-                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Nota Final</th>
-                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Resultado</th>
-                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Observação</th>
-              </tr></thead>
-              <tbody>${tableRows}</tbody>
-              ${footer}
-            </table>
-          </div>
-        </div>`;
-
-        // Comments
-        if (rc.teacher_comment || rc.management_comment) {
-          html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            ${rc.teacher_comment ? card('Observação do Professor', `<p class="text-sm text-slate-600 italic">"${rc.teacher_comment}"</p>`) : ''}
-            ${rc.management_comment ? card('Observação da Direcção', `<p class="text-sm text-slate-600 italic">"${rc.management_comment}"</p>`) : ''}
-          </div>`;
-        }
-      }
-
-      html += `</div>`;
-      panel.innerHTML = html;
+          <div class="flex items-center gap-2">${absBadge}${decBadge}</div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[360px]">
+            <thead>
+              <tr class="border-b border-slate-100">
+                <th class="py-2.5 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Disciplina</th>
+                ${termHeaders}
+                <th class="py-2.5 px-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide bg-blue-50/50">Média Anual</th>
+              </tr>
+            </thead>
+            <tbody>${subjectRows}</tbody>
+            <tfoot>
+              <tr class="bg-blue-50/60 border-t-2 border-blue-200">
+                <td class="py-2.5 px-4 text-xs font-bold text-[#024ba5] uppercase tracking-wide">Média da Turma</td>
+                ${avgCells}
+                <td class="py-2.5 px-3 text-center text-sm font-bold ${ovCls} bg-blue-50/50">${fmt(ov)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>`;
     }
 
     // ── PRESENÇAS ─────────────────────────────────────────────────────────────

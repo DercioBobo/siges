@@ -222,41 +222,9 @@ def get_student_boletim(student):
     guardian = _get_guardian()
     _assert_owns_student(guardian.name, student)
 
-    class_group, academic_year = _academic_year_for_student(student)
-    if not academic_year:
-        return {"annual_assessment": None, "report_card": None, "report_card_rows": [], "academic_year": None}
-
-    aa = frappe.db.sql("""
-        SELECT
-            aar.term_1_average, aar.term_2_average, aar.term_3_average,
-            aar.final_grade, aar.result, aar.total_absences, aar.remarks
-        FROM `tabAnnual Assessment Row` aar
-        JOIN `tabAnnual Assessment` aa ON aa.name = aar.parent
-        WHERE aar.student = %s AND aa.academic_year = %s
-        LIMIT 1
-    """, (student, academic_year), as_dict=True)
-
-    rc = frappe.db.get_value(
-        "Report Card",
-        {"student": student, "academic_year": academic_year},
-        ["name", "overall_average", "final_decision", "teacher_comment", "management_comment"],
-        as_dict=True,
-    )
-    rc_rows = []
-    if rc:
-        rc_rows = frappe.db.get_all(
-            "Report Card Row",
-            filters={"parent": rc.name},
-            fields=["subject", "final_grade", "result", "remarks"],
-            order_by="subject",
-        )
-
-    return {
-        "academic_year": academic_year,
-        "annual_assessment": aa[0] if aa else None,
-        "report_card": rc,
-        "report_card_rows": rc_rows,
-    }
+    # Reuse the same data layer as the desk Boletim do Aluno page
+    from escola.escola.page.boletim_aluno import boletim_aluno as _ba
+    return _ba.get_student_report(student, academic_year="")
 
 
 # ---------------------------------------------------------------------------
