@@ -350,7 +350,11 @@ def execute_promotion_plan(promotion_name, plan):
         )
         frappe.db.set_value("Class Group", cg_name, "student_count", cnt)
 
-    # ── Step 5: Finalise ────────────────────────────────────────────────────
+    # ── Step 5: Deactivate the origin turma ─────────────────────────────────
+    if doc.class_group:
+        frappe.db.set_value("Class Group", doc.class_group, "is_active", 0)
+
+    # ── Step 6: Finalise ────────────────────────────────────────────────────
     doc.status = "Finalizado"
     doc.save(ignore_permissions=True)
     frappe.db.commit()
