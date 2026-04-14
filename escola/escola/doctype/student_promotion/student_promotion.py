@@ -15,13 +15,13 @@ def get_or_suggest_next_academic_year(academic_year):
     Returns:
       {"found": True,  "name": "2026/2027"}
       {"found": False, "suggested_name": "2026/2027",
-       "year_start_date": "2027-01-01", "year_end_date": "2027-12-31"}
+       "start_date": "2027-01-01", "end_date": "2027-12-31"}
       {"found": False, "error": "no_end_date"}
     """
     import re
     from frappe.utils import add_days
 
-    end_date = frappe.db.get_value("Academic Year", academic_year, "year_end_date")
+    end_date = frappe.db.get_value("Academic Year", academic_year, "end_date")
     if not end_date:
         return {"found": False, "error": "no_end_date"}
 
@@ -30,8 +30,8 @@ def get_or_suggest_next_academic_year(academic_year):
 
     row = frappe.db.sql(
         """SELECT name FROM `tabAcademic Year`
-           WHERE year_start_date BETWEEN %s AND %s
-           ORDER BY year_start_date ASC LIMIT 1""",
+           WHERE start_date BETWEEN %s AND %s
+           ORDER BY start_date ASC LIMIT 1""",
         (next_start_min, next_start_max),
         as_dict=True,
     )
@@ -60,8 +60,8 @@ def get_or_suggest_next_academic_year(academic_year):
     return {
         "found":            False,
         "suggested_name":   suggested_name,
-        "year_start_date":  str(next_start_min),
-        "year_end_date":    str(add_years(end_date, 1)),
+        "start_date":  str(next_start_min),
+        "end_date":    str(add_years(end_date, 1)),
     }
 
 

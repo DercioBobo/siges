@@ -81,11 +81,11 @@ frappe.ui.form.on("Student Promotion", {
 			return;
 		}
 		const [origin, next] = await Promise.all([
-			frappe.db.get_value("Academic Year", frm.doc.academic_year,      "year_end_date"),
-			frappe.db.get_value("Academic Year", frm.doc.next_academic_year, "year_start_date"),
+			frappe.db.get_value("Academic Year", frm.doc.academic_year,      "end_date"),
+			frappe.db.get_value("Academic Year", frm.doc.next_academic_year, "start_date"),
 		]);
-		const originEnd  = origin?.year_end_date  || origin;
-		const nextStart  = next?.year_start_date  || next;
+		const originEnd  = origin?.end_date   || origin;
+		const nextStart  = next?.start_date   || next;
 		if (originEnd && nextStart && nextStart <= originEnd) {
 			frappe.msgprint(__("O Ano Lectivo Seguinte deve ser posterior ao Ano Lectivo de Origem."));
 			frm.set_value("next_academic_year", null);
@@ -137,8 +137,8 @@ async function _auto_fill_next_year(frm) {
 
 	// Not found — ask the user if they want to create it
 	const name    = d.suggested_name || "";
-	const start   = frappe.datetime.str_to_user(d.year_start_date);
-	const end_d   = frappe.datetime.str_to_user(d.year_end_date);
+	const start   = frappe.datetime.str_to_user(d.start_date);
+	const end_d   = frappe.datetime.str_to_user(d.end_date);
 
 	frappe.confirm(
 		__("Não existe Ano Lectivo seguinte a <b>{0}</b>.<br><br>"
@@ -152,8 +152,8 @@ async function _auto_fill_next_year(frm) {
 					doc: {
 						doctype:             "Academic Year",
 						academic_year_name:  name,
-						year_start_date:     d.year_start_date,
-						year_end_date:       d.year_end_date,
+						start_date:          d.start_date,
+						end_date:            d.end_date,
 					},
 				},
 			});

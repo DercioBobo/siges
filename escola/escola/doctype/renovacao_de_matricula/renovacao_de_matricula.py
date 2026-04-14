@@ -149,7 +149,7 @@ def get_next_academic_year(academic_year):
     the given year's end date (within a 90-day window).
     Returns None when not found.
     """
-    end_date = frappe.db.get_value("Academic Year", academic_year, "year_end_date")
+    end_date = frappe.db.get_value("Academic Year", academic_year, "end_date")
     if not end_date:
         return None
 
@@ -158,8 +158,8 @@ def get_next_academic_year(academic_year):
 
     result = frappe.db.sql(
         """SELECT name FROM `tabAcademic Year`
-           WHERE year_start_date BETWEEN %s AND %s
-           ORDER BY year_start_date ASC LIMIT 1""",
+           WHERE start_date BETWEEN %s AND %s
+           ORDER BY start_date ASC LIMIT 1""",
         (next_start_min, next_start_max),
         as_dict=True,
     )
