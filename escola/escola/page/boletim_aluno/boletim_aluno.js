@@ -446,7 +446,7 @@ function _ba_inject_styles() {
 
 /* ── Print ────────────────────────────────────────────────────── */
 @media print {
-	.page-head, .page-head-content, .page-toolbar,
+	.page-head, .page-head-content, .page-toolbar, .page-form,
 	.layout-side-section, .navbar, .sidebar-toggle-btn,
 	.page-actions { display: none !important; }
 
