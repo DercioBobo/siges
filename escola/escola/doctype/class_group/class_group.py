@@ -6,9 +6,9 @@ from frappe.model.document import Document
 class ClassGroup(Document):
     def validate(self):
         self._validate_class_teacher()
-        if self.max_students is not None and self.max_students < 1:
+        if self.max_students and self.max_students < 0:
             frappe.throw(
-                _("A Capacidade Máxima deve ser um número positivo."),
+                _("A Capacidade Máxima não pode ser negativa. Deixe em branco ou a zero para turma ilimitada."),
                 title=_("Capacidade inválida"),
             )
 

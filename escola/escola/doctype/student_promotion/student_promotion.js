@@ -9,6 +9,11 @@ frappe.ui.form.on("Student Promotion", {
 	refresh(frm) {
 		set_queries(frm);
 
+		// If academic_year is set but next_academic_year is missing, try to fill it
+		if (frm.doc.academic_year && !frm.doc.next_academic_year) {
+			_auto_fill_next_year(frm);
+		}
+
 		frm.add_custom_button(__("Gerar Promoção"), () => maybe_generate(frm));
 
 		if (!frm.is_new()) {
@@ -41,7 +46,9 @@ frappe.ui.form.on("Student Promotion", {
 
 	academic_year(frm) {
 		frm.set_value("class_group", null);
+		frm.set_value("next_academic_year", null);
 		set_queries(frm);
+		if (frm.doc.academic_year) _auto_fill_next_year(frm);
 	},
 
 	school_class(frm) {
@@ -56,10 +63,32 @@ frappe.ui.form.on("Student Promotion", {
 			"Class Group", frm.doc.class_group, ["academic_year", "school_class"]
 		);
 		if (cg) {
-			if (!frm.doc.academic_year && cg.academic_year)
+			if (!frm.doc.academic_year && cg.academic_year) {
+				// set_value triggers academic_year handler which calls _auto_fill_next_year
 				frm.set_value("academic_year", cg.academic_year);
+			}
 			if (!frm.doc.school_class && cg.school_class)
 				frm.set_value("school_class", cg.school_class);
+		}
+	},
+
+	async next_academic_year(frm) {
+		// Validate: next year must be strictly after the origin year
+		if (!frm.doc.next_academic_year || !frm.doc.academic_year) return;
+		if (frm.doc.next_academic_year === frm.doc.academic_year) {
+			frappe.msgprint(__("O Ano Lectivo Seguinte não pode ser igual ao Ano Lectivo de Origem."));
+			frm.set_value("next_academic_year", null);
+			return;
+		}
+		const [origin, next] = await Promise.all([
+			frappe.db.get_value("Academic Year", frm.doc.academic_year,      "year_end_date"),
+			frappe.db.get_value("Academic Year", frm.doc.next_academic_year, "year_start_date"),
+		]);
+		const originEnd  = origin?.year_end_date  || origin;
+		const nextStart  = next?.year_start_date  || next;
+		if (originEnd && nextStart && nextStart <= originEnd) {
+			frappe.msgprint(__("O Ano Lectivo Seguinte deve ser posterior ao Ano Lectivo de Origem."));
+			frm.set_value("next_academic_year", null);
 		}
 	},
 });
@@ -73,6 +102,70 @@ function set_queries(frm) {
 	if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
 	if (frm.doc.school_class)  f.school_class  = frm.doc.school_class;
 	frm.set_query("class_group", () => ({ filters: f }));
+
+	// next_academic_year must differ from origin
+	frm.set_query("next_academic_year", () => ({
+		filters: frm.doc.academic_year
+			? { name: ["!=", frm.doc.academic_year] }
+			: {},
+	}));
+}
+
+// ---------------------------------------------------------------------------
+// Auto-fill next_academic_year
+// ---------------------------------------------------------------------------
+
+async function _auto_fill_next_year(frm) {
+	if (!frm.doc.academic_year) return;
+	// Don't overwrite a value the user already chose
+	if (frm.doc.next_academic_year) return;
+
+	const r = await frappe.call({
+		method: "escola.escola.doctype.student_promotion.student_promotion.get_or_suggest_next_academic_year",
+		args:   { academic_year: frm.doc.academic_year },
+	});
+
+	if (!r.message) return;
+	const d = r.message;
+
+	if (d.found) {
+		frm.set_value("next_academic_year", d.name);
+		return;
+	}
+
+	if (d.error) return;  // e.g. no_end_date — silently skip
+
+	// Not found — ask the user if they want to create it
+	const name    = d.suggested_name || "";
+	const start   = frappe.datetime.str_to_user(d.year_start_date);
+	const end_d   = frappe.datetime.str_to_user(d.year_end_date);
+
+	frappe.confirm(
+		__("Não existe Ano Lectivo seguinte a <b>{0}</b>.<br><br>"
+		 + "Deseja criar <b>{1}</b> ({2} → {3})?",
+		   [frm.doc.academic_year, name, start, end_d]),
+		async () => {
+			// Create the Academic Year
+			const result = await frappe.call({
+				method: "frappe.client.insert",
+				args: {
+					doc: {
+						doctype:             "Academic Year",
+						academic_year_name:  name,
+						year_start_date:     d.year_start_date,
+						year_end_date:       d.year_end_date,
+					},
+				},
+			});
+			if (result.message) {
+				frm.set_value("next_academic_year", result.message.name);
+				frappe.show_alert({
+					message: __("Ano Lectivo <b>{0}</b> criado.", [result.message.name]),
+					indicator: "green",
+				}, 4);
+			}
+		}
+	);
 }
 
 // ---------------------------------------------------------------------------

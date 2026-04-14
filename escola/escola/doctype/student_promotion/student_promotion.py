@@ -4,6 +4,68 @@ from frappe.model.document import Document
 
 
 # ---------------------------------------------------------------------------
+# Academic year helpers
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_or_suggest_next_academic_year(academic_year):
+    """
+    Try to find the Academic Year that starts right after `academic_year` ends.
+
+    Returns:
+      {"found": True,  "name": "2026/2027"}
+      {"found": False, "suggested_name": "2026/2027",
+       "year_start_date": "2027-01-01", "year_end_date": "2027-12-31"}
+      {"found": False, "error": "no_end_date"}
+    """
+    import re
+    from frappe.utils import add_days
+
+    end_date = frappe.db.get_value("Academic Year", academic_year, "year_end_date")
+    if not end_date:
+        return {"found": False, "error": "no_end_date"}
+
+    next_start_min = add_days(end_date, 1)
+    next_start_max = add_days(end_date, 90)
+
+    row = frappe.db.sql(
+        """SELECT name FROM `tabAcademic Year`
+           WHERE year_start_date BETWEEN %s AND %s
+           ORDER BY year_start_date ASC LIMIT 1""",
+        (next_start_min, next_start_max),
+        as_dict=True,
+    )
+    if row:
+        return {"found": True, "name": row[0]["name"]}
+
+    # Nothing found — build a suggestion from the name pattern
+    from frappe.utils import add_years
+    years = re.findall(r"\d{4}", str(academic_year))
+    ay    = str(academic_year).strip()
+
+    if len(years) == 1 and ay == years[0]:
+        # Single-year naming: "2026" → "2027"
+        suggested_name = str(int(years[0]) + 1)
+    elif len(years) >= 2:
+        # Range naming: "2025/2026" → "2026/2027"
+        sep_m = re.search(r"\d{4}(.+?)\d{4}", ay)
+        sep   = sep_m.group(1) if sep_m else "/"
+        y2    = int(years[1])
+        suggested_name = f"{y2}{sep}{y2 + 1}"
+    elif len(years) == 1:
+        suggested_name = str(int(years[0]) + 1)
+    else:
+        suggested_name = ""
+
+    return {
+        "found":            False,
+        "suggested_name":   suggested_name,
+        "year_start_date":  str(next_start_min),
+        "year_end_date":    str(add_years(end_date, 1)),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Generate promotion rows from Annual Assessment
 # ---------------------------------------------------------------------------
 
