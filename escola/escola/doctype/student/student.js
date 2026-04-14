@@ -197,7 +197,10 @@ function _show_actions_modal(frm) {
 		const a = $(this).data("action");
 		d.hide();
 		switch (a) {
-			case "boletins":          frappe.set_route("List", "Report Card", { student: frm.doc.name }); break;
+			case "boletins":
+				frappe.route_options = { student: frm.doc.name };
+				frappe.set_route("boletim-aluno");
+				break;
 			case "facturas":          _show_invoices_modal(frm); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
