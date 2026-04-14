@@ -86,3 +86,30 @@ class TermAttendance(Document):
                 at_risk_count += 1
         self.total_students = len(self.attendance_rows)
         self.students_at_risk = at_risk_count
+
+
+@frappe.whitelist()
+def sync_term_attendance_students(doc_name):
+    """Remove rows for students whose current_status is not 'Activo'. Preserves absences."""
+    doc = frappe.get_doc("Term Attendance", doc_name)
+    if not doc.attendance_rows:
+        return {"removed": 0, "kept": 0}
+
+    students = [row.student for row in doc.attendance_rows]
+    active = set(
+        frappe.get_all(
+            "Student",
+            filters={"name": ("in", students), "current_status": "Activo"},
+            pluck="name",
+        )
+    )
+
+    original = len(doc.attendance_rows)
+    kept = [r for r in doc.attendance_rows if r.student in active]
+    removed = original - len(kept)
+
+    if removed:
+        doc.set("attendance_rows", kept)
+        doc.save(ignore_permissions=True)
+
+    return {"removed": removed, "kept": len(kept)}

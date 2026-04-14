@@ -14,7 +14,6 @@
   "teacher_code",
   "column_break_2",
   "gender",
-  "column_break_3",
   "date_of_birth",
   "section_break_contact",
   "phone",
@@ -82,10 +81,6 @@
    "label": "Sexo",
    "options": "\nMasculino\nFeminino",
    "allow_in_quick_entry": 1
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "date_of_birth",

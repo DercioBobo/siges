@@ -234,3 +234,30 @@ class GradeEntry(Document):
             1 for row in self.grade_rows
             if not row.is_approved and not row.is_absent and row.score is not None
         )
+
+
+@frappe.whitelist()
+def sync_grade_entry_students(doc_name):
+    """Remove rows for students whose current_status is not 'Activo'. Preserves scores."""
+    doc = frappe.get_doc("Grade Entry", doc_name)
+    if not doc.grade_rows:
+        return {"removed": 0, "kept": 0}
+
+    unique_students = list({row.student for row in doc.grade_rows})
+    active = set(
+        frappe.get_all(
+            "Student",
+            filters={"name": ("in", unique_students), "current_status": "Activo"},
+            pluck="name",
+        )
+    )
+
+    original = len(doc.grade_rows)
+    kept = [r for r in doc.grade_rows if r.student in active]
+    removed = original - len(kept)
+
+    if removed:
+        doc.set("grade_rows", kept)
+        doc.save(ignore_permissions=True)
+
+    return {"removed": removed, "kept": len(kept)}

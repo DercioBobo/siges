@@ -8,7 +8,9 @@
   "naming_series",
   "sb_identificacao",
   "structure_name",
+  "cb_id_1",
   "school_class",
+  "cb_id_2",
   "is_active",
   "sb_linhas",
   "fee_lines",
@@ -37,12 +39,20 @@
    "unique": 1
   },
   {
+   "fieldname": "cb_id_1",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "school_class",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
    "options": "School Class",
    "reqd": 1
+  },
+  {
+   "fieldname": "cb_id_2",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "is_active",

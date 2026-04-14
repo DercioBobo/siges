@@ -9,6 +9,7 @@
   "sb_identificacao",
   "student",
   "academic_year",
+  "cb_identificacao",
   "school_class",
   "class_group",
   "sb_dados_gerais",
@@ -16,6 +17,7 @@
   "cb_dados_gerais",
   "overall_average",
   "total_subjects",
+  "cb_dados_2",
   "passed_subjects",
   "failed_subjects",
   "final_decision",
@@ -64,6 +66,10 @@
    "reqd": 1
   },
   {
+   "fieldname": "cb_identificacao",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "class_group",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -98,6 +104,10 @@
    "fieldtype": "Int",
    "label": "Total de Disciplinas",
    "read_only": 1
+  },
+  {
+   "fieldname": "cb_dados_2",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "passed_subjects",

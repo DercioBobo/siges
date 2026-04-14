@@ -238,3 +238,30 @@ class AnnualAssessment(Document):
                     title=_("Aluno duplicado"),
                 )
             seen.add(row.student)
+
+
+@frappe.whitelist()
+def sync_annual_assessment_students(doc_name):
+    """Remove rows for students whose current_status is not 'Activo'. Preserves grades."""
+    doc = frappe.get_doc("Annual Assessment", doc_name)
+    if not doc.assessment_rows:
+        return {"removed": 0, "kept": 0}
+
+    students = [row.student for row in doc.assessment_rows]
+    active = set(
+        frappe.get_all(
+            "Student",
+            filters={"name": ("in", students), "current_status": "Activo"},
+            pluck="name",
+        )
+    )
+
+    original = len(doc.assessment_rows)
+    kept = [r for r in doc.assessment_rows if r.student in active]
+    removed = original - len(kept)
+
+    if removed:
+        doc.set("assessment_rows", kept)
+        doc.save(ignore_permissions=True)
+
+    return {"removed": removed, "kept": len(kept)}

@@ -6,9 +6,17 @@ frappe.ui.form.on("Grade Entry", {
     refresh(frm) {
         _set_queries(frm);
 
-        frm.add_custom_button(__("Carregar Alunos"), () => {
-            _load_grade_rows(frm);
-        });
+        const grid = frm.fields_dict["grade_rows"] && frm.fields_dict["grade_rows"].grid;
+        if (grid) {
+            grid.cannot_add_rows = true;
+            grid.cannot_delete_rows = true;
+        }
+
+        frm.add_custom_button(__("Carregar Alunos"), () => _load_grade_rows(frm));
+
+        if (!frm.doc.__islocal) {
+            frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_students(frm));
+        }
     },
 
     async class_group(frm) {
@@ -92,6 +100,40 @@ frappe.ui.form.on("Grade Entry Row", {
         );
     },
 });
+
+// ---------------------------------------------------------------------------
+// Sync students
+// ---------------------------------------------------------------------------
+
+function _sync_students(frm) {
+	frappe.confirm(
+		__("Alunos sem estado 'Activo' serão removidos da pauta. As notas dos restantes são preservadas. Continuar?"),
+		() => {
+			frappe.call({
+				method: "escola.escola.doctype.grade_entry.grade_entry.sync_grade_entry_students",
+				args: { doc_name: frm.doc.name },
+				freeze: true,
+				freeze_message: __("A sincronizar alunos…"),
+				callback(r) {
+					if (!r.message) return;
+					const { removed, kept } = r.message;
+					if (removed > 0) {
+						frappe.show_alert({
+							message: __("{0} aluno(s) removido(s), {1} mantido(s).", [removed, kept]),
+							indicator: "orange",
+						});
+						frm.reload_doc();
+					} else {
+						frappe.show_alert({
+							message: __("Todos os alunos estão activos. Nenhuma alteração."),
+							indicator: "green",
+						});
+					}
+				},
+			});
+		}
+	);
+}
 
 // ---------------------------------------------------------------------------
 // Auto-fill helpers

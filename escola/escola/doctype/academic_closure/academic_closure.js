@@ -6,7 +6,17 @@ frappe.ui.form.on("Academic Closure", {
 	refresh(frm) {
 		set_queries(frm);
 
+		const grid = frm.fields_dict["closure_rows"] && frm.fields_dict["closure_rows"].grid;
+		if (grid) {
+			grid.cannot_add_rows = true;
+			grid.cannot_delete_rows = true;
+		}
+
 		frm.add_custom_button(__("Carregar Promoções"), () => _load_promotions(frm));
+
+		if (!frm.doc.__islocal) {
+			frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_closure_students(frm));
+		}
 
 		if (!frm.doc.__islocal && frm.doc.closure_rows && frm.doc.closure_rows.length > 0) {
 			frm.add_custom_button(__("Criar Boletins"), () => {
@@ -78,6 +88,40 @@ frappe.ui.form.on("Academic Closure", {
 		set_queries(frm);
 	},
 });
+
+// ---------------------------------------------------------------------------
+// Sync students
+// ---------------------------------------------------------------------------
+
+function _sync_closure_students(frm) {
+	frappe.confirm(
+		__("Alunos sem estado 'Activo' serão removidos. As decisões dos restantes são preservadas. Continuar?"),
+		() => {
+			frappe.call({
+				method: "escola.escola.doctype.academic_closure.academic_closure.sync_academic_closure_students",
+				args: { doc_name: frm.doc.name },
+				freeze: true,
+				freeze_message: __("A sincronizar alunos…"),
+				callback(r) {
+					if (!r.message) return;
+					const { removed, kept } = r.message;
+					if (removed > 0) {
+						frappe.show_alert({
+							message: __("{0} aluno(s) removido(s), {1} mantido(s).", [removed, kept]),
+							indicator: "orange",
+						});
+						frm.reload_doc();
+					} else {
+						frappe.show_alert({
+							message: __("Todos os alunos estão activos. Nenhuma alteração."),
+							indicator: "green",
+						});
+					}
+				},
+			});
+		}
+	);
+}
 
 // ---------------------------------------------------------------------------
 

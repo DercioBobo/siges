@@ -123,6 +123,42 @@ def rebuild_roster(class_group_name):
     return count
 
 
+@frappe.whitelist()
+def sync_class_group_students(class_group_name):
+    """
+    Update student_name for all students in the roster and remove those
+    whose current_status is no longer 'Activo'.
+    """
+    doc = frappe.get_doc("Class Group", class_group_name)
+    if not doc.students:
+        return {"removed": 0, "updated": 0, "kept": 0}
+
+    student_ids = [row.student for row in doc.students]
+    student_data = frappe.get_all(
+        "Student",
+        filters={"name": ("in", student_ids)},
+        fields=["name", "current_status", "full_name"],
+    )
+    data_map = {s.name: s for s in student_data}
+
+    kept, removed, updated = [], 0, 0
+    for row in doc.students:
+        s = data_map.get(row.student)
+        if not s or s.current_status != "Activo":
+            removed += 1
+            continue
+        if s.full_name and row.student_name != s.full_name:
+            row.student_name = s.full_name
+            updated += 1
+        kept.append(row)
+
+    if removed or updated:
+        doc.set("students", kept)
+        doc.save(ignore_permissions=True)
+
+    return {"removed": removed, "updated": updated, "kept": len(kept)}
+
+
 def sync_student_in_rosters(doc, method=None):
     """
     Called via doc_events when a Student record is saved.

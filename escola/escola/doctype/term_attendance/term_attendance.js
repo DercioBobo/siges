@@ -6,11 +6,16 @@ frappe.ui.form.on("Term Attendance", {
     refresh(frm) {
         _set_queries(frm);
 
-        frm.add_custom_button(__("Carregar Alunos"), () => {
-            _load_students(frm);
-        });
+        const grid = frm.fields_dict["attendance_rows"] && frm.fields_dict["attendance_rows"].grid;
+        if (grid) {
+            grid.cannot_add_rows = true;
+            grid.cannot_delete_rows = true;
+        }
+
+        frm.add_custom_button(__("Carregar Alunos"), () => _load_students(frm));
 
         if (!frm.doc.__islocal) {
+            frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_attendance_students(frm));
             _show_summary(frm);
         }
     },
@@ -60,6 +65,40 @@ frappe.ui.form.on("Term Attendance Row", {
     justified_absences(frm, cdt, cdn) { _recalc_row(frm, cdt, cdn); },
     unjustified_absences(frm, cdt, cdn) { _recalc_row(frm, cdt, cdn); },
 });
+
+// ---------------------------------------------------------------------------
+// Sync students
+// ---------------------------------------------------------------------------
+
+function _sync_attendance_students(frm) {
+    frappe.confirm(
+        __("Alunos sem estado 'Activo' serão removidos. As faltas dos restantes são preservadas. Continuar?"),
+        () => {
+            frappe.call({
+                method: "escola.escola.doctype.term_attendance.term_attendance.sync_term_attendance_students",
+                args: { doc_name: frm.doc.name },
+                freeze: true,
+                freeze_message: __("A sincronizar alunos…"),
+                callback(r) {
+                    if (!r.message) return;
+                    const { removed, kept } = r.message;
+                    if (removed > 0) {
+                        frappe.show_alert({
+                            message: __("{0} aluno(s) removido(s), {1} mantido(s).", [removed, kept]),
+                            indicator: "orange",
+                        });
+                        frm.reload_doc();
+                    } else {
+                        frappe.show_alert({
+                            message: __("Todos os alunos estão activos. Nenhuma alteração."),
+                            indicator: "green",
+                        });
+                    }
+                },
+            });
+        }
+    );
+}
 
 // ---------------------------------------------------------------------------
 

@@ -13,8 +13,15 @@ frappe.ui.form.on("Annual Assessment", {
 	refresh(frm) {
 		set_queries(frm);
 
+		const grid = frm.fields_dict["assessment_rows"] && frm.fields_dict["assessment_rows"].grid;
+		if (grid) {
+			grid.cannot_add_rows = true;
+			grid.cannot_delete_rows = true;
+		}
+
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Carregar Alunos"), () => load_students(frm));
+			frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_assessment_students(frm));
 			frm.add_custom_button(__("Calcular Avaliação"), () => maybe_calculate(frm), null, "primary");
 
 			_render_from_rows(frm);
@@ -40,6 +47,40 @@ frappe.ui.form.on("Annual Assessment", {
 		set_queries(frm);
 	},
 });
+
+// ---------------------------------------------------------------------------
+// Sync students
+// ---------------------------------------------------------------------------
+
+function _sync_assessment_students(frm) {
+	frappe.confirm(
+		__("Alunos sem estado 'Activo' serão removidos. As notas dos restantes são preservadas. Continuar?"),
+		() => {
+			frappe.call({
+				method: "escola.escola.doctype.annual_assessment.annual_assessment.sync_annual_assessment_students",
+				args: { doc_name: frm.doc.name },
+				freeze: true,
+				freeze_message: __("A sincronizar alunos…"),
+				callback(r) {
+					if (!r.message) return;
+					const { removed, kept } = r.message;
+					if (removed > 0) {
+						frappe.show_alert({
+							message: __("{0} aluno(s) removido(s), {1} mantido(s).", [removed, kept]),
+							indicator: "orange",
+						});
+						frm.reload_doc();
+					} else {
+						frappe.show_alert({
+							message: __("Todos os alunos estão activos. Nenhuma alteração."),
+							indicator: "green",
+						});
+					}
+				},
+			});
+		}
+	);
+}
 
 // ---------------------------------------------------------------------------
 // Queries

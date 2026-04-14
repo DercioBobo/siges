@@ -18,6 +18,7 @@
   "column_break_3",
   "alternative_phone",
   "email",
+  "column_break_contact_2",
   "address",
   "section_break_system",
   "user_id",
@@ -100,6 +101,10 @@
    "options": "Email",
    "in_list_view": 1,
    "allow_in_quick_entry": 1
+  },
+  {
+   "fieldname": "column_break_contact_2",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "address",

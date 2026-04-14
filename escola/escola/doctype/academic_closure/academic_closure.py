@@ -192,3 +192,30 @@ def create_report_cards(doc_name):
             errors.append(row.student)
 
     return {"created": created, "updated": updated, "errors": errors}
+
+
+@frappe.whitelist()
+def sync_academic_closure_students(doc_name):
+    """Remove rows for students whose current_status is not 'Activo'. Preserves decisions."""
+    doc = frappe.get_doc("Academic Closure", doc_name)
+    if not doc.closure_rows:
+        return {"removed": 0, "kept": 0}
+
+    students = [row.student for row in doc.closure_rows]
+    active = set(
+        frappe.get_all(
+            "Student",
+            filters={"name": ("in", students), "current_status": "Activo"},
+            pluck="name",
+        )
+    )
+
+    original = len(doc.closure_rows)
+    kept = [r for r in doc.closure_rows if r.student in active]
+    removed = original - len(kept)
+
+    if removed:
+        doc.set("closure_rows", kept)
+        doc.save(ignore_permissions=True)
+
+    return {"removed": removed, "kept": len(kept)}

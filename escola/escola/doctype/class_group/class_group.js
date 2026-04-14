@@ -14,8 +14,15 @@ frappe.ui.form.on("Class Group", {
     refresh(frm) {
         frm.set_query("class_teacher", () => ({ filters: { is_active: 1 } }));
 
+        const grid = frm.fields_dict["students"] && frm.fields_dict["students"].grid;
+        if (grid) {
+            grid.cannot_add_rows = true;
+            grid.cannot_delete_rows = true;
+        }
+
         if (!frm.is_new()) {
             frm.add_custom_button(__("Gerir Alunos"), () => manage_students_dialog(frm));
+            frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_class_group_students(frm), __("Acções"));
 
             frm.add_custom_button(
                 __("Pauta de Notas"),
@@ -513,6 +520,37 @@ async function _suggest_group_name(frm) {
     const yy         = years.length ? years[years.length - 1].slice(-2) : "??";
 
     frm.set_value("group_name", `${class_name} ${letter}-${yy}`);
+}
+
+// ---------------------------------------------------------------------------
+// Sync students (name + remove inactive)
+// ---------------------------------------------------------------------------
+
+function _sync_class_group_students(frm) {
+    frappe.confirm(
+        __("Alunos sem estado 'Activo' serão removidos e os nomes actualizados. Continuar?"),
+        () => {
+            frappe.call({
+                method: "escola.escola.doctype.class_group.class_group.sync_class_group_students",
+                args: { class_group_name: frm.doc.name },
+                freeze: true,
+                freeze_message: __("A sincronizar alunos…"),
+                callback(r) {
+                    if (!r.message) return;
+                    const { removed, updated, kept } = r.message;
+                    const parts = [];
+                    if (removed > 0) parts.push(__("{0} removido(s)", [removed]));
+                    if (updated > 0) parts.push(__("{0} nome(s) actualizado(s)", [updated]));
+                    if (!parts.length) parts.push(__("Nenhuma alteração"));
+                    frappe.show_alert({
+                        message: parts.join(" · "),
+                        indicator: removed > 0 ? "orange" : updated > 0 ? "blue" : "green",
+                    });
+                    if (removed > 0 || updated > 0) frm.reload_doc();
+                },
+            });
+        }
+    );
 }
 
 // ---------------------------------------------------------------------------

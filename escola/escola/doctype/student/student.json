@@ -14,7 +14,6 @@
   "gender",
   "date_of_birth",
   "idade",
-  "column_break_3",
   "place_of_birth",
   "section_break_contact",
   "phone",
@@ -22,16 +21,13 @@
   "address",
   "section_break_school",
   "student_code",
-  "column_break_5",
   "bi_number",
   "column_break_6",
   "admission_date",
-  "column_break_7",
   "current_status",
   "financial_status",
   "column_break_8",
   "current_school_class",
-  "column_break_9",
   "current_class_group",
   "renovation_status_html",
   "section_break_guardian",
@@ -98,10 +94,6 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "place_of_birth",
    "fieldtype": "Data",
    "label": "Local de Nascimento"
@@ -141,10 +133,6 @@
    "description": "Gerado automaticamente no momento do registo."
   },
   {
-   "fieldname": "column_break_5",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "bi_number",
    "fieldtype": "Data",
    "label": "Nº do BI",
@@ -159,10 +147,6 @@
    "fieldtype": "Date",
    "label": "Data de Admissão",
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_7",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "current_status",
@@ -191,10 +175,6 @@
    "label": "Classe Actual",
    "options": "School Class",
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_9",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "current_class_group",
