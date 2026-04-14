@@ -161,6 +161,11 @@ function _inject_spm_styles() {
 	font-size: 12px; color: var(--text-muted); background: var(--subtle-fg);
 	padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;
 }
+.spm-assigned-note {
+	font-size: 12px; color: #065f46; background: #d1fae5;
+	padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;
+	border: 1px solid #6ee7b7;
+}
 .spm-empty-note { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
 
 /* ── Capacity bars ───────────────────────────────── */
@@ -255,8 +260,20 @@ async function _show_distribution_modal(frm) {
 	if (!r.message) return;
 	const data = r.message;
 
-	if (!data.aprovados_count && !data.reprovados_count) {
+	const total_pending = (data.aprovados_count || 0) + (data.reprovados_count || 0);
+	const total_assigned = (data.already_assigned_aprovados || 0) + (data.already_assigned_reprovados || 0);
+
+	if (!total_pending && !total_assigned) {
 		frappe.msgprint(__("Não há alunos Aprovados nem Reprovados para distribuir."));
+		return;
+	}
+	if (!total_pending && total_assigned) {
+		frappe.msgprint({
+			title: __("Todos os alunos já alocados"),
+			message: __("Todos os {0} aluno(s) já foram alocados a turmas no ano lectivo <b>{1}</b>.",
+				[total_assigned, data.next_academic_year]),
+			indicator: "green",
+		});
 		return;
 	}
 
@@ -268,6 +285,10 @@ async function _show_distribution_modal(frm) {
 		ret_idx: Math.max(0, (data.reprovados_options || []).findIndex(o => o.recommended)),
 		new_vals: {},  // temp_id → { name, capacity }
 	};
+
+	// Ensure recommended defaults to index 0 when no option is flagged recommended
+	if (state.apr_idx < 0) state.apr_idx = 0;
+	if (state.ret_idx < 0) state.ret_idx = 0;
 
 	// Pre-populate new_vals from every option's new_groups
 	[...(data.aprovados_options || []), ...(data.reprovados_options || [])].forEach(opt => {
@@ -292,11 +313,14 @@ async function _show_distribution_modal(frm) {
 		const html = [];
 
 		// Aprovados section
-		if (data.aprovados_count > 0) {
+		if (data.aprovados_count > 0 || data.already_assigned_aprovados > 0) {
 			html.push(_render_spm_section(
-				"apr", __("Aprovados"), data.aprovados_count,
+				"apr",
+				__("Aprovados — passam para {0}", [data.next_school_class || __("próxima classe")]),
+				data.aprovados_count,
 				data.next_school_class, data.next_academic_year,
-				data.target_groups, data.aprovados_options, state.apr_idx, state
+				data.target_groups, data.aprovados_options, state.apr_idx, state,
+				data.already_assigned_aprovados || 0
 			));
 		}
 
@@ -315,12 +339,15 @@ async function _show_distribution_modal(frm) {
 		}
 
 		// Reprovados section
-		if (data.reprovados_count > 0) {
+		if (data.reprovados_count > 0 || data.already_assigned_reprovados > 0) {
 			if (html.length) html.push(""); // separator handled by CSS border-top
 			html.push(_render_spm_section(
-				"ret", __("Reprovados / Repetentes"), data.reprovados_count,
+				"ret",
+				__("Reprovados / Repetentes — ficam em {0}", [data.school_class || __("mesma classe")]),
+				data.reprovados_count,
 				data.school_class, data.next_academic_year,
-				data.retained_groups, data.reprovados_options, state.ret_idx, state
+				data.retained_groups, data.reprovados_options, state.ret_idx, state,
+				data.already_assigned_reprovados || 0
 			));
 		}
 
@@ -371,8 +398,27 @@ async function _show_distribution_modal(frm) {
 // Distribution modal — section renderer
 // ---------------------------------------------------------------------------
 
-function _render_spm_section(prefix, title, count, school_class_name, academic_year, groups, options, selected_idx, state) {
-	const dest = [school_class_name, academic_year].filter(Boolean).join(" · ");
+function _render_spm_section(prefix, title, count, school_class_name, academic_year, groups, options, selected_idx, state, already_assigned) {
+	const dest = academic_year || "";
+
+	// Already-assigned note (shown when redistribuindo)
+	const assigned_note = already_assigned > 0
+		? `<div class="spm-assigned-note">
+			✓ ${__("{0} aluno(s) já alocado(s) anteriormente — serão ignorados nesta distribuição.", [already_assigned])}
+		   </div>`
+		: "";
+
+	// No-remaining note
+	if (count === 0 && already_assigned > 0) {
+		return `
+		<div class="spm-section">
+			<div class="spm-section-head">
+				<span class="spm-section-title">${title}</span>
+				${dest ? `<span class="spm-dest">${frappe.utils.escape_html(dest)}</span>` : ""}
+			</div>
+			${assigned_note}
+		</div>`;
+	}
 
 	// Capacity bars
 	const groups_html = groups && groups.length
@@ -394,7 +440,7 @@ function _render_spm_section(prefix, title, count, school_class_name, academic_y
 				` : `<span class="spm-bar-free" style="color:var(--text-muted);">${used} ${__("alunos")} · ${__("sem limite")}</span>`}
 			</div>`;
 		}).join("")}</div>`
-		: `<div class="spm-no-groups">${__("Nenhuma turma existente para {0}", [dest || __("esta classe")])}</div>`;
+		: `<div class="spm-no-groups">${__("Nenhuma turma existente para {0}", [school_class_name || __("esta classe")])}</div>`;
 
 	// Radio options
 	const options_html = (options || []).map((opt, i) => {
@@ -402,7 +448,7 @@ function _render_spm_section(prefix, title, count, school_class_name, academic_y
 		const warn_cls = opt.warning === "overfill" ? "overfill" : opt.warning ? "not_recommended" : "";
 		const warn_lbl = opt.warning === "overfill"
 			? __("⚠ excede capacidade")
-			: opt.warning
+			: opt.warning === "not_recommended"
 				? __("não recomendado")
 				: "";
 		return `
@@ -420,11 +466,12 @@ function _render_spm_section(prefix, title, count, school_class_name, academic_y
 	return `
 	<div class="spm-section">
 		<div class="spm-section-head">
-			<span class="spm-section-title">${title} (${count})</span>
-			${dest ? `<span class="spm-dest">→ ${frappe.utils.escape_html(dest)}</span>` : ""}
+			<span class="spm-section-title">${title} (${count} ${__("por alocar")})</span>
+			${dest ? `<span class="spm-dest">${frappe.utils.escape_html(dest)}</span>` : ""}
 		</div>
+		${assigned_note}
 		${groups_html}
-		<div class="spm-opts-label">${__("Opções:")}</div>
+		<div class="spm-opts-label">${__("Como distribuir os {0} alunos:", [count])}</div>
 		<div id="${prefix}-options">${options_html}</div>
 		<div id="${prefix}-plan">${plan_html}</div>
 	</div>`;
@@ -468,10 +515,10 @@ function _render_spm_plan(prefix, option, state) {
 			</div>
 			<span class="spm-plan-arrow">→</span>
 			<span class="spm-plan-count">${ng.count} ${__("alunos")}</span>
-			<span class="spm-cap-label">${__("Cap.:")}</span>
+			<span class="spm-cap-label">${__("Limite:")}</span>
 			<input class="spm-cap-inp" type="text" inputmode="numeric" pattern="[0-9]*"
 				value="${v.capacity > 0 ? v.capacity : ""}"
-				placeholder="${__("0 = ilim.")}"
+				placeholder="${__("Ilimitado")}"
 				data-field="cap" data-tid="${ng.temp_id}">
 		</div>`);
 	}

@@ -68,9 +68,22 @@ def get_promotion_turma_options(promotion_name):
     """
     doc = frappe.get_doc("Student Promotion", promotion_name)
 
-    aprovados  = [r for r in doc.promotion_rows if r.decision == "Promovido"]
+    # Exclude students that already have an active enrolment for the next year
+    # so that re-opening after a partial/full run shows the real remaining count.
+    already_assigned = set()
+    if doc.next_academic_year:
+        already_assigned = set(frappe.db.get_all(
+            "Student Group Assignment",
+            filters={"academic_year": doc.next_academic_year, "status": "Activa"},
+            pluck="student",
+        ))
+
+    all_aprovados  = [r for r in doc.promotion_rows if r.decision == "Promovido"]
+    all_reprovados = [r for r in doc.promotion_rows if r.decision == "Retido"]
+
+    aprovados  = [r for r in all_aprovados  if r.student not in already_assigned]
     concluidos = [r for r in doc.promotion_rows if r.decision == "Concluído"]
-    reprovados = [r for r in doc.promotion_rows if r.decision == "Retido"]
+    reprovados = [r for r in all_reprovados if r.student not in already_assigned]
 
     default_cap = int(
         frappe.db.get_single_value("School Settings", "default_max_students_per_class") or 0
@@ -95,15 +108,17 @@ def get_promotion_turma_options(promotion_name):
     retained_groups = _get_groups(doc.school_class,  doc.next_academic_year)
 
     return {
-        "aprovados_count":   len(aprovados),
-        "concluidos_count":  len(concluidos),
-        "reprovados_count":  len(reprovados),
-        "next_school_class": next_school_class,
-        "school_class":      doc.school_class,
-        "next_academic_year": doc.next_academic_year,
-        "default_capacity":  default_cap,
-        "target_groups":     target_groups,
-        "retained_groups":   retained_groups,
+        "aprovados_count":              len(aprovados),
+        "concluidos_count":             len(concluidos),
+        "reprovados_count":             len(reprovados),
+        "already_assigned_aprovados":   len(all_aprovados)  - len(aprovados),
+        "already_assigned_reprovados":  len(all_reprovados) - len(reprovados),
+        "next_school_class":            next_school_class,
+        "school_class":                 doc.school_class,
+        "next_academic_year":           doc.next_academic_year,
+        "default_capacity":             default_cap,
+        "target_groups":                target_groups,
+        "retained_groups":              retained_groups,
         "aprovados_options": _build_aprovados_options(
             len(aprovados), target_groups, next_school_class,
             doc.next_academic_year, default_cap,
@@ -326,11 +341,17 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
     total_free = sum(_free(g) for g in groups)
     n_existing = len(groups)
 
+    def _overfill_label(g, n):
+        after = (g.student_count or 0) + n
+        if g.max_students:
+            return f"Ultrapassar o limite — colocar todos os {n} em {g.group_name} (ficaria com {after}/{g.max_students})"
+        return f"Colocar todos os {n} em {g.group_name} (sem limite definido)"
+
     if not groups:
         # ── No existing turmas ──────────────────────────────────────────────
         options.append({
             "id": "all_new", "recommended": True, "warning": None,
-            "label": f"Criar nova turma para todos os {count} aprovados",
+            "label": f"Criar uma nova turma com todos os {count} aprovados",
             "buckets": [],
             "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, 0, default_cap)],
         })
@@ -338,7 +359,7 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
             h1, h2 = (count + 1) // 2, count // 2
             options.append({
                 "id": "two_new", "recommended": False, "warning": None,
-                "label": f"Criar 2 turmas: {h1} + {h2} alunos (mais equilibrado)",
+                "label": f"Criar 2 turmas mais equilibradas: {h1} + {h2} alunos",
                 "buckets": [],
                 "new_groups": [
                     _bucket_new("apr_new_0", school_class, academic_year, h1, 0, default_cap),
@@ -362,7 +383,7 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
                 rem -= take
         options.append({
             "id": "pack", "recommended": True, "warning": None,
-            "label": "Alocar nos existentes: " + " + ".join(
+            "label": "Alocar nas turmas existentes: " + " + ".join(
                 f"{b['count']} em {b['group_name']}" for b in buckets
             ),
             "buckets": buckets, "new_groups": [],
@@ -377,9 +398,10 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
             if take > 0:
                 buckets.append(_bucket_existing(g, take))
                 rem -= take
+        placed = count - rem
         options.append({
             "id": "partial_new", "recommended": True, "warning": None,
-            "label": f"Preencher existentes ({count - rem}) + criar nova turma para {rem}",
+            "label": f"Alocar {placed} nas turmas existentes + criar nova turma para os {rem} restantes",
             "buckets": buckets,
             "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, rem, n_existing, default_cap)],
         })
@@ -387,10 +409,7 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
         most_full = by_full[0]
         options.append({
             "id": "overfill", "recommended": False, "warning": "overfill",
-            "label": (
-                f"Exceder capacidade: todos os {count} em {most_full.group_name}"
-                + (f" ({(most_full.student_count or 0) + count}/{most_full.max_students})" if most_full.max_students else "")
-            ),
+            "label": _overfill_label(most_full, count),
             "buckets": [_bucket_existing(most_full, count)],
             "new_groups": [],
         })
@@ -398,17 +417,14 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
         # ── All existing turmas are full ────────────────────────────────────
         options.append({
             "id": "all_new_full", "recommended": True, "warning": None,
-            "label": f"Turmas existentes cheias — criar nova turma para todos os {count}",
+            "label": f"Criar nova turma para os {count} aprovados (turmas actuais estão cheias)",
             "buckets": [],
             "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, n_existing, default_cap)],
         })
         most_full = by_full[0]
         options.append({
             "id": "overfill", "recommended": False, "warning": "overfill",
-            "label": (
-                f"Exceder capacidade: todos os {count} em {most_full.group_name}"
-                + (f" ({(most_full.student_count or 0) + count}/{most_full.max_students})" if most_full.max_students else "")
-            ),
+            "label": _overfill_label(most_full, count),
             "buckets": [_bucket_existing(most_full, count)],
             "new_groups": [],
         })
@@ -416,7 +432,7 @@ def _build_aprovados_options(count, groups, school_class, academic_year, default
     # Always offer "create new for all" as alternative
     options.append({
         "id": "all_new_alt", "recommended": False, "warning": None,
-        "label": f"Criar nova turma para todos os {count} aprovados",
+        "label": f"Criar nova turma separada com todos os {count} aprovados",
         "buckets": [],
         "new_groups": [_bucket_new("apr_new_0", school_class, academic_year, count, n_existing, default_cap)],
     })
@@ -437,7 +453,7 @@ def _build_reprovados_options(count, groups, school_class, academic_year, defaul
     if not groups:
         options.append({
             "id": "all_new", "recommended": True, "warning": None,
-            "label": f"Criar nova turma para todos os {count} repetentes",
+            "label": f"Criar nova turma com todos os {count} repetentes",
             "buckets": [],
             "new_groups": [_bucket_new("ret_new_0", school_class, academic_year, count, 0, default_cap)],
         })
@@ -449,7 +465,7 @@ def _build_reprovados_options(count, groups, school_class, academic_year, defaul
 
     options.append({
         "id": "spread", "recommended": fits, "warning": None if fits else "overfill",
-        "label": "Distribuir entre turmas existentes: " + " + ".join(
+        "label": "Distribuir pelas turmas existentes: " + " + ".join(
             f"{b['count']} em {b['group_name']}" for b in spread
         ),
         "buckets": spread, "new_groups": [],
@@ -465,10 +481,11 @@ def _build_reprovados_options(count, groups, school_class, academic_year, defaul
                 buckets.append(_bucket_existing(g, take))
                 rem -= take
         if rem > 0:
+            placed = count - rem
             new_g = _bucket_new("ret_new_0", school_class, academic_year, rem, n_existing, default_cap)
             options.insert(0, {
                 "id": "spread_new", "recommended": True, "warning": None,
-                "label": f"Distribuir {count - rem} nas existentes + criar nova turma para {rem}",
+                "label": f"Distribuir {placed} pelas existentes + criar nova turma para os {rem} restantes",
                 "buckets": buckets,
                 "new_groups": [new_g],
             })
@@ -476,12 +493,13 @@ def _build_reprovados_options(count, groups, school_class, academic_year, defaul
     # ── Per-group individual options (not recommended) ──────────────────────
     for g in groups:
         over = count > _free(g) and bool(g.max_students)
+        after = (g.student_count or 0) + count
+        cap_note = f" (ficaria com {after}/{g.max_students})" if g.max_students else ""
         options.append({
             "id": f"all_{g.name}", "recommended": False,
             "warning": "overfill" if over else "not_recommended",
             "label": (
-                f"Todos os {count} em {g.group_name}"
-                + (f" ({(g.student_count or 0) + count}/{g.max_students})" if g.max_students else "")
+                f"{'Ultrapassar o limite — t' if over else 'T'}odos os {count} em {g.group_name}{cap_note}"
             ),
             "buckets": [_bucket_existing(g, count)],
             "new_groups": [],
@@ -490,7 +508,7 @@ def _build_reprovados_options(count, groups, school_class, academic_year, defaul
     # ── Create new for all (not recommended when existing groups available) ──
     options.append({
         "id": "ret_all_new", "recommended": False, "warning": "not_recommended",
-        "label": f"Criar nova turma para todos os {count} repetentes",
+        "label": f"Criar nova turma separada com todos os {count} repetentes",
         "buckets": [],
         "new_groups": [_bucket_new("ret_new_0", school_class, academic_year, count, n_existing, default_cap)],
     })
