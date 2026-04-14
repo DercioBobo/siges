@@ -70,6 +70,10 @@ frappe.ui.form.on("Student Promotion", {
 			if (!frm.doc.school_class && cg.school_class)
 				frm.set_value("school_class", cg.school_class);
 		}
+		// Auto-load students on new docs when the table is empty
+		if (frm.doc.__islocal && !(frm.doc.promotion_rows && frm.doc.promotion_rows.length)) {
+			_auto_load_students(frm);
+		}
 	},
 
 	async next_academic_year(frm) {
@@ -99,10 +103,10 @@ frappe.ui.form.on("Student Promotion", {
 // ---------------------------------------------------------------------------
 
 function set_queries(frm) {
-	const f = { is_active: 1 };
-	if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
-	if (frm.doc.school_class)  f.school_class  = frm.doc.school_class;
-	frm.set_query("class_group", () => ({ filters: f }));
+	frm.set_query("class_group", () => ({
+		query: "escola.escola.doctype.student_promotion.student_promotion.get_class_groups_with_annual_assessment",
+		filters: { academic_year: frm.doc.academic_year || "" },
+	}));
 
 	// next_academic_year must differ from origin
 	frm.set_query("next_academic_year", () => ({
@@ -167,6 +171,29 @@ async function _auto_fill_next_year(frm) {
 			}
 		}
 	);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-load students (silent, for new docs)
+// ---------------------------------------------------------------------------
+
+async function _auto_load_students(frm) {
+	if (!frm.doc.class_group) return;
+	const r = await frappe.call({
+		method: "escola.escola.doctype.student_promotion.student_promotion.get_students_for_promotion",
+		args: { class_group: frm.doc.class_group },
+	});
+	if (!r.message || !r.message.length) return;
+	frm.clear_table("promotion_rows");
+	r.message.forEach(student => {
+		const row = frappe.model.add_child(frm.doc, "Student Promotion Row", "promotion_rows");
+		row.student = student;
+	});
+	frm.refresh_field("promotion_rows");
+	frappe.show_alert({
+		message: __("{0} aluno(s) carregado(s). Use «Gerar Promoção» para obter as decisões.", [r.message.length]),
+		indicator: "green",
+	}, 4);
 }
 
 // ---------------------------------------------------------------------------

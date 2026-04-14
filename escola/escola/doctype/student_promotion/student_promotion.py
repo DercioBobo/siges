@@ -8,6 +8,46 @@ from frappe.model.document import Document
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def get_class_groups_with_annual_assessment(doctype, txt, searchfield, start, page_len, filters):
+    """Custom search: only Class Groups that have an Annual Assessment."""
+    import json
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+    filters = filters or {}
+
+    academic_year = filters.get("academic_year")
+    values = {"txt": f"%{txt}%", "start": int(start), "page_len": int(page_len)}
+
+    conds = ["cg.is_active = 1", f"cg.`{searchfield}` LIKE %(txt)s"]
+    if academic_year:
+        conds.append("aa.academic_year = %(academic_year)s")
+        values["academic_year"] = academic_year
+
+    sql = """
+        SELECT DISTINCT cg.name
+        FROM `tabClass Group` cg
+        INNER JOIN `tabAnnual Assessment` aa ON aa.class_group = cg.name
+        WHERE {where}
+        ORDER BY cg.name
+        LIMIT %(start)s, %(page_len)s
+    """.format(where=" AND ".join(conds))
+
+    return frappe.db.sql(sql, values)
+
+
+@frappe.whitelist()
+def get_students_for_promotion(class_group):
+    """Return active students in a class group for pre-populating promotion rows."""
+    return frappe.db.get_all(
+        "Student Group Assignment",
+        filters={"class_group": class_group, "status": "Activa"},
+        pluck="student",
+        order_by="student asc",
+    )
+
+
+@frappe.whitelist()
 def get_or_suggest_next_academic_year(academic_year):
     """
     Try to find the Academic Year that starts right after `academic_year` ends.

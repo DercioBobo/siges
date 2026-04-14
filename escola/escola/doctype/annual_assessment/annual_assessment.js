@@ -35,6 +35,10 @@ frappe.ui.form.on("Annual Assessment", {
 			const cg = await frappe.db.get_value("Class Group", frm.doc.class_group, ["academic_year"]);
 			if (cg && cg.academic_year) frm.set_value("academic_year", cg.academic_year);
 		}
+		// Auto-load students on new docs when the table is empty
+		if (frm.doc.__islocal && !(frm.doc.assessment_rows && frm.doc.assessment_rows.length)) {
+			_auto_load_students(frm);
+		}
 	},
 
 	academic_year(frm) {
@@ -47,6 +51,29 @@ frappe.ui.form.on("Annual Assessment", {
 		set_queries(frm);
 	},
 });
+
+// ---------------------------------------------------------------------------
+// Auto-load students (silent, for new docs)
+// ---------------------------------------------------------------------------
+
+async function _auto_load_students(frm) {
+	if (!frm.doc.class_group) return;
+	const r = await frappe.call({
+		method: "escola.escola.doctype.annual_assessment.annual_assessment.get_students_for_assessment",
+		args: { class_group: frm.doc.class_group },
+	});
+	if (!r.message || !r.message.length) return;
+	frm.clear_table("assessment_rows");
+	r.message.forEach(student => {
+		const row = frappe.model.add_child(frm.doc, "Annual Assessment Row", "assessment_rows");
+		row.student = student;
+	});
+	frm.refresh_field("assessment_rows");
+	frappe.show_alert({
+		message: __("{0} aluno(s) carregado(s).", [r.message.length]),
+		indicator: "green",
+	}, 3);
+}
 
 // ---------------------------------------------------------------------------
 // Sync students
