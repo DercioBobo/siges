@@ -171,6 +171,44 @@ def get_student_invoices(student):
     }
 
 
+@frappe.whitelist()
+def register_withdrawal(student, withdrawal_date, withdrawal_reason):
+    """
+    Mark a student as Desistente:
+    1. Set current_status, withdrawal_date, withdrawal_reason on Student
+    2. Close their active Student Group Assignment
+    3. Recalculate student_count on the affected turma
+    4. Clear current_class_group / current_school_class
+    """
+    frappe.db.set_value("Student", student, {
+        "current_status":    "Desistente",
+        "withdrawal_date":   frappe.utils.getdate(withdrawal_date),
+        "withdrawal_reason": withdrawal_reason or "",
+        "current_class_group":  None,
+        "current_school_class": None,
+    })
+
+    sga = frappe.db.get_value(
+        "Student Group Assignment",
+        {"student": student, "status": "Activa"},
+        ["name", "class_group"],
+        as_dict=True,
+    )
+
+    class_group = None
+    if sga:
+        frappe.db.set_value("Student Group Assignment", sga.name, "status", "Encerrada")
+        class_group = sga.class_group
+        cnt = frappe.db.count(
+            "Student Group Assignment",
+            {"class_group": class_group, "status": "Activa"},
+        )
+        frappe.db.set_value("Class Group", class_group, "student_count", cnt)
+
+    frappe.db.commit()
+    return {"class_group": class_group}
+
+
 def _calc_age(date_of_birth):
     if not date_of_birth:
         return None

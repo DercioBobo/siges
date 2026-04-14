@@ -32,6 +32,10 @@
   "renovation_status_html",
   "section_break_guardian",
   "primary_guardian",
+  "section_break_withdrawal",
+  "withdrawal_date",
+  "column_break_withdrawal",
+  "withdrawal_reason",
   "section_break_history",
   "student_history_html",
   "section_break_notes",
@@ -200,6 +204,30 @@
    "label": "Encarregado Principal",
    "options": "Guardian",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_withdrawal",
+   "fieldtype": "Section Break",
+   "label": "Desistência",
+   "depends_on": "eval:doc.current_status === 'Desistente'"
+  },
+  {
+   "fieldname": "withdrawal_date",
+   "fieldtype": "Date",
+   "label": "Data de Desistência",
+   "depends_on": "eval:doc.current_status === 'Desistente'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_withdrawal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "withdrawal_reason",
+   "fieldtype": "Small Text",
+   "label": "Motivo de Desistência",
+   "depends_on": "eval:doc.current_status === 'Desistente'",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_history",

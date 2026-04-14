@@ -163,6 +163,7 @@ function _show_actions_modal(frm) {
 		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: true      },
 		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
+		{ id: "desistencia",       ico: "✕",  label: __("Registar Desistência"),         color: "#dc2626", bg: "#fef2f2", show: isActive   },
 		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
 		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#166534", bg: "#f0fdf4", show: isInactive },
 	].filter(b => b.show);
@@ -202,6 +203,7 @@ function _show_actions_modal(frm) {
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
 			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
 			case "transferencia":     frappe.new_doc("Student Transfer", { student: frm.doc.name }); break;
+			case "desistencia":       _register_withdrawal_dialog(frm); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
 			case "reactivar":         reactivate_dialog(frm); break;
 			case "nova-renovacao":
@@ -727,6 +729,52 @@ function update_full_name(frm) {
 // ---------------------------------------------------------------------------
 // Reactivation dialog (existing, unchanged)
 // ---------------------------------------------------------------------------
+
+function _register_withdrawal_dialog(frm) {
+	const d = new frappe.ui.Dialog({
+		title: __("Registar Desistência — {0}", [frm.doc.full_name]),
+		fields: [
+			{
+				fieldname:  "withdrawal_date",
+				fieldtype:  "Date",
+				label:      __("Data de Desistência"),
+				reqd:       1,
+				default:    frappe.datetime.get_today(),
+			},
+			{
+				fieldname:  "withdrawal_reason",
+				fieldtype:  "Small Text",
+				label:      __("Motivo"),
+				reqd:       1,
+				description: __("Descreva o motivo da desistência (será guardado no registo do aluno)."),
+			},
+		],
+		primary_action_label: __("Confirmar Desistência"),
+		async primary_action(values) {
+			if (!values.withdrawal_date || !(values.withdrawal_reason || "").trim()) return;
+			d.hide();
+
+			const r = await frappe.call({
+				method:  "escola.escola.doctype.student.student.register_withdrawal",
+				args: {
+					student:           frm.doc.name,
+					withdrawal_date:   values.withdrawal_date,
+					withdrawal_reason: values.withdrawal_reason,
+				},
+				freeze:         true,
+				freeze_message: __("A registar desistência…"),
+			});
+
+			if (r.exc) return;
+			frappe.show_alert({
+				message:   __("Desistência registada. O aluno foi removido da turma."),
+				indicator: "orange",
+			}, 5);
+			frm.reload_doc();
+		},
+	});
+	d.show();
+}
 
 function reactivate_dialog(frm) {
 	const d = new frappe.ui.Dialog({
