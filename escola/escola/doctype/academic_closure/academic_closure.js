@@ -68,9 +68,10 @@ frappe.ui.form.on("Academic Closure", {
 			return;
 		}
 
-		const academic_year = await frappe.db.get_value(
-			"Class Group", frm.doc.class_group, "academic_year"
+		const cg = await frappe.db.get_value(
+			"Class Group", frm.doc.class_group, ["academic_year"]
 		);
+		const academic_year = cg && cg.academic_year;
 		if (academic_year) {
 			frm.set_value("academic_year", academic_year);
 		}
