@@ -14,8 +14,9 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 		options:   "Student",
 		label:     __("Aluno"),
 		change() {
+			if (wrapper._ba._sup) return;
 			wrapper._ba.cache = {};
-			fTerm.set_value("");
+			_ba_clear_term(wrapper);
 			_ba_trigger(wrapper);
 		},
 	});
@@ -26,8 +27,9 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 		options:   "Academic Year",
 		label:     __("Ano Lectivo"),
 		change() {
+			if (wrapper._ba._sup) return;
 			wrapper._ba.cache = {};
-			fTerm.set_value("");
+			_ba_clear_term(wrapper);
 			_ba_trigger(wrapper);
 		},
 	});
@@ -42,6 +44,7 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 			return yr ? { filters: { academic_year: yr } } : {};
 		},
 		change() {
+			if (wrapper._ba._sup) return;
 			_ba_trigger(wrapper, /* use_cache */ true);
 		},
 	});
@@ -52,64 +55,92 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 		options:   "Completo\nSó Anual",
 		label:     __("Vista"),
 		change() {
+			if (wrapper._ba._sup) return;
 			_ba_trigger(wrapper, true);
 		},
 	});
 
-	// ── Toolbar buttons ───────────────────────────────────────────────────────
-	page.add_button(__("← Aluno"), () => {
-		const s = fStudent.get_value();
-		if (s) frappe.set_route("Form", "Student", s);
-		else   frappe.set_route("List", "Student");
+	// ── Buttons ───────────────────────────────────────────────────────────────
+	page.add_button(__("Limpar"), () => {
+		// Suppress all change cascades while resetting
+		wrapper._ba._sup = true;
+		fTerm.set_value("");
+		fYear.set_value("");
+		fStudent.set_value("");
+		fView.set_value("Completo");
+		wrapper._ba._sup = false;
+		wrapper._ba.cache = {};
+		wrapper._ba.$content.html(_ba_empty_msg());
 	});
 
 	page.add_button(__("Imprimir"), () => window.print(), { icon: "printer" });
 
-	wrapper._ba = { page, fStudent, fYear, fTerm, fView, cache: {} };
+	// ── IMPORTANT: append a dedicated content div AFTER page.add_field calls.
+	// Frappe puts page_form inside page.body, so we must never replace all of
+	// page.body — only update this child div.
+	const $content = $('<div class="ba-content-area"></div>').appendTo(page.body);
+	$content.html(_ba_empty_msg());
+
+	wrapper._ba = {
+		page, fStudent, fYear, fTerm, fView,
+		$content,
+		cache: {},
+		_sup: false,   // suppression flag prevents change-event cascades
+	};
 };
 
 frappe.pages["boletim-aluno"].on_page_show = function (wrapper) {
-	const { fStudent, fTerm } = wrapper._ba || {};
-	if (!fStudent) return;
+	const ba = wrapper._ba;
+	if (!ba) return;
 
 	const opts = frappe.route_options || {};
 	frappe.route_options = {};
 
 	if (opts.student) {
-		wrapper._ba.cache = {};
-		fTerm.set_value("");
-		fStudent.set_value(opts.student);
-		// set_value triggers change() → _ba_trigger
+		ba.cache = {};
+		_ba_clear_term(wrapper);
+		ba.fStudent.set_value(opts.student);
+		// set_value triggers fStudent.change() → _ba_trigger
 	}
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function _ba_empty_msg() {
+	return `<div class="ba-empty">${__("Seleccione um aluno para ver o boletim.")}</div>`;
+}
+
+/** Clear the term field without triggering its change handler. */
+function _ba_clear_term(wrapper) {
+	wrapper._ba._sup = true;
+	wrapper._ba.fTerm.set_value("");
+	wrapper._ba._sup = false;
+}
+
 // ── Orchestration ─────────────────────────────────────────────────────────────
-//
-// use_cache=true  → re-render from cached data if available (term/view changes)
-// use_cache=false → always re-fetch (student/year changes)
-//
+
 async function _ba_trigger(wrapper, use_cache = false) {
-	const { page, fStudent, fYear, fTerm, fView } = wrapper._ba;
+	const ba = wrapper._ba;
+	const { $content, fStudent, fYear, fTerm, fView } = ba;
+
 	const student = fStudent.get_value();
-	const year    = fYear.get_value()    || "";
-	const term    = fTerm.get_value()    || "";
-	const view    = fView.get_value()    || "Completo";
+	const year    = fYear.get_value()  || "";
+	const term    = fTerm.get_value()  || "";
+	const view    = fView.get_value()  || "Completo";
 
 	if (!student) {
-		$(page.body).html(
-			`<div class="ba-empty">${__("Seleccione um aluno para ver o boletim.")}</div>`
-		);
+		$content.html(_ba_empty_msg());
 		return;
 	}
 
 	const cacheKey = `${student}__${year}`;
 
-	if (use_cache && wrapper._ba.cache[cacheKey]) {
-		_ba_draw(page, wrapper._ba.cache[cacheKey], term, view);
+	if (use_cache && ba.cache[cacheKey]) {
+		_ba_draw($content, ba.cache[cacheKey], term, view);
 		return;
 	}
 
-	$(page.body).html(
+	$content.html(
 		`<div class="ba-loading"><div class="ba-spinner"></div>${__("A carregar…")}</div>`
 	);
 
@@ -118,27 +149,27 @@ async function _ba_trigger(wrapper, use_cache = false) {
 		args:   { student, academic_year: year },
 	});
 
-	if (!r.message) { $(page.body).html(""); return; }
+	if (!r.message) { $content.html(""); return; }
 	const data = r.message;
 
 	if (data.error) {
-		$(page.body).html(`<div class="ba-empty">${__("Aluno não encontrado.")}</div>`);
+		$content.html(`<div class="ba-empty">${__("Aluno não encontrado.")}</div>`);
 		return;
 	}
 	if (!data.years || !data.years.length) {
-		$(page.body).html(
+		$content.html(
 			`<div class="ba-empty">${__("Sem dados académicos para este aluno.")}</div>`
 		);
 		return;
 	}
 
-	wrapper._ba.cache[cacheKey] = data;
-	_ba_draw(page, data, term, view);
+	ba.cache[cacheKey] = data;
+	_ba_draw($content, data, term, view);
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// ── Draw ──────────────────────────────────────────────────────────────────────
 
-function _ba_draw(page, data, filterTerm, viewMode) {
+function _ba_draw($content, data, filterTerm, viewMode) {
 	const statusColor = {
 		"Activo":      "#16a34a",
 		"Transferido": "#b45309",
@@ -146,16 +177,20 @@ function _ba_draw(page, data, filterTerm, viewMode) {
 		"Concluiu":    "#1d4ed8",
 	}[data.current_status] || "#6b7280";
 
+	// Student name links to their form
+	const studentHref = `/app/student/${encodeURIComponent(data.student)}`;
+
 	let html = `
 	<div class="ba-student-header">
-		<div>
-			<div class="ba-student-name">${frappe.utils.escape_html(data.full_name)}</div>
-			<div class="ba-student-meta">
-				<span class="ba-code">${frappe.utils.escape_html(data.student_code || "")}</span>
-				<span class="ba-status-pill" style="background:${statusColor}20;color:${statusColor};">
-					${frappe.utils.escape_html(__(data.current_status || ""))}
-				</span>
-			</div>
+		<a class="ba-student-name" href="${studentHref}"
+		   title="${__("Abrir ficha do aluno")}" onclick="event.stopPropagation()">
+			${frappe.utils.escape_html(data.full_name)}
+		</a>
+		<div class="ba-student-meta">
+			<span class="ba-code">${frappe.utils.escape_html(data.student_code || "")}</span>
+			<span class="ba-status-pill" style="background:${statusColor}20;color:${statusColor};">
+				${frappe.utils.escape_html(__(data.current_status || ""))}
+			</span>
 		</div>
 	</div>`;
 
@@ -166,59 +201,56 @@ function _ba_draw(page, data, filterTerm, viewMode) {
 	}
 
 	if (!yearsRendered) {
-		html += `<div class="ba-empty">${__("Sem dados para os filtros seleccionados.")}</div>`;
+		html += `<div class="ba-empty ba-empty-sm">
+			${__("Nenhum ano lectivo corresponde aos filtros seleccionados.")}
+		</div>`;
 	}
 
-	$(page.body).html(html);
+	$content.html(html);
 }
 
 // ── Year card ─────────────────────────────────────────────────────────────────
 
 function _ba_year_html(yr, filterTerm, viewMode) {
-	// Which term column index to show; null = show all
+	// Find which column to show (null = show all)
 	let termIdx = null;
 	if (filterTerm) {
 		const idx = (yr.term_names || []).indexOf(filterTerm);
-		if (idx === -1) return null; // this year has no such term → skip card entirely
+		if (idx === -1) return null; // this year has no such term → skip card
 		termIdx = idx;
 	}
 
-	// "Só Anual" collapses all term columns into the annual average only
+	// "Só Anual" collapses term columns; ignored when a single term is pinned
 	const onlyAnnual = (viewMode === "Só Anual") && termIdx === null;
 	const showTerms  = !onlyAnnual;
-	const showAnnual = termIdx === null; // single-term view doesn't show the annual column
+	const showAnnual = termIdx === null; // single-term view hides annual average
 
-	// ── Table headers ─────────────────────────────────────────────────────
+	// ── Column headers ────────────────────────────────────────────────────
 	let termHeaders = "";
 	if (showTerms) {
-		const labels = termIdx !== null
-			? [yr.term_labels[termIdx]]
-			: yr.term_labels;
-		termHeaders = labels
-			.map(t => `<th class="ba-th ba-th-center">${frappe.utils.escape_html(t)}</th>`)
-			.join("");
+		const labels = termIdx !== null ? [yr.term_labels[termIdx]] : yr.term_labels;
+		termHeaders = labels.map(t =>
+			`<th class="ba-th ba-th-center">${frappe.utils.escape_html(t)}</th>`
+		).join("");
 	}
 	const annualHeader = showAnnual
-		? `<th class="ba-th ba-th-center ba-col-annual">${__("Média Anual")}</th>`
-		: "";
+		? `<th class="ba-th ba-th-center ba-col-annual">${__("Média Anual")}</th>` : "";
 
 	// ── Subject rows ──────────────────────────────────────────────────────
 	const subjectRows = yr.subjects.map(s => {
 		let termCells = "";
 		if (showTerms) {
 			const grades = termIdx !== null ? [s.term_grades[termIdx]] : s.term_grades;
-			termCells = grades
-				.map(g => `<td class="ba-td ba-td-num">${_ba_fmt(g)}</td>`)
-				.join("");
+			termCells = grades.map(g =>
+				`<td class="ba-td ba-td-num">${_ba_fmt(g)}</td>`
+			).join("");
 		}
-
 		let annualCell = "";
 		if (showAnnual) {
 			const ann = s.annual_average;
 			const cls = ann != null && ann < 10 ? " ba-fail" : "";
 			annualCell = `<td class="ba-td ba-td-num ba-col-annual${cls}">${_ba_fmt(ann)}</td>`;
 		}
-
 		return `<tr class="ba-row">
 			<td class="ba-td ba-td-subj">${frappe.utils.escape_html(s.subject)}</td>
 			${termCells}
@@ -229,14 +261,11 @@ function _ba_year_html(yr, filterTerm, viewMode) {
 	// ── Average footer ────────────────────────────────────────────────────
 	let avgTermCells = "";
 	if (showTerms) {
-		const avgs = termIdx !== null
-			? [yr.term_averages[termIdx]]
-			: yr.term_averages;
-		avgTermCells = avgs
-			.map(a => `<td class="ba-td ba-td-num ba-avg-cell">${_ba_fmt(a)}</td>`)
-			.join("");
+		const avgs = termIdx !== null ? [yr.term_averages[termIdx]] : yr.term_averages;
+		avgTermCells = avgs.map(a =>
+			`<td class="ba-td ba-td-num ba-avg-cell">${_ba_fmt(a)}</td>`
+		).join("");
 	}
-
 	let overallCell = "";
 	if (showAnnual) {
 		const ov  = yr.overall_average;
@@ -307,10 +336,20 @@ function _ba_inject_styles() {
 	const s = document.createElement("style");
 	s.id = "ba-styles";
 	s.textContent = `
-/* ── State ───────────────────────────────────────────────────── */
+/* ── Content area ─────────────────────────────────────────────── */
+.ba-content-area {
+	padding-top: 16px;
+	min-height: 120px;
+}
+
+/* ── State ────────────────────────────────────────────────────── */
 .ba-empty {
 	text-align: center; padding: 80px 20px;
 	color: var(--text-muted); font-size: 14px;
+}
+.ba-empty-sm {
+	text-align: center; padding: 30px 20px;
+	color: var(--text-muted); font-size: 13px;
 }
 .ba-loading {
 	display: flex; align-items: center; justify-content: center;
@@ -327,14 +366,18 @@ function _ba_inject_styles() {
 
 /* ── Student header ───────────────────────────────────────────── */
 .ba-student-header {
-	padding: 20px 4px 16px;
+	padding: 4px 4px 16px;
 	border-bottom: 1px solid var(--border-color);
 	margin-bottom: 20px;
 }
 .ba-student-name {
+	display: block;
 	font-size: 22px; font-weight: 700;
-	color: var(--heading-color); margin-bottom: 6px;
+	color: var(--heading-color);
+	text-decoration: none;
+	margin-bottom: 6px;
 }
+.ba-student-name:hover { text-decoration: underline; color: var(--primary); }
 .ba-student-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ba-code { font-size: 13px; color: var(--text-muted); font-weight: 500; }
 .ba-status-pill {
@@ -375,7 +418,7 @@ function _ba_inject_styles() {
 	letter-spacing: .06em; background: #f8fafc;
 	border-bottom: 2px solid var(--border-color);
 }
-.ba-th-subj  { text-align: left; min-width: 160px; padding-left: 18px; }
+.ba-th-subj   { text-align: left; min-width: 160px; padding-left: 18px; }
 .ba-th-center { text-align: center; min-width: 80px; }
 .ba-col-annual {
 	background: rgba(30,64,175,.04) !important;
