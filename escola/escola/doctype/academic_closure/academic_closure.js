@@ -59,32 +59,30 @@ frappe.ui.form.on("Academic Closure", {
 		}
 	},
 
-	// Turma is the entry point — fills Classe and Ano Lectivo, then auto-loads
+	// Turma is the entry point — fills Ano Lectivo then auto-loads.
+	// school_class is handled automatically by fetch_from on the JSON field.
 	async class_group(frm) {
 		if (!frm.doc.class_group) {
-			frm.set_value("school_class",  null);
 			frm.set_value("academic_year", null);
 			set_queries(frm);
 			return;
 		}
 
-		const cg = await frappe.db.get_value(
-			"Class Group", frm.doc.class_group, ["academic_year", "school_class"]
+		const academic_year = await frappe.db.get_value(
+			"Class Group", frm.doc.class_group, "academic_year"
 		);
-		if (cg) {
-			frm.set_value("school_class",  cg.school_class  || null);
-			frm.set_value("academic_year", cg.academic_year || null);
+		if (academic_year) {
+			frm.set_value("academic_year", academic_year);
 		}
 		set_queries(frm);
 
-		// Auto-load promotions immediately if we have both fields
-		if (frm.doc.class_group && frm.doc.academic_year) {
+		// Use the fetched value directly — frm.doc may not reflect set_value yet
+		if (frm.doc.class_group && academic_year) {
 			_try_auto_load(frm);
 		}
 	},
 
 	academic_year(frm) {
-		if (!frm.doc.class_group) frm.set_value("school_class", null);
 		set_queries(frm);
 	},
 });
