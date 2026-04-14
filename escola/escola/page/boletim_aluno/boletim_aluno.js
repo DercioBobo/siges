@@ -7,15 +7,16 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 
 	_ba_inject_styles();
 
-	// ── Toolbar fields ───────────────────────────────────────────────────────
+	// ── Toolbar fields ────────────────────────────────────────────────────────
 	const fStudent = page.add_field({
 		fieldname: "student",
 		fieldtype: "Link",
 		options:   "Student",
 		label:     __("Aluno"),
 		change() {
-			const s = fStudent.get_value();
-			if (s) _ba_render(page, s, fYear.get_value());
+			wrapper._ba.cache = {};
+			fTerm.set_value("");
+			_ba_trigger(wrapper);
 		},
 	});
 
@@ -25,61 +26,119 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 		options:   "Academic Year",
 		label:     __("Ano Lectivo"),
 		change() {
-			const s = fStudent.get_value();
-			if (s) _ba_render(page, s, fYear.get_value());
+			wrapper._ba.cache = {};
+			fTerm.set_value("");
+			_ba_trigger(wrapper);
 		},
+	});
+
+	const fTerm = page.add_field({
+		fieldname: "academic_term",
+		fieldtype: "Link",
+		options:   "Academic Term",
+		label:     __("Período"),
+		get_query() {
+			const yr = fYear.get_value();
+			return yr ? { filters: { academic_year: yr } } : {};
+		},
+		change() {
+			_ba_trigger(wrapper, /* use_cache */ true);
+		},
+	});
+
+	const fView = page.add_field({
+		fieldname: "view_mode",
+		fieldtype: "Select",
+		options:   "Completo\nSó Anual",
+		label:     __("Vista"),
+		change() {
+			_ba_trigger(wrapper, true);
+		},
+	});
+
+	// ── Toolbar buttons ───────────────────────────────────────────────────────
+	page.add_button(__("← Aluno"), () => {
+		const s = fStudent.get_value();
+		if (s) frappe.set_route("Form", "Student", s);
+		else   frappe.set_route("List", "Student");
 	});
 
 	page.add_button(__("Imprimir"), () => window.print(), { icon: "printer" });
 
-	wrapper._ba = { page, fStudent, fYear };
+	wrapper._ba = { page, fStudent, fYear, fTerm, fView, cache: {} };
 };
 
 frappe.pages["boletim-aluno"].on_page_show = function (wrapper) {
-	const { page, fStudent, fYear } = wrapper._ba || {};
-	if (!page) return;
+	const { fStudent, fTerm } = wrapper._ba || {};
+	if (!fStudent) return;
 
 	const opts = frappe.route_options || {};
 	frappe.route_options = {};
 
 	if (opts.student) {
+		wrapper._ba.cache = {};
+		fTerm.set_value("");
 		fStudent.set_value(opts.student);
-		_ba_render(page, opts.student, fYear ? fYear.get_value() : "");
+		// set_value triggers change() → _ba_trigger
 	}
 };
 
-// ---------------------------------------------------------------------------
-// Render
-// ---------------------------------------------------------------------------
-
-async function _ba_render(page, student, academic_year) {
-	const $body = $(page.body);
+// ── Orchestration ─────────────────────────────────────────────────────────────
+//
+// use_cache=true  → re-render from cached data if available (term/view changes)
+// use_cache=false → always re-fetch (student/year changes)
+//
+async function _ba_trigger(wrapper, use_cache = false) {
+	const { page, fStudent, fYear, fTerm, fView } = wrapper._ba;
+	const student = fStudent.get_value();
+	const year    = fYear.get_value()    || "";
+	const term    = fTerm.get_value()    || "";
+	const view    = fView.get_value()    || "Completo";
 
 	if (!student) {
-		$body.html(`<div class="ba-empty">${__("Seleccione um aluno para ver o boletim.")}</div>`);
+		$(page.body).html(
+			`<div class="ba-empty">${__("Seleccione um aluno para ver o boletim.")}</div>`
+		);
 		return;
 	}
 
-	$body.html(`<div class="ba-loading"><div class="ba-spinner"></div>${__("A carregar…")}</div>`);
+	const cacheKey = `${student}__${year}`;
+
+	if (use_cache && wrapper._ba.cache[cacheKey]) {
+		_ba_draw(page, wrapper._ba.cache[cacheKey], term, view);
+		return;
+	}
+
+	$(page.body).html(
+		`<div class="ba-loading"><div class="ba-spinner"></div>${__("A carregar…")}</div>`
+	);
 
 	const r = await frappe.call({
 		method: "escola.escola.page.boletim_aluno.boletim_aluno.get_student_report",
-		args:   { student, academic_year: academic_year || "" },
+		args:   { student, academic_year: year },
 	});
 
-	if (!r.message) { $body.html(""); return; }
+	if (!r.message) { $(page.body).html(""); return; }
 	const data = r.message;
 
 	if (data.error) {
-		$body.html(`<div class="ba-empty">${__("Aluno não encontrado.")}</div>`);
+		$(page.body).html(`<div class="ba-empty">${__("Aluno não encontrado.")}</div>`);
 		return;
 	}
 	if (!data.years || !data.years.length) {
-		$body.html(`<div class="ba-empty">${__("Sem dados académicos para este aluno.")}</div>`);
+		$(page.body).html(
+			`<div class="ba-empty">${__("Sem dados académicos para este aluno.")}</div>`
+		);
 		return;
 	}
 
-	// ── Student header (print-visible) ───────────────────────────────────────
+	wrapper._ba.cache[cacheKey] = data;
+	_ba_draw(page, data, term, view);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function _ba_draw(page, data, filterTerm, viewMode) {
 	const statusColor = {
 		"Activo":      "#16a34a",
 		"Transferido": "#b45309",
@@ -100,18 +159,92 @@ async function _ba_render(page, student, academic_year) {
 		</div>
 	</div>`;
 
+	let yearsRendered = 0;
 	for (const yr of data.years) {
-		html += _ba_year_html(yr);
+		const card = _ba_year_html(yr, filterTerm, viewMode);
+		if (card) { html += card; yearsRendered++; }
 	}
 
-	$body.html(html);
+	if (!yearsRendered) {
+		html += `<div class="ba-empty">${__("Sem dados para os filtros seleccionados.")}</div>`;
+	}
+
+	$(page.body).html(html);
 }
 
-// ---------------------------------------------------------------------------
-// Year card
-// ---------------------------------------------------------------------------
+// ── Year card ─────────────────────────────────────────────────────────────────
 
-function _ba_year_html(yr) {
+function _ba_year_html(yr, filterTerm, viewMode) {
+	// Which term column index to show; null = show all
+	let termIdx = null;
+	if (filterTerm) {
+		const idx = (yr.term_names || []).indexOf(filterTerm);
+		if (idx === -1) return null; // this year has no such term → skip card entirely
+		termIdx = idx;
+	}
+
+	// "Só Anual" collapses all term columns into the annual average only
+	const onlyAnnual = (viewMode === "Só Anual") && termIdx === null;
+	const showTerms  = !onlyAnnual;
+	const showAnnual = termIdx === null; // single-term view doesn't show the annual column
+
+	// ── Table headers ─────────────────────────────────────────────────────
+	let termHeaders = "";
+	if (showTerms) {
+		const labels = termIdx !== null
+			? [yr.term_labels[termIdx]]
+			: yr.term_labels;
+		termHeaders = labels
+			.map(t => `<th class="ba-th ba-th-center">${frappe.utils.escape_html(t)}</th>`)
+			.join("");
+	}
+	const annualHeader = showAnnual
+		? `<th class="ba-th ba-th-center ba-col-annual">${__("Média Anual")}</th>`
+		: "";
+
+	// ── Subject rows ──────────────────────────────────────────────────────
+	const subjectRows = yr.subjects.map(s => {
+		let termCells = "";
+		if (showTerms) {
+			const grades = termIdx !== null ? [s.term_grades[termIdx]] : s.term_grades;
+			termCells = grades
+				.map(g => `<td class="ba-td ba-td-num">${_ba_fmt(g)}</td>`)
+				.join("");
+		}
+
+		let annualCell = "";
+		if (showAnnual) {
+			const ann = s.annual_average;
+			const cls = ann != null && ann < 10 ? " ba-fail" : "";
+			annualCell = `<td class="ba-td ba-td-num ba-col-annual${cls}">${_ba_fmt(ann)}</td>`;
+		}
+
+		return `<tr class="ba-row">
+			<td class="ba-td ba-td-subj">${frappe.utils.escape_html(s.subject)}</td>
+			${termCells}
+			${annualCell}
+		</tr>`;
+	}).join("");
+
+	// ── Average footer ────────────────────────────────────────────────────
+	let avgTermCells = "";
+	if (showTerms) {
+		const avgs = termIdx !== null
+			? [yr.term_averages[termIdx]]
+			: yr.term_averages;
+		avgTermCells = avgs
+			.map(a => `<td class="ba-td ba-td-num ba-avg-cell">${_ba_fmt(a)}</td>`)
+			.join("");
+	}
+
+	let overallCell = "";
+	if (showAnnual) {
+		const ov  = yr.overall_average;
+		const cls = ov != null && ov < 10 ? " ba-fail" : "";
+		overallCell = `<td class="ba-td ba-td-num ba-col-annual ba-avg-cell${cls}">${_ba_fmt(ov)}</td>`;
+	}
+
+	// ── Decision badge ────────────────────────────────────────────────────
 	const DC = {
 		"Promovido": { bg: "#d1fae5", color: "#065f46" },
 		"Concluído": { bg: "#dbeafe", color: "#1e40af" },
@@ -119,31 +252,7 @@ function _ba_year_html(yr) {
 	};
 	const dc = DC[yr.final_decision] || { bg: "#f3f4f6", color: "#6b7280" };
 
-	const termHeaders = yr.term_labels.map(t =>
-		`<th class="ba-th ba-th-center">${frappe.utils.escape_html(t)}</th>`
-	).join("");
-
-	const subjectRows = yr.subjects.map(s => {
-		const termCells = s.term_grades.map(g =>
-			`<td class="ba-td ba-td-num">${_ba_fmt(g)}</td>`
-		).join("");
-		const ann = s.annual_average;
-		const annClass = ann == null ? "" : ann < 10 ? " ba-fail" : " ba-pass";
-		return `<tr class="ba-row">
-			<td class="ba-td ba-td-subj">${frappe.utils.escape_html(s.subject)}</td>
-			${termCells}
-			<td class="ba-td ba-td-num ba-col-annual${annClass}">${_ba_fmt(ann)}</td>
-		</tr>`;
-	}).join("");
-
-	const termAvgCells = yr.term_averages.map(a =>
-		`<td class="ba-td ba-td-num ba-avg-cell">${_ba_fmt(a)}</td>`
-	).join("");
-	const ov = yr.overall_average;
-	const ovClass = ov == null ? "" : ov < 10 ? " ba-fail" : " ba-pass";
-	const overallCell = `<td class="ba-td ba-td-num ba-col-annual ba-avg-cell${ovClass}">${_ba_fmt(ov)}</td>`;
-
-	const absText  = yr.total_absences != null
+	const absText      = yr.total_absences != null
 		? `<span class="ba-absences">${yr.total_absences} ${__("falta(s)")}</span>` : "";
 	const decisionHtml = yr.final_decision
 		? `<span class="ba-decision-badge" style="background:${dc.bg};color:${dc.color};">
@@ -165,21 +274,20 @@ function _ba_year_html(yr) {
 				${decisionHtml}
 			</div>
 		</div>
-
 		<div class="ba-table-wrap">
 			<table class="ba-table">
 				<thead>
 					<tr>
 						<th class="ba-th ba-th-subj">${__("Disciplina")}</th>
 						${termHeaders}
-						<th class="ba-th ba-th-center ba-col-annual">${__("Média Anual")}</th>
+						${annualHeader}
 					</tr>
 				</thead>
 				<tbody>${subjectRows}</tbody>
 				<tfoot>
 					<tr class="ba-avg-row">
 						<td class="ba-td ba-td-subj ba-avg-label">${__("Média da Turma")}</td>
-						${termAvgCells}
+						${avgTermCells}
 						${overallCell}
 					</tr>
 				</tfoot>
@@ -192,9 +300,7 @@ function _ba_fmt(v) {
 	return v == null ? "—" : v.toFixed(1);
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 function _ba_inject_styles() {
 	if (document.getElementById("ba-styles")) return;
@@ -281,7 +387,6 @@ function _ba_inject_styles() {
 .ba-td-num  { text-align: center; font-variant-numeric: tabular-nums; }
 .ba-row:last-child .ba-td { border-bottom: none; }
 
-.ba-pass { color: var(--text-color); }
 .ba-fail { color: #dc2626; font-weight: 700; }
 
 /* ── Average footer ───────────────────────────────────────────── */

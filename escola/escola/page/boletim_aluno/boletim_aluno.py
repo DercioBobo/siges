@@ -110,6 +110,7 @@ def _build_year(student, sga):
         "class_group":     sga.class_group,
         "sga_status":      sga.status,
         "term_labels":     [t.term_name or t.name for t in terms],
+        "term_names":      [t.name for t in terms],
         "subjects":        subjects,
         "term_averages":   term_averages,
         "overall_average": overall,
