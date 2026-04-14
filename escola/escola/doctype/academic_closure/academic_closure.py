@@ -54,7 +54,7 @@ class AcademicClosure(Document):
 
 
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_input
+@frappe.validate_and_sanitize_search_inputs
 def get_class_groups_with_promotions(doctype, txt, searchfield, start, page_len, filters):
     """Custom search: only Class Groups that have a Student Promotion (optionally filtered by academic_year)."""
     import json
