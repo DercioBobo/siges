@@ -13,6 +13,8 @@
   "column_break_1",
   "renewal_date",
   "student",
+  "section_break_payment",
+  "payments",
   "section_break_invoice",
   "sales_invoice",
   "section_break_notes",
@@ -71,6 +73,18 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "section_break_payment",
+   "fieldtype": "Section Break",
+   "label": "Pagamento"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Métodos de Pagamento",
+   "options": "Renovacao Payment",
+   "description": "Preencha para gerar a factura como POS com os métodos indicados."
   },
   {
    "fieldname": "section_break_invoice",

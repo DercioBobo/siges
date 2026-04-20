@@ -34,7 +34,6 @@ class RenovacaoDeMatricula(Document):
         if self.sales_invoice:
             inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
             if inv_status == 0:
-                # Draft — safe to delete
                 frappe.delete_doc("Sales Invoice", self.sales_invoice, ignore_permissions=True)
                 self.db_set("sales_invoice", None)
                 frappe.msgprint(_("Factura de renovação eliminada."), indicator="orange")
@@ -64,7 +63,7 @@ class RenovacaoDeMatricula(Document):
                 "student":               self.student,
                 "academic_year":         self.academic_year,
                 "target_academic_year":  self.target_academic_year,
-                "docstatus":             ("!=", 2),   # not cancelled
+                "docstatus":             ("!=", 2),
                 "name":                  ("!=", self.name),
             },
             "name",
@@ -84,7 +83,7 @@ class RenovacaoDeMatricula(Document):
 # ---------------------------------------------------------------------------
 
 def _create_renewal_invoice(doc):
-    """Create a Sales Invoice for the renewal fee. Returns the invoice or None."""
+    """Create a POS Sales Invoice for the renewal fee. Returns the invoice or None."""
     from escola.escola.doctype.student.student import ensure_customer_for_student
 
     settings = frappe.get_single("School Settings")
@@ -104,19 +103,25 @@ def _create_renewal_invoice(doc):
         frappe.db.get_single_value("School Settings", "default_company")
         or frappe.db.get_single_value("Global Defaults", "default_company")
     )
-    due_days   = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
-    today_date = today()
-    due_date   = add_days(today_date, due_days)
-    auto_submit = int(frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0)
+    due_days    = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
+    today_date  = today()
+    due_date    = add_days(today_date, due_days)
+    auto_submit = int(settings.get("auto_submit_invoices") or 0)
     fee_amount  = float(settings.get("renewal_fee_amount") or 0)
+    is_pos      = int(settings.get("renewal_is_pos") or 0)
+    pos_profile = settings.get("renewal_pos_profile") or "Escola"
     description = _("Renovação de Matrícula {0}").format(doc.target_academic_year)
 
     si = frappe.new_doc("Sales Invoice")
-    si.customer     = customer
-    si.company      = company
-    si.posting_date = today_date
-    si.due_date     = due_date
-    si.remarks      = description
+    si.customer      = customer
+    si.company       = company
+    si.posting_date  = today_date
+    si.due_date      = due_date
+    si.remarks       = description
+
+    if is_pos:
+        si.is_pos      = 1
+        si.pos_profile = pos_profile
 
     try:
         si.escola_student = doc.student
@@ -124,18 +129,39 @@ def _create_renewal_invoice(doc):
         pass
 
     si.append("items", {
-        "item_code":  item_code,
-        "item_name":  description,
+        "item_code":   item_code,
+        "item_name":   description,
         "description": description,
-        "qty":        1,
-        "rate":       fee_amount,
+        "qty":         1,
+        "rate":        fee_amount,
     })
 
+    # Copy payment methods from the Renovação doc (only relevant when POS)
+    if is_pos:
+        for p in (doc.payments or []):
+            account = _get_payment_account(p.mode_of_payment, company)
+            si.append("payments", {
+                "mode_of_payment": p.mode_of_payment,
+                "amount":          p.amount,
+                "account":         account,
+            })
+
     si.insert(ignore_permissions=True)
+
     if auto_submit:
         si.submit()
 
     return si
+
+
+def _get_payment_account(mode_of_payment, company):
+    """Resolve the default account for a Mode of Payment within a company."""
+    account = frappe.db.get_value(
+        "Mode of Payment Account",
+        {"parent": mode_of_payment, "company": company},
+        "default_account",
+    )
+    return account
 
 
 # ---------------------------------------------------------------------------
@@ -186,26 +212,24 @@ def get_student_renewal_status(student):
     if not (getdate(period_start) <= today_date <= getdate(period_end)):
         return None
 
-    # Find the next year for the current year
     next_year = get_next_academic_year(current_year)
 
-    # Check if this student already has a submitted renewal
     renewal = frappe.db.get_value(
         "Renovacao De Matricula",
         {
-            "student":              student,
-            "academic_year":        current_year,
-            "docstatus":            1,   # submitted
+            "student":       student,
+            "academic_year": current_year,
+            "docstatus":     1,
         },
         ["name", "target_academic_year", "renewal_date"],
         as_dict=True,
     )
 
     return {
-        "in_period":        True,
-        "period_start":     str(period_start),
-        "period_end":       str(period_end),
-        "current_year":     current_year,
-        "next_year":        next_year,
-        "renewal":          renewal,  # None or {name, target_academic_year, renewal_date}
+        "in_period":    True,
+        "period_start": str(period_start),
+        "period_end":   str(period_end),
+        "current_year": current_year,
+        "next_year":    next_year,
+        "renewal":      renewal,
     }

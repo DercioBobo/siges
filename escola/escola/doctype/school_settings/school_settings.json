@@ -34,6 +34,8 @@
   "column_break_renewal",
   "renewal_fee_item_code",
   "renewal_fee_amount",
+  "renewal_pos_profile",
+  "renewal_is_pos",
   "section_billing",
   "default_company",
   "default_income_account",
@@ -236,6 +238,22 @@
    "label": "Valor da Taxa de Renovação",
    "default": "0",
    "description": "Valor cobrado na taxa de renovação. 0 = taxa calculada a partir da tabela de preços do item."
+  },
+  {
+   "fieldname": "renewal_pos_profile",
+   "fieldtype": "Link",
+   "label": "Perfil POS para Renovações",
+   "options": "POS Profile",
+   "default": "Escola",
+   "depends_on": "eval:doc.renewal_is_pos",
+   "description": "Perfil POS utilizado nas facturas de renovação de matrícula."
+  },
+  {
+   "fieldname": "renewal_is_pos",
+   "fieldtype": "Check",
+   "label": "Factura de Renovação como POS",
+   "default": "1",
+   "description": "Se activo, as facturas geradas na renovação de matrícula são marcadas como POS e incluem os métodos de pagamento indicados."
   },
   {
    "fieldname": "section_billing",
