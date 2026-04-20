@@ -31,9 +31,20 @@ frappe.ui.form.on("Troca De Turma", {
 	from_class_group(frm) {
 		frm.set_value("to_class_group", null);
 		_set_queries(frm);
-		// Reset warning since destination was cleared
 		frm.set_intro("");
 		frm.set_df_property("reason", "reqd", 0);
+		// If academic_year is still empty, fill it from the chosen turma
+		// without triggering the academic_year handler (which would clear from_class_group)
+		if (frm.doc.from_class_group && !frm.doc.academic_year) {
+			frappe.db.get_value("Class Group", frm.doc.from_class_group, "academic_year")
+				.then(r => {
+					const yr = r.message && r.message.academic_year;
+					if (yr && !frm.doc.academic_year) {
+						frm.doc.academic_year = yr;
+						frm.refresh_field("academic_year");
+					}
+				});
+		}
 	},
 
 	to_class_group(frm) {
