@@ -21,7 +21,6 @@ frappe.ui.form.on("Class Curriculum", {
     },
 
     class_group(frm) {
-        _set_cg_query(frm);
         if (!frm.doc.class_group) return;
         _populate_from_class_group(frm);
     },

@@ -1,6 +1,8 @@
 // Copyright (c) 2024, EntreTech and contributors
 // For license information, please see license.txt
 
+let _grid_dialog_timer = null;
+
 frappe.ui.form.on("Timetable", {
 	onload(frm) {
 		_set_time_slot_filter(frm);
@@ -48,7 +50,8 @@ frappe.ui.form.on("Timetable", {
 			});
 			// Auto-open grid on new docs once class_group (and thus shift) is set
 			if (frm.is_new()) {
-				setTimeout(() => _open_grid_dialog(frm), 400);
+				clearTimeout(_grid_dialog_timer);
+				_grid_dialog_timer = setTimeout(() => _open_grid_dialog(frm), 400);
 			}
 		}
 	},
