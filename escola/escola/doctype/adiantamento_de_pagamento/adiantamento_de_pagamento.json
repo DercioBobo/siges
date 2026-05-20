@@ -1,0 +1,244 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "naming_series",
+  "section_identification",
+  "payment_date",
+  "academic_year",
+  "col_break_1",
+  "student",
+  "student_full_name",
+  "school_class",
+  "section_periods",
+  "periods",
+  "section_summary",
+  "total_periods",
+  "full_year_periods",
+  "discount_percent",
+  "discount_reason",
+  "col_break_summary",
+  "gross_total",
+  "discount_total",
+  "net_total",
+  "section_payment",
+  "is_pos",
+  "pos_profile",
+  "payments",
+  "section_system",
+  "notes",
+  "sales_invoice"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "ADIAN-.YYYY.-.####",
+   "default": "ADIAN-.YYYY.-.####",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_identification",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "label": "Data de Pagamento",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Aluno",
+   "options": "Student",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "student_full_name",
+   "fieldtype": "Data",
+   "label": "Nome do Aluno",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "school_class",
+   "fieldtype": "Data",
+   "label": "Classe",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_periods",
+   "fieldtype": "Section Break",
+   "label": "Períodos Cobertos"
+  },
+  {
+   "fieldname": "periods",
+   "fieldtype": "Table",
+   "label": "Períodos",
+   "options": "Adiantamento Period Line",
+   "description": "Use o botão «Carregar Períodos» para preencher automaticamente os períodos disponíveis."
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Resumo e Desconto"
+  },
+  {
+   "fieldname": "total_periods",
+   "fieldtype": "Int",
+   "label": "Períodos Seleccionados",
+   "read_only": 1
+  },
+  {
+   "fieldname": "full_year_periods",
+   "fieldtype": "Int",
+   "label": "Total Períodos do Ano",
+   "read_only": 1,
+   "description": "Número total de períodos de facturação no ano lectivo para esta classe."
+  },
+  {
+   "fieldname": "discount_percent",
+   "fieldtype": "Percent",
+   "label": "Desconto (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discount_reason",
+   "fieldtype": "Data",
+   "label": "Motivo do Desconto",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_summary",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gross_total",
+   "fieldtype": "Currency",
+   "label": "Subtotal (Bruto)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discount_total",
+   "fieldtype": "Currency",
+   "label": "Total de Desconto",
+   "read_only": 1
+  },
+  {
+   "fieldname": "net_total",
+   "fieldtype": "Currency",
+   "label": "Total a Pagar",
+   "read_only": 1,
+   "bold": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_payment",
+   "fieldtype": "Section Break",
+   "label": "Pagamento"
+  },
+  {
+   "fieldname": "is_pos",
+   "fieldtype": "Check",
+   "label": "Pagamento Imediato (POS)",
+   "description": "Active para registar o pagamento no momento da submissão."
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "label": "Perfil POS",
+   "options": "POS Profile",
+   "depends_on": "eval:doc.is_pos"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Métodos de Pagamento",
+   "options": "Adiantamento Payment",
+   "description": "Preencha os métodos de pagamento utilizados."
+  },
+  {
+   "fieldname": "section_system",
+   "fieldtype": "Section Break",
+   "label": "Sistema",
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.sales_invoice"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Factura Gerada",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "description": "Preenchida automaticamente após submissão."
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Adiantamento De Pagamento",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "submit": 1,
+   "cancel": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "payment_date",
+ "sort_order": "DESC",
+ "title_field": "student_full_name",
+ "track_changes": 1
+}

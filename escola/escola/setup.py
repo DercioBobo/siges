@@ -54,6 +54,17 @@ _CUSTOM_FIELDS = {
             "no_copy": 1,
             "in_standard_filter": 1,
         },
+        {
+            "fieldname": "escola_advance_payment",
+            "fieldtype": "Link",
+            "options": "Adiantamento De Pagamento",
+            "label": "Adiantamento (Escola)",
+            "insert_after": "escola_encarregado",
+            "read_only": 1,
+            "no_copy": 1,
+            "in_standard_filter": 1,
+            "search_index": 1,
+        },
     ],
     "Customer": [
         {

@@ -153,6 +153,10 @@ def generate_invoices(doc_name):
                 "Billing Schedule", cycle.billing_schedule,
                 "last_billed_date", cycle.posting_date,
             )
+    elif skipped > 0 and created == 0 and not pre_errors:
+        # All students were legitimately skipped (advance payments / already billed).
+        # Mark the cycle so it doesn't appear as a forgotten draft.
+        cycle.db_set("status", "Sem Facturas")
 
     cycle.db_set("skipped_count", skipped)
     cycle.db_set("error_count", len(pre_errors))
@@ -278,10 +282,8 @@ def cancel_cycle(doc_name):
 def _invoice_exists(cycle, student_name):
     """
     Check whether a non-cancelled invoice already exists for this student
-    in the same billing period, across any cycle.
-    Uses period-based matching (month/quarter/year) instead of exact posting_date
-    so that a manual run on day 16 and a scheduler run on day 25 are treated as
-    the same period and the second one is skipped.
+    in the same billing period, across any cycle OR via an advance payment.
+    Uses period-based matching (month/quarter/year).
     """
     mode = cycle.billing_mode
     date = cycle.posting_date
@@ -289,18 +291,26 @@ def _invoice_exists(cycle, student_name):
     if mode == "Mensal":
         period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
         params = (student_name, mode, date, date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND MONTH(apl.posting_date) = MONTH(%s)"
+        adv_params = (student_name, mode, date, date)
     elif mode == "Trimestral":
         period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
         params = (student_name, mode, date, date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND QUARTER(apl.posting_date) = QUARTER(%s)"
+        adv_params = (student_name, mode, date, date)
     elif mode == "Anual":
         period_sql = "YEAR(si.posting_date) = YEAR(%s)"
         params = (student_name, mode, date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s)"
+        adv_params = (student_name, mode, date)
     else:
         period_sql = "si.posting_date = %s"
         params = (student_name, mode, date)
+        adv_sql = "apl.posting_date = %s"
+        adv_params = (student_name, mode, date)
 
     try:
-        return bool(frappe.db.sql(
+        if frappe.db.sql(
             f"""
             SELECT si.name
             FROM `tabSales Invoice` si
@@ -312,7 +322,26 @@ def _invoice_exists(cycle, student_name):
             LIMIT 1
             """,
             params,
-        ))
+        ):
+            return True
+
+        # Also block if an active advance payment already covers this period
+        if frappe.db.sql(
+            f"""
+            SELECT 1
+            FROM `tabAdiantamento Period Line` apl
+            JOIN `tabAdiantamento De Pagamento` adp ON adp.name = apl.parent
+            WHERE adp.student = %s
+              AND adp.docstatus = 1
+              AND apl.billing_mode = %s
+              AND {adv_sql}
+            LIMIT 1
+            """,
+            adv_params,
+        ):
+            return True
+
+        return False
     except Exception:
         return False
 

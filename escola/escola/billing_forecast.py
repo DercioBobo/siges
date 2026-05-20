@@ -105,19 +105,28 @@ def _billing_periods(sched, ay_start, ay_end, invoice_day):
 # ---------------------------------------------------------------------------
 
 def _find_invoice(student_name, school_class, billing_mode, posting_date):
-    """Return invoice row dict for this student+period, or None."""
+    """Return invoice row dict for this student+period, or None.
+    Also checks advance payment (Adiantamento) coverage."""
     if billing_mode == "Mensal":
         period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
         params = (student_name, school_class, billing_mode, posting_date, posting_date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND MONTH(apl.posting_date) = MONTH(%s)"
+        adv_params = (student_name, billing_mode, posting_date, posting_date)
     elif billing_mode == "Trimestral":
         period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
         params = (student_name, school_class, billing_mode, posting_date, posting_date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND QUARTER(apl.posting_date) = QUARTER(%s)"
+        adv_params = (student_name, billing_mode, posting_date, posting_date)
     elif billing_mode == "Anual":
         period_sql = "YEAR(si.posting_date) = YEAR(%s)"
         params = (student_name, school_class, billing_mode, posting_date)
+        adv_sql = "YEAR(apl.posting_date) = YEAR(%s)"
+        adv_params = (student_name, billing_mode, posting_date)
     else:
         period_sql = "si.posting_date = %s"
         params = (student_name, school_class, billing_mode, posting_date)
+        adv_sql = "apl.posting_date = %s"
+        adv_params = (student_name, billing_mode, posting_date)
 
     rows = frappe.db.sql(f"""
         SELECT si.name, si.docstatus, si.grand_total, si.outstanding_amount, si.posting_date
@@ -131,7 +140,35 @@ def _find_invoice(student_name, school_class, billing_mode, posting_date):
         ORDER BY si.posting_date DESC
         LIMIT 1
     """, params, as_dict=True)
-    return rows[0] if rows else None
+    if rows:
+        return rows[0]
+
+    # Check advance payment coverage
+    adv_rows = frappe.db.sql(f"""
+        SELECT adp.name AS adiantamento_name, adp.sales_invoice,
+               apl.gross_amount, adp.discount_percent
+        FROM `tabAdiantamento Period Line` apl
+        JOIN `tabAdiantamento De Pagamento` adp ON adp.name = apl.parent
+        WHERE adp.student = %s
+          AND adp.docstatus = 1
+          AND apl.billing_mode = %s
+          AND {adv_sql}
+        ORDER BY adp.payment_date DESC
+        LIMIT 1
+    """, adv_params, as_dict=True)
+    if adv_rows:
+        a = adv_rows[0]
+        period_net = float(a.gross_amount or 0) * (1 - float(a.discount_percent or 0) / 100)
+        return frappe._dict({
+            "name":             a.sales_invoice or a.adiantamento_name,
+            "docstatus":        1,
+            "grand_total":      period_net,
+            "outstanding_amount": 0.0,
+            "is_advance":       True,
+            "adiantamento_name": a.adiantamento_name,
+        })
+
+    return None
 
 
 def _period_status(inv):
@@ -211,14 +248,16 @@ def get_student_forecast(student_name):
             status       = _period_status(inv)
 
             all_periods.append({
-                "period_label": p["period_label"],
-                "posting_date": str(posting_date),
-                "due_date":     str(due_date),
-                "billing_mode": sched.billing_mode,
-                "amount":       float(inv.grand_total or base_amount) if inv else base_amount,
-                "outstanding":  float(inv.outstanding_amount or 0) if inv else 0.0,
-                "status":       status,
-                "invoice_name": inv.name if inv else None,
+                "period_label":  p["period_label"],
+                "posting_date":  str(posting_date),
+                "due_date":      str(due_date),
+                "billing_mode":  sched.billing_mode,
+                "amount":        float(inv.grand_total or base_amount) if inv else base_amount,
+                "outstanding":   float(inv.outstanding_amount or 0) if inv else 0.0,
+                "status":        status,
+                "invoice_name":  inv.name if inv else None,
+                "is_advance":    bool(getattr(inv, "is_advance", False)) if inv else False,
+                "adiantamento":  getattr(inv, "adiantamento_name", None) if inv else None,
             })
 
     all_periods.sort(key=lambda x: x["posting_date"])

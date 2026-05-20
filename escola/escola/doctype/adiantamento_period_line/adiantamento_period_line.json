@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "period_label",
+  "posting_date",
+  "billing_mode",
+  "gross_amount",
+  "invoice"
+ ],
+ "fields": [
+  {
+   "fieldname": "period_label",
+   "fieldtype": "Data",
+   "label": "Período",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Data Prevista",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "billing_mode",
+   "fieldtype": "Data",
+   "label": "Modo",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "gross_amount",
+   "fieldtype": "Currency",
+   "label": "Valor Base",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "invoice",
+   "fieldtype": "Link",
+   "label": "Factura",
+   "options": "Sales Invoice",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Adiantamento Period Line",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "posting_date",
+ "sort_order": "ASC"
+}

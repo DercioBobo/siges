@@ -50,6 +50,7 @@ doc_events = {
 # -----------------------------------------------------------------
 fixtures = [
     {"dt": "School Settings"},
+    {"dt": "Print Format", "filters": [["doc_type", "=", "Adiantamento De Pagamento"]]},
 ]
 
 # -----------------------------------------------------------------

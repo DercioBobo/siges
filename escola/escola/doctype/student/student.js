@@ -706,7 +706,9 @@ function _render_forecast(fc) {
 		const isPastDue = p.due_date < today && p.status === "Facturado";
 		const rowBg     = isPastDue ? "background:#fff5f5;" : "";
 		const invLink   = p.invoice_name
-			? `<a class="sinv-link" href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" target="_blank">${frappe.utils.escape_html(p.invoice_name)}</a>`
+			? p.is_advance
+				? `<a class="sinv-link" href="/app/adiantamento-de-pagamento/${encodeURIComponent(p.adiantamento || p.invoice_name)}" target="_blank" title="${__('Adiantamento de Pagamento')}">${__("Adiantamento")}</a>`
+				: `<a class="sinv-link" href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" target="_blank">${frappe.utils.escape_html(p.invoice_name)}</a>`
 			: "<span style='color:#cbd5e1;'>—</span>";
 		const amtDisplay = p.status === "Pago"
 			? `<span style="color:#059669;font-weight:600;">${fmt(p.amount)}</span>`

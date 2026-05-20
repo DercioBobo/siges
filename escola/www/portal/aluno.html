@@ -686,7 +686,9 @@
           const isPast = p.due_date < today && p.status !== 'Pago';
           const rowCls = isPast && p.status === 'Facturado' ? 'bg-red-50/30' : '';
           const invLink = p.invoice_name
-            ? `<a href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" class="text-[#024ba5] hover:underline text-xs font-medium" target="_blank">${p.invoice_name}</a>`
+            ? p.is_advance
+              ? `<a href="/app/adiantamento-de-pagamento/${encodeURIComponent(p.adiantamento || p.invoice_name)}" class="text-teal-600 hover:underline text-xs font-medium" target="_blank">Adiantamento</a>`
+              : `<a href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" class="text-[#024ba5] hover:underline text-xs font-medium" target="_blank">${p.invoice_name}</a>`
             : '<span class="text-slate-300 text-xs">—</span>';
           const amtHtml = p.status === 'Pago'
             ? `<span class="text-green-600 font-semibold">${fmtMZN(p.amount)}</span>`
