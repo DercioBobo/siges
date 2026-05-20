@@ -18,6 +18,10 @@ frappe.ui.form.on("Renovacao De Matricula", {
 				frappe.set_route("Form", "Sales Invoice", frm.doc.sales_invoice);
 			});
 		}
+
+		if (frm.doc.docstatus === 1) {
+			_check_reactivation(frm);
+		}
 	},
 
 	async academic_year(frm) {
@@ -117,5 +121,98 @@ async function _load_fee_info(frm, settings_field, label) {
 		);
 	} else {
 		wrapper.html("");
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Renewal hold reactivation
+// ---------------------------------------------------------------------------
+
+async function _check_reactivation(frm) {
+	const r = await frappe.call({
+		method: "escola.escola.renewal_hold.get_reactivation_options",
+		args:   { doc_name: frm.doc.name },
+	});
+	if (r.message) {
+		_show_reactivation_dialog(frm, r.message);
+	}
+}
+
+function _show_reactivation_dialog(frm, opts) {
+	const groups = opts.available_groups || [];
+
+	if (!groups.length) {
+		frappe.msgprint({
+			title: __("Sem Vagas Disponíveis"),
+			message: __("O aluno <b>{0}</b> está Pendente de Renovação mas não há turmas com vagas disponíveis para {1}.", [opts.student_name, opts.target_year]),
+			indicator: "orange",
+		});
+		return;
+	}
+
+	// Build Select options: original first, then others
+	const select_options = groups.map(g => {
+		const tag   = g.is_original ? ` (${__("turma original")})` : "";
+		const seats = g.max_students ? ` — ${g.current_count}/${g.max_students}` : "";
+		return { value: g.name, label: `${g.name}${tag}${seats}` };
+	});
+
+	const dialog = new frappe.ui.Dialog({
+		title: __("Reactivar Aluno — {0}", [opts.student_name]),
+		fields: [
+			{
+				fieldtype: "HTML",
+				options: `<p style="margin:0 0 12px;color:var(--text-muted);">
+					${__("O aluno está em estado <b>Pendente de Renovação</b>. Seleccione a turma para reactivar.")}
+				</p>`,
+			},
+			{
+				fieldname:  "class_group",
+				fieldtype:  "Select",
+				label:      __("Turma"),
+				options:    select_options.map(o => o.value).join("\n"),
+				default:    select_options[0].value,
+				reqd:       1,
+				description: select_options.map(o => `${o.value}: ${o.label}`).join(" | "),
+			},
+		],
+		primary_action_label: __("Reactivar"),
+		async primary_action(values) {
+			dialog.hide();
+			frappe.show_progress(__("A reactivar..."), 0, 100);
+			try {
+				const res = await frappe.call({
+					method: "escola.escola.renewal_hold.reactivate_student",
+					args: {
+						student:       opts.student,
+						class_group:   values.class_group,
+						academic_year: opts.target_year,
+					},
+				});
+				frappe.hide_progress();
+				if (res.message) {
+					frappe.show_alert({
+						message: __("Aluno reactivado e alocado à turma <b>{0}</b>.", [res.message.class_group]),
+						indicator: "green",
+					}, 5);
+					frm.reload_doc();
+				}
+			} catch (e) {
+				frappe.hide_progress();
+			}
+		},
+	});
+
+	// Replace select element with a proper label/description per option
+	dialog.show();
+
+	// Rebuild the select with human-readable labels
+	const sf = dialog.fields_dict.class_group;
+	if (sf && sf.$input) {
+		sf.$input.empty();
+		select_options.forEach(o => {
+			sf.$input.append(`<option value="${o.value}">${o.label}</option>`);
+		});
+		sf.$input.val(select_options[0].value);
 	}
 }

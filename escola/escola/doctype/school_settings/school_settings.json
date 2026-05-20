@@ -45,6 +45,10 @@
   "renewal_pos_profile",
   "renewal_is_pos",
   "auto_submit_renewal_invoice",
+  "section_renewal_hold",
+  "renewal_auto_hold_enabled",
+  "column_break_renewal_hold",
+  "renewal_hold_grace_days",
   "section_billing",
   "default_company",
   "default_income_account",
@@ -332,6 +336,30 @@
    "label": "Submeter Factura de Renovação Automaticamente",
    "default": "0",
    "description": "Se activo, a factura de renovação é submetida imediatamente. Caso contrário, fica em Rascunho."
+  },
+  {
+   "fieldname": "section_renewal_hold",
+   "fieldtype": "Section Break",
+   "label": "Bloqueio por Falta de Renovação"
+  },
+  {
+   "fieldname": "renewal_auto_hold_enabled",
+   "fieldtype": "Check",
+   "label": "Activar Bloqueio Automático por Falta de Renovação",
+   "default": "0",
+   "description": "Se activo, alunos sem renovação paga após o início do ano lectivo (+ dias de tolerância) são automaticamente colocados em estado Pendente de Renovação e perdem a vaga na turma."
+  },
+  {
+   "fieldname": "column_break_renewal_hold",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "renewal_hold_grace_days",
+   "fieldtype": "Int",
+   "label": "Dias de Tolerância (Renovação)",
+   "default": "0",
+   "depends_on": "eval:doc.renewal_auto_hold_enabled",
+   "description": "Número de dias após o início do ano lectivo antes de bloquear alunos sem renovação. 0 = bloqueia no próprio dia de início."
   },
   {
    "fieldname": "section_billing",

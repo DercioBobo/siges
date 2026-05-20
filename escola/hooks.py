@@ -83,6 +83,7 @@ scheduler_events = {
         "escola.escola.doctype.student.student.update_all_student_ages",
         "escola.escola.doctype.billing_schedule.billing_schedule.run_due_schedules",
         "escola.escola.doctype.report_card.report_card.refresh_all_report_cards",
+        "escola.escola.renewal_hold.apply_renewal_hold",
     ],
 }
 
