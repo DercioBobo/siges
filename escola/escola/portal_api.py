@@ -295,6 +295,19 @@ def get_student_invoices(student):
 
 
 # ---------------------------------------------------------------------------
+# Student Hub — Previsão de Pagamentos
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_billing_forecast(student):
+    guardian = _get_guardian()
+    _assert_owns_student(guardian.name, student)
+
+    from escola.escola.billing_forecast import get_student_forecast
+    return get_student_forecast(student)
+
+
+# ---------------------------------------------------------------------------
 # Profile
 # ---------------------------------------------------------------------------
 

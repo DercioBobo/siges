@@ -83,6 +83,14 @@ function _inject_student_styles() {
 .srn-banner.renewed .srn-link { background: #059669; color: #fff; }
 .srn-banner.pending .srn-link { background: #d97706; color: #fff; }
 
+/* ── Forecast modal ──────────────────────────── */
+.sfrc-summary { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.sfrc-stat { border-radius:10px; padding:14px 16px; }
+.sfrc-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; opacity:.75; margin-bottom:6px; }
+.sfrc-stat-val { font-size:20px; font-weight:800; line-height:1; }
+.sfrc-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px; white-space:nowrap; }
+.sfrc-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
 /* ── Invoice modal ───────────────────────────── */
 .sinv-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
 .sinv-card { border-radius:10px; padding:14px 16px; }
@@ -147,9 +155,10 @@ function _show_actions_modal(frm) {
 	const alreadyRenewed  = inRenewalPeriod && frm._renewal_status.renewal;
 
 	const ver = [
-		{ id: "boletins",  ico: "📋", label: __("Boletins"),         color: "#4f46e5", bg: "#eef2ff" },
-		{ id: "facturas",  ico: "🧾", label: __("Facturas"),          color: "#059669", bg: "#d1fae5" },
-		{ id: "historial", ico: "🕐", label: __("Ver Historial"),     color: "#7c3aed", bg: "#f5f3ff" },
+		{ id: "boletins",  ico: "📋", label: __("Boletins"),          color: "#4f46e5", bg: "#eef2ff" },
+		{ id: "facturas",  ico: "🧾", label: __("Facturas"),           color: "#059669", bg: "#d1fae5" },
+		{ id: "previsao",  ico: "📅", label: __("Previsão Financeira"),color: "#0891b2", bg: "#ecfeff" },
+		{ id: "historial", ico: "🕐", label: __("Ver Historial"),      color: "#7c3aed", bg: "#f5f3ff" },
 		...(inRenewalPeriod ? [{
 			id:    alreadyRenewed ? "ver-renovacao" : "nova-renovacao",
 			ico:   alreadyRenewed ? "✓" : "🔄",
@@ -202,6 +211,7 @@ function _show_actions_modal(frm) {
 				frappe.set_route("boletim-aluno");
 				break;
 			case "facturas":          _show_invoices_modal(frm); break;
+			case "previsao":          _show_forecast_modal(frm); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
 			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
@@ -613,6 +623,128 @@ function _render_invoices(invoices, summary, student_name) {
   </div>
   <div class="sinv-footer">
     <a href="${listUrl}" target="_blank">↗ ${__("Abrir lista completa")}</a>
+  </div>
+</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Forecast modal
+// ---------------------------------------------------------------------------
+
+const _FORECAST_STATUS = {
+	"Previsto":  { bg: "#f1f5f9", fg: "#475569", dot: "#94a3b8" },
+	"Rascunho":  { bg: "#f3f4f6", fg: "#6b7280", dot: "#9ca3af" },
+	"Facturado": { bg: "#fef3c7", fg: "#92400e", dot: "#f59e0b" },
+	"Pago":      { bg: "#d1fae5", fg: "#065f46", dot: "#10b981" },
+};
+
+async function _show_forecast_modal(frm) {
+	_inject_student_styles();
+
+	const d = new frappe.ui.Dialog({
+		title: `📅 ${__("Previsão Financeira")} · ${frm.doc.full_name}`,
+		size:  "extra-large",
+	});
+	d.$body.css("padding", "0");
+	d.$body.html(`<div style="padding:24px;color:#9ca3af;font-size:13px;">${__("A carregar previsão…")}</div>`);
+	d.set_secondary_action_label(__("Fechar"));
+	d.set_secondary_action(() => d.hide());
+	d.$wrapper.find(".btn-modal-primary").hide();
+	d.show();
+
+	const r = await frappe.call({
+		method: "escola.escola.billing_forecast.get_student_forecast",
+		args:   { student_name: frm.doc.name },
+	});
+
+	if (r.exc || !r.message) {
+		d.$body.html(`<div style="padding:24px;color:#ef4444;font-size:13px;">${__("Não foi possível carregar a previsão.")}</div>`);
+		return;
+	}
+
+	const fc = r.message;
+	d.$body.html(_render_forecast(fc));
+}
+
+function _render_forecast(fc) {
+	const fmt = v => format_currency(v);
+	const s   = fc.summary || {};
+
+	if (!fc.periods || !fc.periods.length) {
+		return `<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px;">
+			${__("Nenhum período de facturação encontrado para o ano lectivo actual.")}
+		</div>`;
+	}
+
+	const summaryHtml = `
+<div class="sfrc-summary">
+  <div class="sfrc-stat" style="background:#eff6ff;color:#1e40af;">
+    <div class="sfrc-stat-label">${__("Total Previsto")}</div>
+    <div class="sfrc-stat-val">${fmt(s.total_expected)}</div>
+    <div style="font-size:11px;margin-top:4px;opacity:.7;">${fc.academic_year || ""}</div>
+  </div>
+  <div class="sfrc-stat" style="background:#f0fdf4;color:#166534;">
+    <div class="sfrc-stat-label">${__("Pago")}</div>
+    <div class="sfrc-stat-val">${fmt(s.total_paid)}</div>
+    <div style="font-size:11px;margin-top:4px;opacity:.7;">${s.count_pago || 0} ${__("per.")}</div>
+  </div>
+  <div class="sfrc-stat" style="background:${(s.total_outstanding || 0) > 0 ? "#fef2f2" : "#f8fafc"};color:${(s.total_outstanding || 0) > 0 ? "#991b1b" : "#374151"};">
+    <div class="sfrc-stat-label">${__("Em Dívida")}</div>
+    <div class="sfrc-stat-val">${fmt(s.total_outstanding)}</div>
+    <div style="font-size:11px;margin-top:4px;opacity:.7;">${s.count_facturado || 0} ${__("per.")}</div>
+  </div>
+  <div class="sfrc-stat" style="background:#f8fafc;color:#64748b;">
+    <div class="sfrc-stat-label">${__("A Emitir")}</div>
+    <div class="sfrc-stat-val">${fmt(s.total_previsto)}</div>
+    <div style="font-size:11px;margin-top:4px;opacity:.7;">${s.count_previsto || 0} ${__("per.")}</div>
+  </div>
+</div>`;
+
+	const today = frappe.datetime.get_today();
+	const rows  = fc.periods.map(p => {
+		const st = _FORECAST_STATUS[p.status] || _FORECAST_STATUS["Previsto"];
+		const isPastDue = p.due_date < today && p.status === "Facturado";
+		const rowBg     = isPastDue ? "background:#fff5f5;" : "";
+		const invLink   = p.invoice_name
+			? `<a class="sinv-link" href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" target="_blank">${frappe.utils.escape_html(p.invoice_name)}</a>`
+			: "<span style='color:#cbd5e1;'>—</span>";
+		const amtDisplay = p.status === "Pago"
+			? `<span style="color:#059669;font-weight:600;">${fmt(p.amount)}</span>`
+			: p.status === "Facturado"
+				? `<span style="color:#92400e;font-weight:600;">${fmt(p.outstanding)}</span>`
+				: `<span style="color:#64748b;">${fmt(p.amount)}</span>`;
+		return `<tr style="${rowBg}">
+			<td style="font-weight:600;">${frappe.utils.escape_html(p.period_label)}</td>
+			<td style="color:#64748b;">${frappe.utils.escape_html(p.billing_mode)}</td>
+			<td style="color:${isPastDue ? "#dc2626" : "#374151"};">${p.due_date}</td>
+			<td class="num">${amtDisplay}</td>
+			<td>
+				<span class="sfrc-badge" style="background:${st.bg};color:${st.fg};">
+					<span class="sfrc-dot" style="background:${st.dot};"></span>
+					${__(p.status)}
+				</span>
+			</td>
+			<td>${invLink}</td>
+		</tr>`;
+	}).join("");
+
+	return `
+<div style="padding:24px;">
+  ${summaryHtml}
+  <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;">
+    <table class="sinv-table">
+      <thead>
+        <tr>
+          <th>${__("Período")}</th>
+          <th>${__("Modo")}</th>
+          <th>${__("Vencimento")}</th>
+          <th class="num">${__("Valor")}</th>
+          <th>${__("Estado")}</th>
+          <th>${__("Factura")}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>
 </div>`;
 }

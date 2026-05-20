@@ -570,7 +570,11 @@
 
     // ── FINANCEIRO ────────────────────────────────────────────────────────────
     async function renderFinanceiro(panel) {
-      const d = await api('get_student_invoices', { student: STUDENT });
+      // Fetch invoices and forecast in parallel
+      const [d, fc] = await Promise.all([
+        api('get_student_invoices',  { student: STUDENT }),
+        api('get_billing_forecast',  { student: STUDENT }).catch(() => null),
+      ]);
 
       const fmtMZN = v => new Intl.NumberFormat('pt-MZ', { style:'currency', currency:'MZN', minimumFractionDigits:2 }).format(v || 0);
 
@@ -608,40 +612,125 @@
           </div>
         </div>`;
 
-      if (!d.invoices || d.invoices.length === 0) {
-        panel.innerHTML = summaryHtml + card('Facturas', empty('Nenhuma factura registada.'));
-        return;
-      }
+      const invSection = (() => {
+        if (!d.invoices || d.invoices.length === 0) {
+          return card('Facturas', empty('Nenhuma factura registada.'));
+        }
+        const invRows = d.invoices.map(inv => {
+          const overdue = inv.status === 'Overdue' || (inv.outstanding_amount > 0 && inv.status !== 'Paid');
+          return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 ${overdue ? 'bg-red-50/30':''}">
+            <td class="py-3 px-4 text-sm text-slate-600">${inv.posting_date || '—'}</td>
+            <td class="py-3 px-4 text-sm ${overdue?'text-red-600 font-medium':'text-slate-500'}">${inv.due_date || '—'}</td>
+            <td class="py-3 px-4 text-sm text-right font-medium text-slate-700">${fmtMZN(inv.grand_total)}</td>
+            <td class="py-3 px-4 text-sm text-right ${inv.outstanding_amount > 0 ?'text-red-600 font-semibold':'text-green-600'}">${fmtMZN(inv.outstanding_amount)}</td>
+            <td class="py-3 px-4 text-center">${invoiceStatusBadge(inv.status)}</td>
+          </tr>`;
+        }).join('');
+        return `
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-100">
+              <h3 class="text-base font-semibold text-slate-700">Facturas</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100">
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Emissão</th>
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Vencimento</th>
+                  <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Total</th>
+                  <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Em Dívida</th>
+                  <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Estado</th>
+                </tr></thead>
+                <tbody>${invRows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      })();
 
-      const invRows = d.invoices.map(inv => {
-        const overdue = inv.status === 'Overdue' || (inv.outstanding_amount > 0 && inv.status !== 'Paid');
-        return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 ${overdue ? 'bg-red-50/30':''}">
-          <td class="py-3 px-4 text-sm text-slate-600">${inv.posting_date || '—'}</td>
-          <td class="py-3 px-4 text-sm ${overdue?'text-red-600 font-medium':'text-slate-500'}">${inv.due_date || '—'}</td>
-          <td class="py-3 px-4 text-sm text-right font-medium text-slate-700">${fmtMZN(inv.grand_total)}</td>
-          <td class="py-3 px-4 text-sm text-right ${inv.outstanding_amount > 0 ?'text-red-600 font-semibold':'text-green-600'}">${fmtMZN(inv.outstanding_amount)}</td>
-          <td class="py-3 px-4 text-center">${invoiceStatusBadge(inv.status)}</td>
-        </tr>`;
-      }).join('');
+      const forecastSection = (() => {
+        if (!fc || !fc.periods || !fc.periods.length) return '';
 
-      panel.innerHTML = summaryHtml + `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div class="px-5 py-3 border-b border-slate-100">
-            <h3 class="text-base font-semibold text-slate-700">Facturas</h3>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr class="border-b border-slate-100">
-                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Emissão</th>
-                <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Vencimento</th>
-                <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Total</th>
-                <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Em Dívida</th>
-                <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Estado</th>
-              </tr></thead>
-              <tbody>${invRows}</tbody>
-            </table>
-          </div>
-        </div>`;
+        const FORECAST_STATUS = {
+          'Previsto':  { bg: 'bg-slate-100',  text: 'text-slate-500',  dot: 'bg-slate-300'  },
+          'Rascunho':  { bg: 'bg-gray-100',   text: 'text-gray-500',   dot: 'bg-gray-400'   },
+          'Facturado': { bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-400'  },
+          'Pago':      { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
+        };
+
+        const today = new Date().toISOString().slice(0, 10);
+        const s = fc.summary;
+
+        const summaryCards = `
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 min-w-[130px]">
+              <div class="text-xs text-slate-400 mb-0.5">Total Previsto</div>
+              <div class="text-base font-bold text-slate-700">${fmtMZN(s.total_expected)}</div>
+            </div>
+            <div class="rounded-xl border border-green-100 bg-green-50 px-4 py-3 min-w-[130px]">
+              <div class="text-xs text-green-600 mb-0.5">Pago</div>
+              <div class="text-base font-bold text-green-700">${fmtMZN(s.total_paid)}</div>
+            </div>
+            ${s.total_outstanding > 0 ? `
+            <div class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 min-w-[130px]">
+              <div class="text-xs text-amber-600 mb-0.5">Em Dívida</div>
+              <div class="text-base font-bold text-amber-700">${fmtMZN(s.total_outstanding)}</div>
+            </div>` : ''}
+            ${s.total_previsto > 0 ? `
+            <div class="rounded-xl border border-slate-100 bg-white px-4 py-3 min-w-[130px]">
+              <div class="text-xs text-slate-400 mb-0.5">A Emitir</div>
+              <div class="text-base font-bold text-slate-500">${fmtMZN(s.total_previsto)}</div>
+            </div>` : ''}
+          </div>`;
+
+        const rows = fc.periods.map(p => {
+          const st = FORECAST_STATUS[p.status] || FORECAST_STATUS['Previsto'];
+          const isPast = p.due_date < today && p.status !== 'Pago';
+          const rowCls = isPast && p.status === 'Facturado' ? 'bg-red-50/30' : '';
+          const invLink = p.invoice_name
+            ? `<a href="/app/sales-invoice/${encodeURIComponent(p.invoice_name)}" class="text-[#024ba5] hover:underline text-xs font-medium" target="_blank">${p.invoice_name}</a>`
+            : '<span class="text-slate-300 text-xs">—</span>';
+          const amtHtml = p.status === 'Pago'
+            ? `<span class="text-green-600 font-semibold">${fmtMZN(p.amount)}</span>`
+            : p.status === 'Facturado'
+              ? `<span class="text-amber-700 font-semibold">${fmtMZN(p.outstanding)}</span>`
+              : `<span class="text-slate-500">${fmtMZN(p.amount)}</span>`;
+          return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${rowCls}">
+            <td class="py-3 px-4 text-sm text-slate-700 font-medium">${p.period_label}</td>
+            <td class="py-3 px-4 text-xs text-slate-400">${p.billing_mode}</td>
+            <td class="py-3 px-4 text-xs text-slate-500">${p.due_date}</td>
+            <td class="py-3 px-4 text-right text-sm">${amtHtml}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${st.bg} ${st.text}">
+                <span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${p.status}
+              </span>
+            </td>
+            <td class="py-3 px-4">${invLink}</td>
+          </tr>`;
+        }).join('');
+
+        return `
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-5">
+            <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-base font-semibold text-slate-700">Previsão de Pagamentos</h3>
+              <span class="text-xs text-slate-400">${fc.academic_year || ''}</span>
+            </div>
+            <div class="px-5 py-4">${summaryCards}</div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100 bg-slate-50/50">
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Período</th>
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Modo</th>
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Vencimento</th>
+                  <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Valor</th>
+                  <th class="py-2.5 px-4 text-center text-xs font-medium text-slate-400">Estado</th>
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Factura</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      })();
+
+      panel.innerHTML = summaryHtml + `<div class="space-y-0">${invSection}${forecastSection}</div>`;
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
