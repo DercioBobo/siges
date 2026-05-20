@@ -135,7 +135,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Estado",
-   "options": "\nRascunho\nGerado\nCancelado",
+   "options": "\nRascunho\nGerado\nSem Facturas\nCancelado",
    "default": "Rascunho",
    "read_only": 1,
    "in_list_view": 1
