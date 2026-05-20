@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "sb_id",
+  "exception_name",
+  "cb_id",
+  "is_active",
+  "sb_period",
+  "applies_from",
+  "cb_period",
+  "applies_until",
+  "sb_config",
+  "extended_due_date",
+  "cb_config",
+  "disable_penalties",
+  "sb_reason",
+  "reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Naming Series",
+   "options": "PEXC-.YYYY.-.####"
+  },
+  {
+   "fieldname": "sb_id",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "fieldname": "exception_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Designação",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "cb_id",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "default": "1",
+   "in_list_view": 1,
+   "label": "Activa"
+  },
+  {
+   "fieldname": "sb_period",
+   "fieldtype": "Section Break",
+   "label": "Período de Vigência"
+  },
+  {
+   "fieldname": "applies_from",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Válida de",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_period",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "applies_until",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Válida até",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sb_config",
+   "fieldtype": "Section Break",
+   "label": "Configuração do Pagamento"
+  },
+  {
+   "fieldname": "extended_due_date",
+   "fieldtype": "Date",
+   "label": "Nova Data de Vencimento",
+   "reqd": 1,
+   "description": "Data de vencimento aplicada nas facturas geradas durante este período excepcional."
+  },
+  {
+   "fieldname": "cb_config",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "disable_penalties",
+   "fieldtype": "Check",
+   "label": "Suspender Multas",
+   "description": "Se activo, nenhuma multa por atraso será calculada ou adicionada às facturas deste ciclo."
+  },
+  {
+   "fieldname": "sb_reason",
+   "fieldtype": "Section Break",
+   "label": "Motivo"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Motivo / Observações",
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Payment Exception",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Secretaria Escolar"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "exception_name"
+}

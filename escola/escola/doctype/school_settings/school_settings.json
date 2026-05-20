@@ -28,6 +28,14 @@
   "section_enrollment",
   "enrollment_requires_guardian",
   "default_max_students_per_class",
+  "section_enrollment_invoice",
+  "auto_invoice_on_enrollment",
+  "enrollment_fee_item_code",
+  "enrollment_fee_amount",
+  "column_break_enrollment_fee",
+  "enrollment_is_pos",
+  "enrollment_pos_profile",
+  "auto_submit_enrollment_invoice",
   "section_renewal",
   "renewal_period_start",
   "renewal_period_end",
@@ -36,6 +44,7 @@
   "renewal_fee_amount",
   "renewal_pos_profile",
   "renewal_is_pos",
+  "auto_submit_renewal_invoice",
   "section_billing",
   "default_company",
   "default_income_account",
@@ -205,6 +214,62 @@
    "description": "Capacidade máxima padrão ao criar novas turmas. 0 = sem limite."
   },
   {
+   "fieldname": "section_enrollment_invoice",
+   "fieldtype": "Section Break",
+   "label": "Factura de Inscrição"
+  },
+  {
+   "fieldname": "auto_invoice_on_enrollment",
+   "fieldtype": "Check",
+   "label": "Gerar Factura Automática na Matrícula",
+   "default": "1",
+   "description": "Se activo, uma factura de inscrição é gerada automaticamente ao submeter a Inscrição."
+  },
+  {
+   "fieldname": "enrollment_fee_item_code",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Item da Taxa de Inscrição",
+   "depends_on": "eval:doc.auto_invoice_on_enrollment",
+   "description": "Item utilizado na factura gerada automaticamente ao submeter uma Inscrição."
+  },
+  {
+   "fieldname": "enrollment_fee_amount",
+   "fieldtype": "Currency",
+   "label": "Valor da Taxa de Inscrição",
+   "default": "0",
+   "depends_on": "eval:doc.auto_invoice_on_enrollment",
+   "description": "Valor cobrado na taxa de inscrição. 0 = usa o preço do item."
+  },
+  {
+   "fieldname": "column_break_enrollment_fee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enrollment_is_pos",
+   "fieldtype": "Check",
+   "label": "Factura de Inscrição como POS",
+   "default": "0",
+   "depends_on": "eval:doc.auto_invoice_on_enrollment",
+   "description": "Se activo, a factura de inscrição é marcada como POS."
+  },
+  {
+   "fieldname": "enrollment_pos_profile",
+   "fieldtype": "Link",
+   "label": "Perfil POS para Inscrições",
+   "options": "POS Profile",
+   "depends_on": "eval:doc.auto_invoice_on_enrollment && doc.enrollment_is_pos",
+   "description": "Perfil POS utilizado nas facturas de inscrição."
+  },
+  {
+   "fieldname": "auto_submit_enrollment_invoice",
+   "fieldtype": "Check",
+   "label": "Submeter Factura de Inscrição Automaticamente",
+   "default": "0",
+   "depends_on": "eval:doc.auto_invoice_on_enrollment",
+   "description": "Se activo, a factura de inscrição é submetida imediatamente. Caso contrário, fica em Rascunho."
+  },
+  {
    "fieldname": "section_renewal",
    "fieldtype": "Section Break",
    "label": "Renovações de Matrícula"
@@ -254,6 +319,13 @@
    "label": "Factura de Renovação como POS",
    "default": "1",
    "description": "Se activo, as facturas geradas na renovação de matrícula são marcadas como POS e incluem os métodos de pagamento indicados."
+  },
+  {
+   "fieldname": "auto_submit_renewal_invoice",
+   "fieldtype": "Check",
+   "label": "Submeter Factura de Renovação Automaticamente",
+   "default": "0",
+   "description": "Se activo, a factura de renovação é submetida imediatamente. Caso contrário, fica em Rascunho."
   },
   {
    "fieldname": "section_billing",

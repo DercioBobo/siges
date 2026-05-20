@@ -180,15 +180,36 @@ def calculate_penalty(invoice_name):
     """
     inv = frappe.db.get_value(
         "Sales Invoice", invoice_name,
-        ["due_date", "grand_total", "outstanding_amount", "docstatus", "escola_student"],
+        ["due_date", "grand_total", "outstanding_amount", "docstatus",
+         "escola_student", "escola_billing_cycle"],
         as_dict=True,
     )
     if not inv:
         frappe.throw(_("Factura não encontrada: {0}").format(invoice_name))
 
+    base = _get_base_total(invoice_name)
+
+    if inv.escola_billing_cycle and frappe.db.get_value(
+        "Billing Cycle", inv.escola_billing_cycle, "penalties_disabled"
+    ):
+        return {
+            "invoice":            invoice_name,
+            "due_date":           str(inv.due_date) if inv.due_date else None,
+            "days_overdue":       0,
+            "periods":            0,
+            "penalty_rate":       0.0,
+            "base_total":         base,
+            "penalty_amount":     0.0,
+            "total_with_penalty": base,
+            "outstanding_amount": inv.outstanding_amount or 0,
+            "docstatus":          inv.docstatus,
+            "financial_status":   "Regular",
+            "alert_level":        0,
+            "penalties_disabled": True,
+        }
+
     settings = _get_settings()
     pd        = _compute_penalty(inv.due_date, settings)
-    base      = _get_base_total(invoice_name)
     penalty   = round(base * pd["penalty_amount_factor"], 2)
 
     return {
@@ -204,6 +225,7 @@ def calculate_penalty(invoice_name):
         "docstatus":          inv.docstatus,
         "financial_status":   _financial_status_from_periods(pd["periods"], settings),
         "alert_level":        _alert_level(pd["periods"], settings),
+        "penalties_disabled": False,
     }
 
 
@@ -220,6 +242,11 @@ def apply_penalty_to_invoice(invoice_name):
         return {"skipped": True, "reason": "penalty_mode_is_dynamic"}
 
     inv = frappe.get_doc("Sales Invoice", invoice_name)
+
+    if inv.escola_billing_cycle and frappe.db.get_value(
+        "Billing Cycle", inv.escola_billing_cycle, "penalties_disabled"
+    ):
+        return {"skipped": True, "reason": "penalties_disabled_by_exception"}
 
     if inv.docstatus != 0:
         frappe.throw(
@@ -440,13 +467,15 @@ def apply_all_pending_penalties():
     try:
         invoices = frappe.db.sql(
             """
-            SELECT name
-            FROM `tabSales Invoice`
-            WHERE docstatus = 0
-              AND outstanding_amount > 0
-              AND due_date < CURDATE()
-              AND escola_billing_cycle IS NOT NULL
-              AND escola_billing_cycle != ''
+            SELECT si.name
+            FROM `tabSales Invoice` si
+            JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
+            WHERE si.docstatus = 0
+              AND si.outstanding_amount > 0
+              AND si.due_date < CURDATE()
+              AND si.escola_billing_cycle IS NOT NULL
+              AND si.escola_billing_cycle != ''
+              AND (bc.penalties_disabled IS NULL OR bc.penalties_disabled = 0)
             """,
             as_dict=True,
         )

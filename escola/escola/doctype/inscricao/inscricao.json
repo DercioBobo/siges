@@ -39,6 +39,7 @@
   "turma_picker_html",
   "section_break_system",
   "student",
+  "sales_invoice",
   "guardian_created"
  ],
  "fields": [
@@ -245,6 +246,14 @@
    "read_only": 1,
    "in_list_view": 1,
    "description": "Preenchido automaticamente após submissão."
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Factura de Inscrição",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "description": "Preenchido automaticamente após submissão, se configurado."
   },
   {
    "fieldname": "guardian_created",

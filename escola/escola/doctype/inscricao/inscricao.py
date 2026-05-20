@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate
+from frappe.utils import add_days, getdate, today
 
 
 class Inscricao(Document):
@@ -18,9 +18,32 @@ class Inscricao(Document):
         guardian_name = self._get_or_create_guardian()
         self._create_student(guardian_name)
         self._create_sga()
+        inv = _create_enrollment_invoice(self)
+        if inv:
+            self.db_set("sales_invoice", inv.name)
+            from escola.escola.invoice_utils import invoice_success_msg
+            frappe.msgprint(
+                invoice_success_msg(inv.name, _("Matrícula confirmada.")),
+                title=_("Matrícula concluída"),
+                indicator="green",
+            )
 
     def on_cancel(self):
         self._close_sga()
+        if self.sales_invoice:
+            inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
+            if inv_status == 0:
+                frappe.delete_doc("Sales Invoice", self.sales_invoice, ignore_permissions=True)
+                self.db_set("sales_invoice", None)
+                frappe.msgprint(_("Factura de inscrição eliminada."), indicator="orange")
+            elif inv_status == 1:
+                frappe.msgprint(
+                    _("A factura <b>{0}</b> já está submetida. Cancele-a manualmente se necessário.").format(
+                        self.sales_invoice
+                    ),
+                    title=_("Factura não cancelada"),
+                    indicator="orange",
+                )
 
     # ------------------------------------------------------------------
 
@@ -150,6 +173,75 @@ class Inscricao(Document):
             sga = frappe.get_doc("Student Group Assignment", sga_name)
             sga.status = "Encerrada"
             sga.save(ignore_permissions=True)
+
+
+def _create_enrollment_invoice(doc):
+    """Create a Sales Invoice for the enrollment fee. Returns the invoice or None."""
+    from escola.escola.doctype.student.student import ensure_customer_for_student
+
+    settings = frappe.get_single("School Settings")
+    if not int(settings.get("auto_invoice_on_enrollment") or 0):
+        return None
+
+    item_code = settings.get("enrollment_fee_item_code")
+    if not item_code:
+        frappe.msgprint(
+            _("Factura de inscrição não gerada: configure o <b>Item da Taxa de Inscrição</b> em Configurações da Escola."),
+            title=_("Item em falta"),
+            indicator="orange",
+        )
+        return None
+
+    try:
+        customer = ensure_customer_for_student(doc.student)
+    except Exception as e:
+        frappe.throw(
+            _("Não foi possível obter o cliente do aluno: {0}").format(str(e)),
+            title=_("Erro ao criar factura"),
+        )
+
+    company = (
+        frappe.db.get_single_value("School Settings", "default_company")
+        or frappe.db.get_single_value("Global Defaults", "default_company")
+    )
+    due_days    = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
+    today_date  = today()
+    due_date    = add_days(today_date, due_days)
+    auto_submit = int(settings.get("auto_submit_enrollment_invoice") or 0)
+    fee_amount  = float(settings.get("enrollment_fee_amount") or 0)
+    is_pos      = int(settings.get("enrollment_is_pos") or 0)
+    pos_profile = settings.get("enrollment_pos_profile") or ""
+    description = _("Taxa de Inscrição — {0}").format(doc.academic_year or "")
+
+    si = frappe.new_doc("Sales Invoice")
+    si.customer     = customer
+    si.company      = company
+    si.posting_date = today_date
+    si.due_date     = due_date
+    si.remarks      = description
+
+    if is_pos and pos_profile:
+        si.is_pos      = 1
+        si.pos_profile = pos_profile
+
+    try:
+        si.escola_student = doc.student
+    except Exception:
+        pass
+
+    si.append("items", {
+        "item_code":   item_code,
+        "item_name":   description,
+        "description": description,
+        "qty":         1,
+        "rate":        fee_amount,
+    })
+
+    si.insert(ignore_permissions=True)
+    if auto_submit:
+        si.submit()
+
+    return si
 
 
 @frappe.whitelist()

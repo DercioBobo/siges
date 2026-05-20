@@ -111,16 +111,25 @@ def _settings_due_days():
 
 def _next_due_day(posting_date, day):
     """Return the next calendar date where day-of-month == day, strictly after posting_date.
-    If that day still lies ahead in the same month, use it; otherwise use next month."""
+    If that day still lies ahead in the same month, use it; otherwise use next month.
+    If the result falls on a Saturday or Sunday, advances to the following Monday
+    so no penalties accrue during the extension."""
     max_same = calendar.monthrange(posting_date.year, posting_date.month)[1]
     candidate = posting_date.replace(day=min(day, max_same))
     if candidate > posting_date:
-        return candidate
-    if posting_date.month == 12:
-        y, m = posting_date.year + 1, 1
+        due = candidate
     else:
-        y, m = posting_date.year, posting_date.month + 1
-    return date(y, m, min(day, calendar.monthrange(y, m)[1]))
+        if posting_date.month == 12:
+            y, m = posting_date.year + 1, 1
+        else:
+            y, m = posting_date.year, posting_date.month + 1
+        due = date(y, m, min(day, calendar.monthrange(y, m)[1]))
+
+    if due.weekday() == 5:      # Saturday → Monday
+        due += timedelta(days=2)
+    elif due.weekday() == 6:    # Sunday → Monday
+        due += timedelta(days=1)
+    return due
 
 
 def _is_due(schedule, today):
@@ -202,6 +211,7 @@ def _next_trigger_date(schedule):
 def _execute_schedule(schedule, today_date):
     """Create a Billing Cycle and generate invoices for this schedule."""
     from escola.escola.doctype.billing_cycle.billing_cycle import generate_invoices
+    from escola.escola.doctype.payment_exception.payment_exception import get_active_exception
 
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
     if not academic_year:
@@ -216,23 +226,36 @@ def _execute_schedule(schedule, today_date):
         due_date = _next_due_day(today_date, payment_due_day)
     else:
         due_date = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
+
+    # Check for an active payment exception — overrides due date and penalty behaviour
+    exception = get_active_exception(today_date)
+    if exception:
+        due_date           = frappe.utils.getdate(exception.extended_due_date)
+        penalties_disabled = int(exception.disable_penalties or 0)
+        exception_ref      = exception.name
+    else:
+        penalties_disabled = 0
+        exception_ref      = None
+
     month_label = today_date.strftime("%m/%Y")
-    cycle_name    = f"{schedule.school_class} · {schedule.billing_mode} · {month_label}"
+    cycle_name  = f"{schedule.school_class} · {schedule.billing_mode} · {month_label}"
 
     # Guard against double execution for the same period
     if frappe.db.exists("Billing Cycle", {"cycle_name": cycle_name}):
         return {"skipped": True, "reason": "already_exists"}
 
     cycle = frappe.get_doc({
-        "doctype":          "Billing Cycle",
-        "cycle_name":       cycle_name,
-        "academic_year":    academic_year,
-        "school_class":     schedule.school_class,
-        "billing_mode":     schedule.billing_mode,
-        "posting_date":     today_date,
-        "due_date":         due_date,
-        "billing_schedule": schedule.name,
-        "status":           "Rascunho",
+        "doctype":            "Billing Cycle",
+        "cycle_name":         cycle_name,
+        "academic_year":      academic_year,
+        "school_class":       schedule.school_class,
+        "billing_mode":       schedule.billing_mode,
+        "posting_date":       today_date,
+        "due_date":           due_date,
+        "billing_schedule":   schedule.name,
+        "status":             "Rascunho",
+        "exception_ref":      exception_ref,
+        "penalties_disabled": penalties_disabled,
     })
     cycle.insert(ignore_permissions=True)
     return generate_invoices(cycle.name)

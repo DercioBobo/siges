@@ -15,11 +15,12 @@ class RenovacaoDeMatricula(Document):
         self._validate_not_duplicate()
 
     def on_submit(self):
+        from escola.escola.invoice_utils import invoice_success_msg
         inv = _create_renewal_invoice(self)
         if inv:
             self.db_set("sales_invoice", inv.name)
             frappe.msgprint(
-                _("Renovação confirmada. Factura <b><a href='/app/sales-invoice/{0}'>{0}</a></b> criada.").format(inv.name),
+                invoice_success_msg(inv.name, _("Renovação confirmada.")),
                 title=_("Renovação concluída"),
                 indicator="green",
             )
@@ -106,7 +107,7 @@ def _create_renewal_invoice(doc):
     due_days    = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
     today_date  = today()
     due_date    = add_days(today_date, due_days)
-    auto_submit = int(settings.get("auto_submit_invoices") or 0)
+    auto_submit = int(settings.get("auto_submit_renewal_invoice") or 0)
     fee_amount  = float(settings.get("renewal_fee_amount") or 0)
     is_pos      = int(settings.get("renewal_is_pos") or 0)
     pos_profile = settings.get("renewal_pos_profile") or "Escola"
