@@ -65,6 +65,16 @@ _CUSTOM_FIELDS = {
             "in_standard_filter": 1,
             "search_index": 1,
         },
+        {
+            "fieldname": "escola_is_addon_invoice",
+            "fieldtype": "Check",
+            "label": "Factura de Extras (Escola)",
+            "insert_after": "escola_advance_payment",
+            "default": "0",
+            "read_only": 1,
+            "no_copy": 1,
+            "print_hide": 1,
+        },
     ],
     "Customer": [
         {

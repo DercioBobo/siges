@@ -37,6 +37,9 @@
   "cb_turma",
   "class_group",
   "turma_picker_html",
+  "section_break_payment",
+  "fee_info_html",
+  "payments",
   "section_break_system",
   "student",
   "sales_invoice",
@@ -230,6 +233,23 @@
    "fieldname": "turma_picker_html",
    "fieldtype": "HTML",
    "label": "Turma Picker"
+  },
+  {
+   "fieldname": "section_break_payment",
+   "fieldtype": "Section Break",
+   "label": "Pagamento"
+  },
+  {
+   "fieldname": "fee_info_html",
+   "fieldtype": "HTML",
+   "label": "Info de Taxa"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Métodos de Pagamento",
+   "options": "Renovacao Payment",
+   "description": "Preencha para gerar a factura como POS com os métodos indicados."
   },
   {
    "fieldname": "section_break_system",

@@ -24,9 +24,11 @@
   "sb_resultado",
   "total_students",
   "total_invoices_created",
+  "total_addon_invoices_created",
   "skipped_count",
   "cb_resultado",
   "total_amount",
+  "total_addon_amount",
   "error_count",
   "sb_generation_errors",
   "generation_errors",
@@ -159,6 +161,12 @@
    "read_only": 1
   },
   {
+   "fieldname": "total_addon_invoices_created",
+   "fieldtype": "Int",
+   "label": "Facturas de Extras",
+   "read_only": 1
+  },
+  {
    "fieldname": "skipped_count",
    "fieldtype": "Int",
    "label": "Ignorados",
@@ -174,6 +182,12 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Valor Total Facturado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_addon_amount",
+   "fieldtype": "Currency",
+   "label": "Valor Total de Extras",
    "read_only": 1
   },
   {

@@ -14,6 +14,7 @@
   "renewal_date",
   "student",
   "section_break_payment",
+  "fee_info_html",
   "payments",
   "section_break_invoice",
   "sales_invoice",
@@ -78,6 +79,11 @@
    "fieldname": "section_break_payment",
    "fieldtype": "Section Break",
    "label": "Pagamento"
+  },
+  {
+   "fieldname": "fee_info_html",
+   "fieldtype": "HTML",
+   "label": "Info de Taxa"
   },
   {
    "fieldname": "payments",

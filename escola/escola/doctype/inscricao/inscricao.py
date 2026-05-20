@@ -237,6 +237,19 @@ def _create_enrollment_invoice(doc):
         "rate":        fee_amount,
     })
 
+    if is_pos:
+        for p in (doc.payments or []):
+            account = frappe.db.get_value(
+                "Mode of Payment Account",
+                {"parent": p.mode_of_payment, "company": company},
+                "default_account",
+            )
+            si.append("payments", {
+                "mode_of_payment": p.mode_of_payment,
+                "amount":          p.amount,
+                "account":         account,
+            })
+
     si.insert(ignore_permissions=True)
     if auto_submit:
         si.submit()

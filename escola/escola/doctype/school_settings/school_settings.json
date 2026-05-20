@@ -74,6 +74,12 @@
   "report_card_footer",
   "column_break_reports",
   "show_averages_on_report_card",
+  "section_sibling_discount",
+  "sibling_discount_enabled",
+  "sibling_discount_threshold",
+  "column_break_sibling",
+  "sibling_discount_percent",
+  "sibling_discount_applies_to_addons",
   "section_portal",
   "guardian_portal_enabled"
  ],
@@ -506,6 +512,46 @@
    "fieldtype": "Check",
    "label": "Mostrar Médias no Boletim",
    "default": "1"
+  },
+  {
+   "fieldname": "section_sibling_discount",
+   "fieldtype": "Section Break",
+   "label": "Desconto de Irmãos"
+  },
+  {
+   "fieldname": "sibling_discount_enabled",
+   "fieldtype": "Check",
+   "label": "Desconto de Irmãos Activo",
+   "default": "1",
+   "description": "Se activo, encarregados com o mínimo de alunos configurado recebem desconto nas propinas."
+  },
+  {
+   "fieldname": "sibling_discount_threshold",
+   "fieldtype": "Int",
+   "label": "Mínimo de Alunos para Desconto",
+   "default": "3",
+   "description": "Número mínimo de alunos activos do mesmo encarregado (no mesmo ano lectivo) para activar o desconto.",
+   "depends_on": "eval:doc.sibling_discount_enabled"
+  },
+  {
+   "fieldname": "column_break_sibling",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sibling_discount_percent",
+   "fieldtype": "Percent",
+   "label": "Percentagem do Desconto (%)",
+   "default": "10",
+   "description": "Desconto aplicado automaticamente às propinas quando o encarregado cumpre o mínimo de alunos.",
+   "depends_on": "eval:doc.sibling_discount_enabled"
+  },
+  {
+   "fieldname": "sibling_discount_applies_to_addons",
+   "fieldtype": "Check",
+   "label": "Desconto Também Aplicável a Extras",
+   "default": "0",
+   "description": "Se activo, o desconto de irmãos também é aplicado nas facturas de serviços extras mensais.",
+   "depends_on": "eval:doc.sibling_discount_enabled"
   },
   {
    "fieldname": "section_portal",

@@ -308,6 +308,21 @@ def get_billing_forecast(student):
 
 
 # ---------------------------------------------------------------------------
+# Student Hub — Serviços Extras
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_addon_services(student):
+    guardian = _get_guardian()
+    _assert_owns_student(guardian.name, student)
+
+    from escola.escola.doctype.mensalidade_extra_do_aluno.mensalidade_extra_do_aluno import (
+        get_active_services_for_student,
+    )
+    return get_active_services_for_student(student)
+
+
+# ---------------------------------------------------------------------------
 # Profile
 # ---------------------------------------------------------------------------
 

@@ -8,6 +8,8 @@ frappe.ui.form.on("Inscricao", {
 
 	refresh(frm) {
 		set_queries(frm);
+		_toggle_payments_grid(frm);
+		_load_fee_info(frm);
 		if (frm.doc.docstatus === 0) {
 			render_turma_picker(frm);
 		}
@@ -52,6 +54,18 @@ frappe.ui.form.on("Inscricao", {
 });
 
 // ---------------------------------------------------------------------------
+// Child table events
+// ---------------------------------------------------------------------------
+
+frappe.ui.form.on("Renovacao Payment", {
+	async mode_of_payment(frm, cdt, cdn) {
+		if (frm.doctype !== "Inscricao" || frm.doc.docstatus !== 0) return;
+		const fee = await frappe.db.get_single_value("School Settings", "enrollment_fee_amount");
+		frappe.model.set_value(cdt, cdn, "amount", parseFloat(fee) || 0);
+	},
+});
+
+// ---------------------------------------------------------------------------
 
 function update_full_name(frm) {
 	const parts = [frm.doc.first_name, frm.doc.last_name].filter(Boolean);
@@ -66,6 +80,52 @@ function set_queries(frm) {
 	if (frm.doc.academic_year) cg_filters.academic_year = frm.doc.academic_year;
 	if (frm.doc.school_class) cg_filters.school_class = frm.doc.school_class;
 	frm.set_query("class_group", () => ({ filters: cg_filters }));
+}
+
+function _toggle_payments_grid(frm) {
+	const editable = frm.doc.docstatus === 0;
+	const grid = frm.get_field("payments").grid;
+	grid.toggle_enable(editable);
+	grid.toggle_add_delete_rows(editable);
+	grid.editable_grid = true;
+
+	if (frm.doc.__islocal && !(frm.doc.payments && frm.doc.payments.length)) {
+		_prefill_payments_from_pos(frm);
+	}
+}
+
+async function _prefill_payments_from_pos(frm) {
+	const pos_profile = await frappe.db.get_single_value("School Settings", "enrollment_pos_profile");
+	if (!pos_profile) return;
+
+	const doc = await frappe.db.get_doc("POS Profile", pos_profile);
+	if (!doc || !doc.payments || !doc.payments.length) return;
+
+	const fee = parseFloat(await frappe.db.get_single_value("School Settings", "enrollment_fee_amount")) || 0;
+	const count = doc.payments.length;
+
+	(doc.payments || []).forEach((p, i) => {
+		const row = frm.add_child("payments");
+		row.mode_of_payment = p.mode_of_payment;
+		row.amount = count === 1 ? fee : (i < count - 1 ? Math.floor(fee / count * 100) / 100 : 0);
+	});
+	frm.refresh_field("payments");
+}
+
+async function _load_fee_info(frm) {
+	const wrapper = frm.fields_dict.fee_info_html?.$wrapper;
+	if (!wrapper) return;
+	const amount = await frappe.db.get_single_value("School Settings", "enrollment_fee_amount");
+	if (amount && parseFloat(amount) > 0) {
+		const fmt = frappe.format(parseFloat(amount), { fieldtype: "Currency" });
+		wrapper.html(
+			`<p style="color:var(--text-muted);font-size:13px;margin:0 0 8px;">
+				${__("Valor da Taxa de Inscrição")}: <strong style="color:var(--text-color);">${fmt}</strong>
+			</p>`
+		);
+	} else {
+		wrapper.html("");
+	}
 }
 
 // ---------------------------------------------------------------------------

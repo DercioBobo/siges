@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "autoname": "field:service_name",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "service_name",
+  "current_amount",
+  "cb_main",
+  "item_code",
+  "sb_history",
+  "price_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "service_name",
+   "fieldtype": "Data",
+   "label": "Nome do Serviço",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "current_amount",
+   "fieldtype": "Currency",
+   "label": "Valor Actual (MZN)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item de Factura",
+   "options": "Item",
+   "description": "Item ERPNext utilizado nas linhas da factura de extras. Se em branco, usa o Item Padrão de Propina das Configurações."
+  },
+  {
+   "fieldname": "sb_history",
+   "fieldtype": "Section Break",
+   "label": "Histórico de Preços",
+   "collapsible": 1,
+   "depends_on": "eval:doc.price_history"
+  },
+  {
+   "fieldname": "price_history",
+   "fieldtype": "Small Text",
+   "label": "Registo de Alterações de Preço",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Serviço Extra",
+ "naming_rule": "By \"service_name\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Secretaria Escolar",
+   "write": 1
+  }
+ ],
+ "sort_field": "service_name",
+ "sort_order": "ASC",
+ "title_field": "service_name"
+}

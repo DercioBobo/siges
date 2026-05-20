@@ -570,10 +570,11 @@
 
     // ── FINANCEIRO ────────────────────────────────────────────────────────────
     async function renderFinanceiro(panel) {
-      // Fetch invoices and forecast in parallel
-      const [d, fc] = await Promise.all([
+      // Fetch invoices, forecast, and addon services in parallel
+      const [d, fc, addons] = await Promise.all([
         api('get_student_invoices',  { student: STUDENT }),
         api('get_billing_forecast',  { student: STUDENT }).catch(() => null),
+        api('get_addon_services',    { student: STUDENT }).catch(() => []),
       ]);
 
       const fmtMZN = v => new Intl.NumberFormat('pt-MZ', { style:'currency', currency:'MZN', minimumFractionDigits:2 }).format(v || 0);
@@ -732,7 +733,33 @@
           </div>`;
       })();
 
-      panel.innerHTML = summaryHtml + `<div class="space-y-0">${invSection}${forecastSection}</div>`;
+      const addonsSection = (() => {
+        if (!addons || !addons.length) return '';
+        const total = addons.reduce((s, r) => s + (r.current_amount || 0), 0);
+        const rows = addons.map(s => `
+          <tr class="border-b border-slate-50 hover:bg-slate-50/40">
+            <td class="py-3 px-4 text-sm font-medium text-slate-700">${s.service_name || s.service}</td>
+            <td class="py-3 px-4 text-sm text-right font-semibold text-teal-700">${fmtMZN(s.current_amount)}</td>
+          </tr>`).join('');
+        return `
+          <div class="bg-white rounded-2xl shadow-sm border border-teal-100 overflow-hidden mb-5">
+            <div class="px-5 py-3 border-b border-teal-100 bg-teal-50 flex items-center justify-between">
+              <h3 class="text-base font-semibold text-teal-800">Serviços Extras Activos</h3>
+              <span class="text-sm font-bold text-teal-700">${fmtMZN(total)}<span class="text-xs font-normal text-teal-500 ml-1">/ mês</span></span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100">
+                  <th class="py-2.5 px-4 text-left text-xs font-medium text-slate-400">Serviço</th>
+                  <th class="py-2.5 px-4 text-right text-xs font-medium text-slate-400">Valor/Mês</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      })();
+
+      panel.innerHTML = summaryHtml + addonsSection + `<div class="space-y-0">${invSection}${forecastSection}</div>`;
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────

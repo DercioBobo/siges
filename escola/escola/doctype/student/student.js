@@ -158,6 +158,7 @@ function _show_actions_modal(frm) {
 		{ id: "boletins",  ico: "📋", label: __("Boletins"),          color: "#4f46e5", bg: "#eef2ff" },
 		{ id: "facturas",  ico: "🧾", label: __("Facturas"),           color: "#059669", bg: "#d1fae5" },
 		{ id: "previsao",  ico: "📅", label: __("Previsão Financeira"),color: "#0891b2", bg: "#ecfeff" },
+		{ id: "servicos",  ico: "🔧", label: __("Serviços Extras"),    color: "#0f766e", bg: "#f0fdfa" },
 		{ id: "historial", ico: "🕐", label: __("Ver Historial"),      color: "#7c3aed", bg: "#f5f3ff" },
 		...(inRenewalPeriod ? [{
 			id:    alreadyRenewed ? "ver-renovacao" : "nova-renovacao",
@@ -212,6 +213,7 @@ function _show_actions_modal(frm) {
 				break;
 			case "facturas":          _show_invoices_modal(frm); break;
 			case "previsao":          _show_forecast_modal(frm); break;
+			case "servicos":          _show_services_modal(frm); break;
 			case "historial":         _show_timeline_modal(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
 			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
@@ -625,6 +627,76 @@ function _render_invoices(invoices, summary, student_name) {
     <a href="${listUrl}" target="_blank">↗ ${__("Abrir lista completa")}</a>
   </div>
 </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Services modal (Mensalidade Extra do Aluno)
+// ---------------------------------------------------------------------------
+
+async function _show_services_modal(frm) {
+	_inject_student_styles();
+
+	const d = new frappe.ui.Dialog({
+		title: `🔧 ${__("Serviços Extras")} · ${frm.doc.full_name}`,
+		size: "large",
+	});
+	d.$body.css("padding", "0");
+	d.$body.html(`<div style="padding:24px;color:#9ca3af;font-size:13px;">${__("A carregar serviços…")}</div>`);
+	d.set_secondary_action_label(__("Fechar"));
+	d.set_secondary_action(() => d.hide());
+	d.$wrapper.find(".btn-modal-primary").hide();
+	d.show();
+
+	const r = await frappe.call({
+		method: "escola.escola.doctype.mensalidade_extra_do_aluno.mensalidade_extra_do_aluno.get_active_services_for_student",
+		args: { student: frm.doc.name },
+	});
+
+	const services = r.message || [];
+	const fmt = v => format_currency(v);
+
+	if (!services.length) {
+		const mea = await frappe.db.get_value("Mensalidade Extra do Aluno", { student: frm.doc.name }, "name").catch(() => null);
+		const linkHtml = mea && mea.message
+			? `<br><a style="color:#2563eb;font-size:12px;" href="/app/mensalidade-extra-do-aluno/${encodeURIComponent(mea.message.name)}">${__("Abrir registo →")}</a>`
+			: `<br><a style="color:#2563eb;font-size:12px;" href="/app/mensalidade-extra-do-aluno/new-mensalidade-extra-do-aluno">${__("Criar registo →")}</a>`;
+		d.$body.html(`<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px;">${__("Sem serviços extras activos.")}${linkHtml}</div>`);
+		return;
+	}
+
+	const total = services.reduce((s, r) => s + r.current_amount, 0);
+	const mea_name = services[0] && await frappe.db.get_value("Mensalidade Extra do Aluno", { student: frm.doc.name }, "name");
+
+	const rows = services.map(s => `
+		<tr>
+			<td style="padding:10px 14px;font-size:13px;font-weight:500;color:#1e293b;">${frappe.utils.escape_html(s.service_name)}</td>
+			<td style="padding:10px 14px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;">${fmt(s.current_amount)}</td>
+		</tr>`
+	).join("");
+
+	const docUrl = mea_name && mea_name.message
+		? `/app/mensalidade-extra-do-aluno/${encodeURIComponent(mea_name.message.name)}`
+		: null;
+
+	d.$body.html(`
+	<div style="padding:24px;">
+		<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+			<div style="font-size:13px;color:#64748b;">${__("Serviços activos neste momento")}</div>
+			<div style="font-size:18px;font-weight:800;color:#0f766e;">${fmt(total)} <span style="font-size:12px;font-weight:500;color:#94a3b8;">/ mês</span></div>
+		</div>
+		<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+			<table style="width:100%;border-collapse:collapse;">
+				<thead>
+					<tr style="background:#f0fdfa;">
+						<th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Serviço")}</th>
+						<th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Valor/Mês")}</th>
+					</tr>
+				</thead>
+				<tbody style="font-size:13px;">${rows}</tbody>
+			</table>
+		</div>
+		${docUrl ? `<div style="margin-top:12px;text-align:right;"><a href="${docUrl}" target="_blank" style="font-size:12px;color:#6366f1;text-decoration:none;">↗ ${__("Gerir serviços")}</a></div>` : ""}
+	</div>`);
 }
 
 // ---------------------------------------------------------------------------

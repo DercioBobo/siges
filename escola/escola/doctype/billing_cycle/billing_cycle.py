@@ -73,6 +73,7 @@ def generate_invoices(doc_name):
 
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
     auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
+    settings = frappe.get_single("School Settings")
 
     _MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
               "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
@@ -138,15 +139,87 @@ def generate_invoices(doc_name):
                 },
             )
 
+        sibling_discount = _get_sibling_discount(sga.student, cycle.academic_year, settings)
+        if sibling_discount:
+            si.additional_discount_percentage = sibling_discount
+
         si.insert(ignore_permissions=True)
         if auto_submit:
             si.submit()
         created += 1
         total_amount += si.grand_total
 
+    # --- Phase 3: create addon invoices for students with active extras ---
+    sibling_discount_addon = int(settings.get("sibling_discount_applies_to_addons") or 0)
+    default_fee_item = frappe.db.get_single_value("School Settings", "default_fee_item_code") or "Propina"
+    addon_created = 0
+    addon_amount = 0.0
+    addon_errors = []
+
+    for sga in sgAs:
+        extras = _get_active_extras(sga.student, cycle.posting_date)
+        if not extras:
+            continue
+
+        if _addon_invoice_exists(sga.student, cycle.posting_date):
+            continue
+
+        # Re-use customer from Phase 1 or look it up
+        customer = customer_map.get(sga.student)
+        if not customer:
+            try:
+                customer = ensure_customer_for_student(sga.student)
+            except Exception as e:
+                addon_errors.append(_("Extras — cliente não criado para {0}: {1}").format(sga.student, str(e)))
+                continue
+
+        si = frappe.new_doc("Sales Invoice")
+        si.customer = customer
+        si.company = default_company
+        si.posting_date = cycle.posting_date
+        si.due_date = cycle.due_date
+        si.remarks = "Extras Mensais | Aluno: {student} | Ano: {year}".format(
+            student=sga.student,
+            year=cycle.academic_year or "",
+        )
+
+        try:
+            si.escola_billing_cycle = cycle.name
+            si.escola_student = sga.student
+            si.escola_mes_referencia = mes_referencia
+            si.escola_encarregado = frappe.db.get_value("Student", sga.student, "primary_guardian")
+            si.escola_is_addon_invoice = 1
+        except Exception:
+            pass
+
+        for ext in extras:
+            item_code = ext.get("item_code") or default_fee_item
+            desc = "{svc} - {mes}".format(svc=ext["service_name"], mes=mes_referencia) if mes_referencia else ext["service_name"]
+            si.append("items", {
+                "item_code": item_code,
+                "item_name": ext["service_name"],
+                "qty": 1,
+                "rate": ext["current_amount"],
+                "description": desc,
+            })
+
+        if sibling_discount_addon:
+            disc = _get_sibling_discount(sga.student, cycle.academic_year, settings)
+            if disc:
+                si.additional_discount_percentage = disc
+
+        try:
+            si.insert(ignore_permissions=True)
+            if auto_submit:
+                si.submit()
+            addon_created += 1
+            addon_amount += si.grand_total
+        except Exception as e:
+            addon_errors.append("Extras {0}: {1}".format(sga.student, str(e)))
+
     _refresh_cycle_summary(cycle)
 
-    if created > 0:
+    if created > 0 or addon_created > 0:
         cycle.db_set("status", "Gerado")
         if cycle.billing_schedule:
             frappe.db.set_value(
@@ -158,15 +231,18 @@ def generate_invoices(doc_name):
         # Mark the cycle so it doesn't appear as a forgotten draft.
         cycle.db_set("status", "Sem Facturas")
 
+    all_errors = pre_errors + addon_errors
     cycle.db_set("skipped_count", skipped)
-    cycle.db_set("error_count", len(pre_errors))
-    cycle.db_set("generation_errors", "\n".join(pre_errors) if pre_errors else "")
+    cycle.db_set("error_count", len(all_errors))
+    cycle.db_set("generation_errors", "\n".join(all_errors) if all_errors else "")
 
     return {
         "created": created,
         "skipped": skipped,
         "total_amount": total_amount,
-        "errors": pre_errors,
+        "addon_created": addon_created,
+        "addon_amount": addon_amount,
+        "errors": all_errors,
     }
 
 
@@ -317,6 +393,7 @@ def _invoice_exists(cycle, student_name):
             JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
             WHERE si.escola_student = %s
               AND si.docstatus != 2
+              AND COALESCE(si.escola_is_addon_invoice, 0) = 0
               AND bc.billing_mode = %s
               AND {period_sql}
             LIMIT 1
@@ -346,15 +423,107 @@ def _invoice_exists(cycle, student_name):
         return False
 
 
+def _get_sibling_discount(student, academic_year, settings):
+    """
+    Returns the sibling discount percent if the student's guardian has >= threshold
+    active students enrolled in this academic year. Returns 0 otherwise.
+    """
+    if not int(settings.get("sibling_discount_enabled") or 0):
+        return 0
+
+    guardian = frappe.db.get_value("Student", student, "primary_guardian")
+    if not guardian:
+        return 0
+
+    threshold = int(settings.get("sibling_discount_threshold") or 3)
+
+    try:
+        count = frappe.db.sql(
+            """
+            SELECT COUNT(DISTINCT s.name)
+            FROM `tabStudent` s
+            JOIN `tabStudent Group Assignment` sga ON sga.student = s.name
+            WHERE s.primary_guardian = %s
+              AND s.current_status = 'Activo'
+              AND sga.academic_year = %s
+              AND sga.status = 'Activa'
+            """,
+            (guardian, academic_year),
+        )[0][0]
+    except Exception:
+        return 0
+
+    if count >= threshold:
+        return float(settings.get("sibling_discount_percent") or 10)
+
+    return 0
+
+
+def _get_active_extras(student, posting_date):
+    """Return active extras for a student on the given posting_date."""
+    date = getdate(posting_date)
+    mea_name = frappe.db.get_value("Mensalidade Extra do Aluno", {"student": student}, "name")
+    if not mea_name:
+        return []
+
+    try:
+        rows = frappe.db.sql(
+            """
+            SELECT
+                l.service,
+                se.service_name,
+                se.current_amount,
+                se.item_code
+            FROM `tabLinha de Mensalidade Extra` l
+            JOIN `tabServiço Extra` se ON se.name = l.service
+            WHERE l.parent = %s
+              AND l.status = 'Activo'
+              AND l.start_date <= %s
+              AND (l.end_date IS NULL OR l.end_date >= %s)
+            """,
+            (mea_name, date, date),
+            as_dict=True,
+        )
+        for r in rows:
+            r["current_amount"] = float(r["current_amount"] or 0)
+        return rows
+    except Exception:
+        return []
+
+
+def _addon_invoice_exists(student, posting_date):
+    """Check if a non-cancelled addon invoice already exists for this student/month."""
+    date = posting_date
+    try:
+        result = frappe.db.sql(
+            """
+            SELECT si.name
+            FROM `tabSales Invoice` si
+            WHERE si.escola_student = %s
+              AND si.escola_is_addon_invoice = 1
+              AND si.docstatus != 2
+              AND YEAR(si.posting_date) = YEAR(%s)
+              AND MONTH(si.posting_date) = MONTH(%s)
+            LIMIT 1
+            """,
+            (student, date, date),
+        )
+        return bool(result)
+    except Exception:
+        return False
+
+
 def _refresh_cycle_summary(cycle):
     """Re-query actual invoice totals for this cycle and update summary fields."""
     try:
         result = frappe.db.sql(
             """
             SELECT
-                COUNT(DISTINCT escola_student) AS unique_students,
-                COUNT(name)                    AS invoice_count,
-                COALESCE(SUM(grand_total), 0)  AS total_amount
+                COUNT(DISTINCT CASE WHEN COALESCE(escola_is_addon_invoice, 0) = 0 THEN escola_student END) AS unique_students,
+                SUM(CASE WHEN COALESCE(escola_is_addon_invoice, 0) = 0 THEN 1 ELSE 0 END)                  AS invoice_count,
+                COALESCE(SUM(CASE WHEN COALESCE(escola_is_addon_invoice, 0) = 0 THEN grand_total ELSE 0 END), 0) AS total_amount,
+                SUM(CASE WHEN escola_is_addon_invoice = 1 THEN 1 ELSE 0 END)                                AS addon_count,
+                COALESCE(SUM(CASE WHEN escola_is_addon_invoice = 1 THEN grand_total ELSE 0 END), 0)         AS addon_amount
             FROM `tabSales Invoice`
             WHERE escola_billing_cycle = %s
               AND docstatus != 2
@@ -366,5 +535,7 @@ def _refresh_cycle_summary(cycle):
         cycle.db_set("total_students", result.unique_students or 0)
         cycle.db_set("total_invoices_created", result.invoice_count or 0)
         cycle.db_set("total_amount", result.total_amount or 0)
+        cycle.db_set("total_addon_invoices_created", result.addon_count or 0)
+        cycle.db_set("total_addon_amount", result.addon_amount or 0)
     except Exception:
         pass
