@@ -19,28 +19,24 @@ class FeeStructure(Document):
         for line in self.fee_lines:
             if line.amount <= 0:
                 frappe.throw(
-                    _("O valor da linha '{0}' deve ser maior que zero.").format(
-                        line.fee_category or line.item_code
-                    )
+                    _("O valor da linha '{0}' deve ser maior que zero.").format(line.item_code)
                 )
 
     def _validate_line_billing_mode(self):
         for line in self.fee_lines:
             if not line.billing_mode:
                 frappe.throw(
-                    _("A linha '{0}' não tem Modo de Cobrança definido.").format(
-                        line.fee_category or line.item_code
-                    )
+                    _("A linha '{0}' não tem Modo de Cobrança definido.").format(line.item_code)
                 )
 
     def _validate_no_duplicate_lines(self):
         seen = set()
         for line in self.fee_lines:
-            key = (line.fee_category, line.item_code, line.billing_mode)
+            key = (line.item_code, line.billing_mode)
             if key in seen:
                 frappe.throw(
-                    _("A combinação Categoria '{0}' + Item '{1}' + Modo '{2}' está duplicada no Plano.").format(
-                        line.fee_category, line.item_code, line.billing_mode
+                    _("A combinação Item '{0}' + Modo '{1}' está duplicada no Plano.").format(
+                        line.item_code, line.billing_mode
                     )
                 )
             seen.add(key)

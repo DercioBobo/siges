@@ -5,21 +5,12 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "fee_category",
   "item_code",
   "description",
   "amount",
   "billing_mode"
  ],
  "fields": [
-  {
-   "fieldname": "fee_category",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Categoria",
-   "options": "Fee Category",
-   "reqd": 1
-  },
   {
    "fieldname": "item_code",
    "fieldtype": "Link",

@@ -8,6 +8,7 @@ class SchoolSettings(Document):
         self._validate_academic_term_belongs_to_year()
         self._validate_grading_thresholds()
         self._validate_income_account_company()
+        self._validate_penalty_submit_conflict()
 
     def _validate_academic_term_belongs_to_year(self):
         if not (self.current_academic_year and self.current_academic_term):
@@ -40,6 +41,16 @@ class SchoolSettings(Document):
                 _("O Limiar de Recurso (<b>{0}</b>) deve ser inferior à Nota Mínima "
                   "de Aprovação (<b>{1}</b>).").format(recurso, min_pass),
                 title=_("Limiar de recurso inválido"),
+            )
+
+    def _validate_penalty_submit_conflict(self):
+        if self.auto_submit_invoices and self.penalty_mode == "Adicionar à Factura":
+            frappe.throw(
+                _("Configuração incompatível: <b>Submeter Facturas Automaticamente</b> e "
+                  "<b>Modo de Multa: Adicionar à Factura</b> não podem estar activos em simultâneo. "
+                  "As multas só são aplicadas a facturas em Rascunho — facturas submetidas "
+                  "automaticamente nunca receberão linhas de multa."),
+                title=_("Conflito de configuração de multas"),
             )
 
     def _validate_income_account_company(self):

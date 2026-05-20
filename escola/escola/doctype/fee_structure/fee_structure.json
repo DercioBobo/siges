@@ -10,6 +10,7 @@
   "structure_name",
   "cb_id_1",
   "school_class",
+  "academic_year",
   "cb_id_2",
   "is_active",
   "sb_linhas",
@@ -49,6 +50,14 @@
    "label": "Classe",
    "options": "School Class",
    "reqd": 1
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Ano Lectivo",
+   "options": "Academic Year",
+   "description": "Opcional. Se definido, este plano aplica-se apenas a este ano lectivo. Deixe em branco para um plano genérico (fallback)."
   },
   {
    "fieldname": "cb_id_2",

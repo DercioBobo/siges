@@ -109,6 +109,20 @@ def _settings_due_days():
     return int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 15)
 
 
+def _next_due_day(posting_date, day):
+    """Return the next calendar date where day-of-month == day, strictly after posting_date.
+    If that day still lies ahead in the same month, use it; otherwise use next month."""
+    max_same = calendar.monthrange(posting_date.year, posting_date.month)[1]
+    candidate = posting_date.replace(day=min(day, max_same))
+    if candidate > posting_date:
+        return candidate
+    if posting_date.month == 12:
+        y, m = posting_date.year + 1, 1
+    else:
+        y, m = posting_date.year, posting_date.month + 1
+    return date(y, m, min(day, calendar.monthrange(y, m)[1]))
+
+
 def _is_due(schedule, today):
     """Return True if this schedule should fire today."""
     day = int(schedule.invoice_day or 0) or _settings_invoice_day()
@@ -197,7 +211,11 @@ def _execute_schedule(schedule, today_date):
             title=_("Configuração em falta"),
         )
 
-    due_date    = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
+    payment_due_day = int(frappe.db.get_single_value("School Settings", "payment_due_day") or 0)
+    if payment_due_day:
+        due_date = _next_due_day(today_date, payment_due_day)
+    else:
+        due_date = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
     month_label = today_date.strftime("%m/%Y")
     cycle_name    = f"{schedule.school_class} · {schedule.billing_mode} · {month_label}"
 

@@ -125,7 +125,7 @@ def generate_invoices(doc_name):
             pass
 
         for ln in applicable_lines:
-            base_description = ln.description or ln.fee_category or ln.item_code
+            base_description = ln.description or ln.item_code
             description = "{0} - {1}".format(base_description, mes_referencia) if mes_referencia else base_description
             si.append(
                 "items",
@@ -148,6 +148,15 @@ def generate_invoices(doc_name):
 
     if created > 0:
         cycle.db_set("status", "Gerado")
+        if cycle.billing_schedule:
+            frappe.db.set_value(
+                "Billing Schedule", cycle.billing_schedule,
+                "last_billed_date", cycle.posting_date,
+            )
+
+    cycle.db_set("skipped_count", skipped)
+    cycle.db_set("error_count", len(pre_errors))
+    cycle.db_set("generation_errors", "\n".join(pre_errors) if pre_errors else "")
 
     return {
         "created": created,
@@ -193,7 +202,7 @@ def _validate_fee_structure_compatibility(school_class, billing_mode):
 
 
 def _find_fee_structure(school_class, academic_year=None):
-    """Find the single active Fee Structure for a class."""
+    """Return the single active Fee Structure for a class."""
     return frappe.db.get_value(
         "Fee Structure",
         {"school_class": school_class, "is_active": 1},
@@ -269,22 +278,40 @@ def cancel_cycle(doc_name):
 def _invoice_exists(cycle, student_name):
     """
     Check whether a non-cancelled invoice already exists for this student
-    with the same billing_mode and posting_date, across any cycle.
-    Prevents duplicates when two cycles are created for the same period.
+    in the same billing period, across any cycle.
+    Uses period-based matching (month/quarter/year) instead of exact posting_date
+    so that a manual run on day 16 and a scheduler run on day 25 are treated as
+    the same period and the second one is skipped.
     """
+    mode = cycle.billing_mode
+    date = cycle.posting_date
+
+    if mode == "Mensal":
+        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
+        params = (student_name, mode, date, date)
+    elif mode == "Trimestral":
+        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
+        params = (student_name, mode, date, date)
+    elif mode == "Anual":
+        period_sql = "YEAR(si.posting_date) = YEAR(%s)"
+        params = (student_name, mode, date)
+    else:
+        period_sql = "si.posting_date = %s"
+        params = (student_name, mode, date)
+
     try:
         return bool(frappe.db.sql(
-            """
+            f"""
             SELECT si.name
             FROM `tabSales Invoice` si
             JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
             WHERE si.escola_student = %s
               AND si.docstatus != 2
               AND bc.billing_mode = %s
-              AND si.posting_date = %s
+              AND {period_sql}
             LIMIT 1
             """,
-            (student_name, cycle.billing_mode, cycle.posting_date),
+            params,
         ))
     except Exception:
         return False
