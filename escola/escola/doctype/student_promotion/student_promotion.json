@@ -22,8 +22,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "PRO-.YYYY.-.####",
-   "default": "PRO-.YYYY.-.####",
+   "options": "PRO-.YY.-.##",
+   "default": "PRO-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

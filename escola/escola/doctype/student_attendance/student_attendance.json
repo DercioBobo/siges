@@ -24,8 +24,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "ATT-.YYYY.-.####",
-   "default": "ATT-.YYYY.-.####",
+   "options": "ATT-.YY.-.##",
+   "default": "ATT-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

@@ -50,8 +50,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "INS-.YYYY.-.####",
-   "default": "INS-.YYYY.-.####",
+   "options": "INS-.YY.-.##",
+   "default": "INS-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

@@ -26,8 +26,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "REN-.YYYY.-.####",
-   "default": "REN-.YYYY.-.####",
+   "options": "REN-.YY.-.##",
+   "default": "REN-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

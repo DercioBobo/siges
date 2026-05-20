@@ -30,8 +30,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "TUR-.####",
-   "default": "TUR-.####",
+   "options": "TUR-.##",
+   "default": "TUR-.##",
    "hidden": 1,
    "print_hide": 1
   },

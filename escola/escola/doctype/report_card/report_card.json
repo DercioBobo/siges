@@ -34,7 +34,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Naming Series",
-   "options": "RPC-.YYYY.-.####"
+   "options": "RPC-.YY.-.##"
   },
   {
    "fieldname": "sb_identificacao",

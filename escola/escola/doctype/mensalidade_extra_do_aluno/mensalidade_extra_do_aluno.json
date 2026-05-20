@@ -18,8 +18,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "MEA-.YY-.##",
-   "default": "MEA-.YY-.##",
+   "options": "MEA-.##",
+   "default": "MEA-.##",
    "hidden": 1,
    "print_hide": 1
   },

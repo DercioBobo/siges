@@ -24,8 +24,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "HORT-.YYYY.-.####",
-   "default": "HORT-.YYYY.-.####",
+   "options": "HORT-.YY.-.##",
+   "default": "HORT-.YY.-.##",
    "hidden": 1
   },
   {

@@ -28,7 +28,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Naming Series",
-   "options": "BSH-.YYYY.-.####"
+   "options": "BSH-.##"
   },
   {
    "fieldname": "sb_id",

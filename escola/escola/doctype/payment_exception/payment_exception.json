@@ -27,7 +27,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Naming Series",
-   "options": "PEXC-.YYYY.-.####"
+   "options": "PEXC-.YY.-.##"
   },
   {
    "fieldname": "sb_id",

@@ -23,8 +23,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "SGA-.YYYY.-.####",
-   "default": "SGA-.YYYY.-.####",
+   "options": "SGA-.YY.-.##",
+   "default": "SGA-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

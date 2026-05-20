@@ -41,7 +41,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Naming Series",
-   "options": "BIL-.YYYY.-.####"
+   "options": "BIL-.YY.-.##"
   },
   {
    "fieldname": "billing_schedule",

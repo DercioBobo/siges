@@ -29,7 +29,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Naming Series",
-   "options": "CLS-.YYYY.-.####"
+   "options": "CLS-.YY.-.##"
   },
   {
    "fieldname": "sb_identificacao",

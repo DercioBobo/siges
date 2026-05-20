@@ -35,8 +35,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "GRD-.YYYY.-.####",
-   "default": "GRD-.YYYY.-.####",
+   "options": "GRD-.YY.-.##",
+   "default": "GRD-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },

@@ -38,8 +38,8 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Série",
-   "options": "ADIAN-.YYYY.-.####",
-   "default": "ADIAN-.YYYY.-.####",
+   "options": "ADIAN-.YY.-.##",
+   "default": "ADIAN-.YY.-.##",
    "hidden": 1,
    "print_hide": 1
   },
