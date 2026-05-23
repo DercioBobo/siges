@@ -38,10 +38,38 @@ def get_students_for_attendance(class_group, academic_year):
 
 class StudentAttendance(Document):
     def validate(self):
+        self._validate_teacher_permission()
         self._validate_class_group_compatibility()
         self._validate_uniqueness()
         self._validate_entries_not_empty()
         self._validate_no_duplicate_students()
+
+    def _validate_teacher_permission(self):
+        if frappe.session.user == "Administrator":
+            return
+        if frappe.has_role("Diretor Escolar") or frappe.has_role("Secretaria Escolar"):
+            return
+        if not frappe.has_role("Professor"):
+            return
+        if not self.class_group:
+            return
+
+        teacher = frappe.db.get_value("Teacher", {"user_id": frappe.session.user}, "name")
+        if not teacher:
+            frappe.throw(
+                _("Não foi encontrado um registo de Professor associado ao seu utilizador. "
+                  "Contacte o administrador."),
+                title=_("Acesso negado"),
+            )
+
+        class_teacher = frappe.db.get_value("Class Group", self.class_group, "class_teacher")
+        if class_teacher != teacher:
+            frappe.throw(
+                _("Apenas o Director de Turma da turma <b>{0}</b> pode registar presenças.").format(
+                    self.class_group
+                ),
+                title=_("Acesso negado"),
+            )
 
     def _validate_class_group_compatibility(self):
         if not self.class_group:

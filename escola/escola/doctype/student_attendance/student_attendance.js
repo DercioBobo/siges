@@ -6,7 +6,18 @@ frappe.ui.form.on("Student Attendance", {
 		escola.utils.auto_fill_academic_year(frm);
 	},
 
-	refresh(frm) {
+	async refresh(frm) {
+		// Resolve the logged-in teacher once; used to restrict the class_group dropdown
+		frm._teacher_name = null;
+		const isProfessor = frappe.user.has_role("Professor")
+			&& !frappe.user.has_role("Diretor Escolar")
+			&& !frappe.user.has_role("Secretaria Escolar");
+
+		if (isProfessor) {
+			const r = await frappe.db.get_value("Teacher", { user_id: frappe.session.user }, "name");
+			frm._teacher_name = r && r.message && r.message.name ? r.message.name : null;
+		}
+
 		set_class_group_query(frm);
 
 		frm.add_custom_button(__("Carregar Alunos"), () => {
@@ -41,6 +52,7 @@ function set_class_group_query(frm) {
 	const filters = { is_active: 1 };
 	if (frm.doc.academic_year) filters.academic_year = frm.doc.academic_year;
 	if (frm.doc.school_class) filters.school_class = frm.doc.school_class;
+	if (frm._teacher_name) filters.class_teacher = frm._teacher_name;
 
 	frm.set_query("class_group", () => ({ filters }));
 }
