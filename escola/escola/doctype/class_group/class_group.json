@@ -92,7 +92,7 @@
   {
    "fieldname": "class_teacher",
    "fieldtype": "Link",
-   "label": "Professor Titular",
+   "label": "Director de Turma",
    "options": "Teacher",
    "in_list_view": 1
   },

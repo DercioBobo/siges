@@ -11,6 +11,7 @@ from frappe.utils import add_days, getdate, today
 class RenovacaoDeMatricula(Document):
 
     def validate(self):
+        self._validate_student_status()
         self._validate_years()
         self._validate_not_duplicate()
 
@@ -48,6 +49,16 @@ class RenovacaoDeMatricula(Document):
                 )
 
     # ------------------------------------------------------------------
+
+    def _validate_student_status(self):
+        status = frappe.db.get_value("Student", self.student, "current_status")
+        if status == "Concluiu":
+            frappe.throw(
+                _("O aluno <b>{0}</b> concluiu todos os anos de escolaridade e não pode efectuar renovações.").format(
+                    self.student
+                ),
+                title=_("Aluno já concluiu"),
+            )
 
     def _validate_years(self):
         if self.academic_year and self.target_academic_year:

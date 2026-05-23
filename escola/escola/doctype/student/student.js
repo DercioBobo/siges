@@ -63,25 +63,42 @@ function _inject_student_styles() {
 .sam-ico { font-size: 22px; line-height: 1; }
 .sam-lbl { font-size: 12px; font-weight: 600; line-height: 1.3; }
 
-/* ── Renewal status banner ───────────────────── */
-.srn-banner {
+/* ── Renewal history panel ───────────────────── */
+.srn-header {
+	display: flex; align-items: center; justify-content: space-between;
+	margin-bottom: 6px;
+}
+.srn-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); }
+.srn-all-link { font-size: 11px; color: #6366f1; text-decoration: none; }
+.srn-all-link:hover { text-decoration: underline; }
+.srn-row {
 	display: flex; align-items: center; gap: 10px;
-	padding: 10px 14px; border-radius: 8px; margin: 4px 0 8px;
-	font-size: 13px; font-weight: 500;
+	padding: 7px 10px; border-radius: 7px; margin-bottom: 5px;
+	border: 1px solid var(--border-color); background: var(--fg-color);
+	font-size: 12px;
 }
-.srn-banner.renewed  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-.srn-banner.pending  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-.srn-icon { font-size: 16px; flex-shrink: 0; }
-.srn-text { flex: 1; }
-.srn-text b { display: block; }
-.srn-text small { opacity: .75; font-size: 11px; }
-.srn-link {
-	font-size: 12px; font-weight: 600; padding: 4px 10px;
-	border-radius: 6px; text-decoration: none; white-space: nowrap;
-	cursor: pointer; border: none; outline: none;
+.srn-years { font-weight: 700; font-size: 13px; min-width: 160px; }
+.srn-date  { color: var(--text-muted); min-width: 80px; }
+.srn-badge {
+	font-size: 11px; font-weight: 600; padding: 2px 8px;
+	border-radius: 12px; white-space: nowrap;
 }
-.srn-banner.renewed .srn-link { background: #059669; color: #fff; }
-.srn-banner.pending .srn-link { background: #d97706; color: #fff; }
+.srn-badge.confirmed { background: #d1fae5; color: #065f46; }
+.srn-badge.draft     { background: #fef3c7; color: #92400e; }
+.srn-ver { margin-left: auto; font-size: 11px; font-weight: 600; color: #6366f1; cursor: pointer; background: none; border: none; padding: 0; }
+.srn-ver:hover { text-decoration: underline; }
+.srn-pending {
+	display: flex; align-items: center; gap: 8px;
+	padding: 8px 10px; border-radius: 7px; margin-bottom: 5px;
+	background: #fef3c7; border: 1px solid #fcd34d;
+	font-size: 12px; font-weight: 500; color: #92400e;
+}
+.srn-pending-btn {
+	margin-left: auto; font-size: 11px; font-weight: 600; padding: 3px 9px;
+	border-radius: 6px; background: #d97706; color: #fff;
+	cursor: pointer; border: none; outline: none; white-space: nowrap;
+}
+.srn-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
 
 /* ── Forecast modal ──────────────────────────── */
 .sfrc-summary { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
@@ -146,12 +163,13 @@ function _inject_student_styles() {
 function _show_actions_modal(frm) {
 	_inject_student_styles();
 
-	const status     = frm.doc.current_status;
-	const isActive   = !status || status === "Activo";
-	const isInactive = status === "Transferido" || status === "Desistente";
+	const status      = frm.doc.current_status;
+	const isActive    = !status || status === "Activo";
+	const isInactive  = status === "Transferido" || status === "Desistente";
+	const isConcluded = status === "Concluiu";
 
-	// Show renewal card only when in active renewal period
-	const inRenewalPeriod = frm._renewal_status && frm._renewal_status.in_period;
+	// Show renewal card only when in active renewal period and student can still renew
+	const inRenewalPeriod = !isConcluded && frm._renewal_status && frm._renewal_status.in_period;
 	const alreadyRenewed  = inRenewalPeriod && frm._renewal_status.renewal;
 
 	const ver = [
@@ -170,7 +188,7 @@ function _show_actions_modal(frm) {
 	];
 
 	const acoes = [
-		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: true      },
+		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: !isConcluded },
 		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
 		{ id: "desistencia",       ico: "✕",  label: __("Registar Desistência"),         color: "#dc2626", bg: "#fef2f2", show: isActive   },
@@ -448,72 +466,93 @@ function _render_history_compact(data) {
 }
 
 // ---------------------------------------------------------------------------
-// Renewal status badge
+// Renewal history panel
 // ---------------------------------------------------------------------------
 
 async function _load_renewal_status(frm) {
 	const fd = frm.fields_dict["renovation_status_html"];
 	if (!fd) return;
 
-	fd.$wrapper.html(""); // clear while loading
+	fd.$wrapper.html("");
 
 	const r = await frappe.call({
-		method: "escola.escola.doctype.renovacao_de_matricula.renovacao_de_matricula.get_student_renewal_status",
-		args:   { student: frm.doc.name },
+		method: "escola.escola.doctype.renovacao_de_matricula.renovacao_de_matricula.get_student_renewal_history",
+		args:   { student: frm.doc.name, limit: 5 },
 	});
 
-	if (r.exc || !r.message) {
-		fd.$wrapper.html("");
-		return;
-	}
+	if (r.exc || !r.message) return;
 
 	_inject_student_styles();
 	const d = r.message;
-	frm._renewal_status = d;
 
-	if (d.renewal) {
-		// Already renewed
-		const date_fmt = frappe.datetime.str_to_user(d.renewal.renewal_date);
-		fd.$wrapper.html(`
-		<div class="srn-banner renewed">
-			<span class="srn-icon">✓</span>
-			<div class="srn-text">
-				<b>${__("Matrícula renovada para {0}", [d.renewal.target_academic_year])}</b>
-				<small>${__("Renovado em {0}", [date_fmt])}</small>
-			</div>
-			<button class="srn-link" data-action="view-renewal" data-name="${frappe.utils.escape_html(d.renewal.name)}">
-				${__("Ver →")}
-			</button>
-		</div>`);
-	} else {
-		// Pending renewal
-		const period_end_fmt = frappe.datetime.str_to_user(d.period_end);
-		fd.$wrapper.html(`
-		<div class="srn-banner pending">
-			<span class="srn-icon">⚠</span>
-			<div class="srn-text">
-				<b>${__("Matrícula por renovar para {0}", [d.next_year || d.current_year])}</b>
-				<small>${__("Período de renovações aberto até {0}", [period_end_fmt])}</small>
-			</div>
-			<button class="srn-link" data-action="new-renewal">
-				${__("Renovar Agora")}
-			</button>
-		</div>`);
-	}
+	// Keep frm._renewal_status populated for the actions modal
+	frm._renewal_status = {
+		in_period:    d.in_period,
+		period_start: d.period_start,
+		period_end:   d.period_end,
+		current_year: d.current_year,
+		next_year:    d.next_year,
+		renewal:      d.current_renewal,
+	};
 
-	fd.$wrapper.find("[data-action=view-renewal]").on("click", function () {
+	fd.$wrapper.html(_render_renewal_history(frm, d));
+
+	fd.$wrapper.find("[data-name]").on("click", function () {
 		frappe.set_route("Form", "Renovacao De Matricula", $(this).data("name"));
 	});
-
 	fd.$wrapper.find("[data-action=new-renewal]").on("click", function () {
 		_open_new_renewal(frm, d);
 	});
 }
 
+function _render_renewal_history(frm, d) {
+	const listUrl = `/app/renovacao-de-matricula?student=${encodeURIComponent(frm.doc.name)}`;
+
+	const header = `
+	<div class="srn-header">
+		<span class="srn-title">${__("Renovações de Matrícula")}</span>
+		<a class="srn-all-link" href="${listUrl}" target="_blank">↗ ${__("Ver todas")}</a>
+	</div>`;
+
+	// Pending action row — only when window is open, not yet renewed, and student can still renew
+	let pendingRow = "";
+	if (d.in_period && !d.current_renewal && frm.doc.current_status !== "Concluiu") {
+		const end_fmt = frappe.datetime.str_to_user(d.period_end);
+		pendingRow = `
+		<div class="srn-pending">
+			<span>⚠</span>
+			<span>${__("Período aberto até {0} — matrícula por renovar", [end_fmt])}</span>
+			<button class="srn-pending-btn" data-action="new-renewal">${__("Renovar Agora")}</button>
+		</div>`;
+	}
+
+	if (!d.renewals || !d.renewals.length) {
+		return header + pendingRow + `<div class="srn-empty">${__("Sem renovações registadas.")}</div>`;
+	}
+
+	const rows = d.renewals.map(ren => {
+		const date_fmt  = frappe.datetime.str_to_user(ren.renewal_date);
+		const confirmed = ren.docstatus === 1;
+		const badge     = confirmed
+			? `<span class="srn-badge confirmed">${__("Confirmada")}</span>`
+			: `<span class="srn-badge draft">${__("Rascunho")}</span>`;
+
+		return `
+		<div class="srn-row">
+			<span class="srn-years">${frappe.utils.escape_html(ren.academic_year)} → ${frappe.utils.escape_html(ren.target_academic_year)}</span>
+			<span class="srn-date">${date_fmt}</span>
+			${badge}
+			<button class="srn-ver" data-name="${frappe.utils.escape_html(ren.name)}">${__("Ver →")}</button>
+		</div>`;
+	}).join("");
+
+	return header + pendingRow + rows;
+}
+
 function _open_new_renewal(frm, renewal_data) {
 	frappe.new_doc("Renovacao De Matricula", {
-		student:             frm.doc.name,
-		academic_year:       renewal_data.current_year,
+		student:              frm.doc.name,
+		academic_year:        renewal_data.current_year,
 		target_academic_year: renewal_data.next_year || "",
 	});
 }

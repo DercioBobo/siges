@@ -354,6 +354,11 @@ def execute_promotion_plan(promotion_name, plan):
     if doc.class_group:
         frappe.db.set_value("Class Group", doc.class_group, "is_active", 0)
 
+    # ── Step 5b: Mark concluded students ────────────────────────────────────
+    concluded_students = [r.student for r in doc.promotion_rows if r.decision == "Concluído"]
+    for student_name in concluded_students:
+        frappe.db.set_value("Student", student_name, "current_status", "Concluiu")
+
     # ── Step 6: Finalise ────────────────────────────────────────────────────
     doc.status = "Finalizado"
     doc.save(ignore_permissions=True)
@@ -362,6 +367,7 @@ def execute_promotion_plan(promotion_name, plan):
     return {
         "created":        created,
         "skipped":        skipped,
+        "concluded":      len(concluded_students),
         "errors":         errors,
         "created_groups": created_cg_names,
     }

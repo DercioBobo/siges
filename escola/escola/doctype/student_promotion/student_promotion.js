@@ -494,6 +494,8 @@ async function _show_distribution_modal(frm) {
 		const m = result.message;
 
 		const parts = [__("<b>{0}</b> aluno(s) alocado(s) às turmas", [m.created])];
+		if (m.concluded)
+			parts.push(__("<b>{0}</b> aluno(s) marcado(s) como <b>Concluiu</b> (última classe)", [m.concluded]));
 		if (m.skipped)
 			parts.push(__("<b>{0}</b> já alocado(s) anteriormente — ignorados", [m.skipped]));
 		if (m.created_groups && m.created_groups.length)
