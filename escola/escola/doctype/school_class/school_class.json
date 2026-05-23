@@ -103,7 +103,7 @@
   {
    "fieldname": "default_teacher",
    "fieldtype": "Link",
-   "label": "Professor Titular",
+   "label": "Director de Turma",
    "options": "Teacher",
    "depends_on": "eval:doc.teaching_model=='Professor Único'",
    "mandatory_depends_on": "eval:doc.teaching_model=='Professor Único'",

@@ -10,7 +10,7 @@ frappe.ui.form.on("Class Curriculum", {
             _show_summary(frm);
         }
 
-        frm.add_custom_button(__("Preencher Professor Titular"), () => {
+        frm.add_custom_button(__("Preencher Director de Turma"), () => {
             _fill_homeroom_teacher(frm);
         });
     },
@@ -68,11 +68,11 @@ function _populate_from_class_group(frm) {
 
             if (!data.class_teacher) {
                 frappe.msgprint({
-                    message: __("A Turma <b>{0}</b> não tem Professor Titular definido. "
-                              + "Defina o Professor Titular na ficha da Turma para que as disciplinas "
+                    message: __("A Turma <b>{0}</b> não tem Director de Turma definido. "
+                              + "Defina o Director de Turma na ficha da Turma para que as disciplinas "
                               + "sejam preenchidas automaticamente.",
                               [frm.doc.class_group]),
-                    title: __("Professor Titular em falta"),
+                    title: __("Director de Turma em falta"),
                     indicator: "orange",
                 });
             }
@@ -92,7 +92,7 @@ function _populate_from_class_group(frm) {
 }
 
 // ---------------------------------------------------------------------------
-// Preencher Professor Titular (re-apply homeroom teacher to non-specialist lines)
+// Preencher Director de Turma (re-apply homeroom teacher to non-specialist lines)
 // ---------------------------------------------------------------------------
 
 function _fill_homeroom_teacher(frm) {
@@ -105,8 +105,8 @@ function _fill_homeroom_teacher(frm) {
         const homeroom = r ? r.class_teacher : null;
         if (!homeroom) {
             frappe.msgprint({
-                message: __("A Turma <b>{0}</b> não tem Professor Titular definido.", [frm.doc.class_group]),
-                title: __("Professor Titular em falta"),
+                message: __("A Turma <b>{0}</b> não tem Director de Turma definido.", [frm.doc.class_group]),
+                title: __("Director de Turma em falta"),
                 indicator: "orange",
             });
             return;

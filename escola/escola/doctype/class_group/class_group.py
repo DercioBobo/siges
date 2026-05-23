@@ -19,7 +19,7 @@ class ClassGroup(Document):
         if not is_active:
             frappe.throw(
                 _("O professor <b>{0}</b> não está activo e não pode ser designado "
-                  "como Professor Titular.").format(self.class_teacher),
+                  "como Director de Turma.").format(self.class_teacher),
                 title=_("Professor inactivo"),
             )
 
