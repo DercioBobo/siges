@@ -196,22 +196,22 @@ def get_next_academic_year(academic_year):
 @frappe.whitelist()
 def get_student_renewal_status(student):
     """
-    Returns renovation status for the student only when today is within the
-    configured renewal period in School Settings. Returns None otherwise.
-
-    Used by the Student form to show/hide the renewal badge.
+    Returns renewal status for the student relative to the current academic year
+    and the configured renewal window. Used by the Student form actions modal.
     """
     settings = frappe.get_single("School Settings")
     period_start  = settings.get("renewal_period_start")
     period_end    = settings.get("renewal_period_end")
     current_year  = settings.get("current_academic_year")
 
-    if not period_start or not period_end or not current_year:
+    if not current_year:
         return None
 
     today_date = getdate(today())
-    if not (getdate(period_start) <= today_date <= getdate(period_end)):
-        return None
+    in_period = bool(
+        period_start and period_end
+        and getdate(period_start) <= today_date <= getdate(period_end)
+    )
 
     next_year = get_next_academic_year(current_year)
 
@@ -227,10 +227,65 @@ def get_student_renewal_status(student):
     )
 
     return {
-        "in_period":    True,
-        "period_start": str(period_start),
-        "period_end":   str(period_end),
+        "in_period":    in_period,
+        "period_start": str(period_start) if period_start else None,
+        "period_end":   str(period_end) if period_end else None,
         "current_year": current_year,
         "next_year":    next_year,
         "renewal":      renewal,
+    }
+
+
+@frappe.whitelist()
+def get_student_renewal_history(student, limit=5):
+    """
+    Returns the last N renewals for a student plus current-window context.
+    Used by the Student form renewal history panel.
+    """
+    settings = frappe.get_single("School Settings")
+    period_start  = settings.get("renewal_period_start")
+    period_end    = settings.get("renewal_period_end")
+    current_year  = settings.get("current_academic_year")
+
+    today_date = getdate(today())
+    in_period = bool(
+        period_start and period_end and current_year
+        and getdate(period_start) <= today_date <= getdate(period_end)
+    )
+
+    next_year = get_next_academic_year(current_year) if current_year else None
+
+    renewals = frappe.db.sql(
+        """
+        SELECT
+            r.name,
+            r.academic_year,
+            r.target_academic_year,
+            r.renewal_date,
+            r.docstatus,
+            r.sales_invoice
+        FROM `tabRenovacao De Matricula` r
+        WHERE r.student = %(student)s
+          AND r.docstatus != 2
+        ORDER BY r.renewal_date DESC
+        LIMIT %(limit)s
+        """,
+        {"student": student, "limit": int(limit)},
+        as_dict=True,
+    )
+
+    # Current-year renewal needed by the actions modal
+    current_renewal = next(
+        (r for r in renewals if r.academic_year == current_year and r.docstatus == 1),
+        None,
+    )
+
+    return {
+        "in_period":       in_period,
+        "period_start":    str(period_start) if period_start else None,
+        "period_end":      str(period_end) if period_end else None,
+        "current_year":    current_year,
+        "next_year":       next_year,
+        "current_renewal": current_renewal,
+        "renewals":        renewals,
     }

@@ -7,50 +7,57 @@ def execute(filters=None):
 
     columns = [
         {
-            "label": _("Renovação"),
-            "fieldname": "name",
+            "label": _("Turma"),
+            "fieldname": "turma",
             "fieldtype": "Link",
-            "options": "Renovacao De Matricula",
-            "width": 130,
+            "options": "Class Group",
+            "width": 150,
+        },
+        {
+            "label": _("Classe"),
+            "fieldname": "classe",
+            "fieldtype": "Link",
+            "options": "School Class",
+            "width": 110,
         },
         {
             "label": _("Aluno"),
             "fieldname": "student",
             "fieldtype": "Link",
             "options": "Student",
-            "width": 130,
-        },
-        {
-            "label": _("Nome Completo"),
-            "fieldname": "full_name",
-            "fieldtype": "Data",
-            "width": 210,
-        },
-        {
-            "label": _("Ano de Origem"),
-            "fieldname": "academic_year",
-            "fieldtype": "Link",
-            "options": "Academic Year",
             "width": 120,
         },
         {
-            "label": _("Ano de Renovação"),
-            "fieldname": "target_academic_year",
-            "fieldtype": "Link",
-            "options": "Academic Year",
+            "label": _("Nome Completo"),
+            "fieldname": "student_name",
+            "fieldtype": "Data",
+            "width": 220,
+        },
+        {
+            "label": _("Estado"),
+            "fieldname": "status",
+            "fieldtype": "Data",
             "width": 120,
         },
         {
             "label": _("Data de Renovação"),
             "fieldname": "renewal_date",
             "fieldtype": "Date",
-            "width": 120,
+            "width": 130,
         },
         {
-            "label": _("Estado"),
-            "fieldname": "status",
-            "fieldtype": "Data",
-            "width": 100,
+            "label": _("Ano de Renovação"),
+            "fieldname": "target_academic_year",
+            "fieldtype": "Link",
+            "options": "Academic Year",
+            "width": 130,
+        },
+        {
+            "label": _("Renovação"),
+            "fieldname": "renovacao",
+            "fieldtype": "Link",
+            "options": "Renovacao De Matricula",
+            "width": 130,
         },
         {
             "label": _("Factura"),
@@ -61,38 +68,54 @@ def execute(filters=None):
         },
     ]
 
-    conditions = ["r.docstatus != 2"]  # exclude cancelled
-
-    if filters.get("academic_year"):
-        conditions.append("r.academic_year = %(academic_year)s")
+    join_conditions = [
+        "r.student = cgs.student",
+        "r.academic_year = cg.academic_year",
+        "r.docstatus != 2",  # exclude cancelled from the join so they show as Não Renovado
+    ]
     if filters.get("target_academic_year"):
-        conditions.append("r.target_academic_year = %(target_academic_year)s")
-    if filters.get("from_date"):
-        conditions.append("r.renewal_date >= %(from_date)s")
-    if filters.get("to_date"):
-        conditions.append("r.renewal_date <= %(to_date)s")
+        join_conditions.append("r.target_academic_year = %(target_academic_year)s")
 
-    where = " AND ".join(conditions)
+    where_conditions = ["1=1"]
+    if filters.get("academic_year"):
+        where_conditions.append("cg.academic_year = %(academic_year)s")
+    if filters.get("class_group"):
+        where_conditions.append("cg.name = %(class_group)s")
+    if filters.get("status"):
+        if filters["status"] == "Renovado":
+            where_conditions.append("r.docstatus = 1")
+        elif filters["status"] == "Não Renovado":
+            where_conditions.append("r.name IS NULL")
+        elif filters["status"] == "Rascunho":
+            where_conditions.append("r.docstatus = 0")
+
+    join_sql   = " AND ".join(join_conditions)
+    where_sql  = " AND ".join(where_conditions)
 
     data = frappe.db.sql(
         f"""
         SELECT
-            r.name,
-            r.student,
-            s.full_name,
-            r.academic_year,
-            r.target_academic_year,
+            cg.name          AS class_group,
+            cg.group_name    AS turma,
+            cg.school_class  AS classe,
+            cgs.student,
+            cgs.student_name,
+            CASE
+                WHEN r.docstatus = 1 THEN 'Renovado'
+                WHEN r.docstatus = 0 THEN 'Rascunho'
+                ELSE 'Não Renovado'
+            END              AS status,
             r.renewal_date,
-            CASE r.docstatus
-                WHEN 0 THEN 'Rascunho'
-                WHEN 1 THEN 'Confirmada'
-                ELSE 'Cancelada'
-            END AS status,
+            r.target_academic_year,
+            r.name           AS renovacao,
             r.sales_invoice
-        FROM `tabRenovacao De Matricula` r
-        LEFT JOIN `tabStudent` s ON s.name = r.student
-        WHERE {where}
-        ORDER BY r.renewal_date DESC, s.full_name ASC
+        FROM `tabClass Group Student` cgs
+        JOIN  `tabClass Group` cg
+              ON cg.name = cgs.parent
+        LEFT JOIN `tabRenovacao De Matricula` r
+              ON {join_sql}
+        WHERE {where_sql}
+        ORDER BY cg.group_name ASC, cgs.student_name ASC
         """,
         filters,
         as_dict=True,

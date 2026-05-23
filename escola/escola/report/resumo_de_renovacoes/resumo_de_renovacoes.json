@@ -9,24 +9,25 @@
    "fieldtype": "Link",
    "label": "Ano Lectivo de Origem",
    "options": "Academic Year",
-   "reqd": 0
+   "reqd": 1
+  },
+  {
+   "fieldname": "class_group",
+   "fieldtype": "Link",
+   "label": "Turma",
+   "options": "Class Group"
   },
   {
    "fieldname": "target_academic_year",
    "fieldtype": "Link",
    "label": "Ano Lectivo de Renovação",
-   "options": "Academic Year",
-   "reqd": 0
+   "options": "Academic Year"
   },
   {
-   "fieldname": "from_date",
-   "fieldtype": "Date",
-   "label": "De"
-  },
-  {
-   "fieldname": "to_date",
-   "fieldtype": "Date",
-   "label": "Até"
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "\nRenovado\nNão Renovado\nRascunho"
   }
  ],
  "is_standard": "Yes",
