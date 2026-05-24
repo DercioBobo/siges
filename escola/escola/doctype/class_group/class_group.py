@@ -25,6 +25,31 @@ class ClassGroup(Document):
 
 
 @frappe.whitelist()
+def get_subjects_for_class_group(class_group):
+    """
+    Return subjects defined on the linked School Class, with is_specialist flag.
+    Used by the 'Preencher Disciplinas' button to pre-populate subject_teachers.
+    """
+    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
+    if not school_class:
+        return []
+
+    rows = frappe.db.get_all(
+        "School Class Subject",
+        filters={"parent": school_class},
+        fields=["subject"],
+        order_by="idx asc",
+    )
+
+    result = []
+    for row in rows:
+        is_specialist = frappe.db.get_value("Subject", row.subject, "is_specialist") or 0
+        result.append({"subject": row.subject, "is_specialist": is_specialist})
+
+    return result
+
+
+@frappe.whitelist()
 def add_students_to_group(class_group_name, students):
     """
     Bulk-create Student Group Assignments for a list of students.

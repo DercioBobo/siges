@@ -16,7 +16,10 @@
   "shift",
   "column_break_3",
   "class_teacher",
+  "teaching_model",
   "is_active",
+  "section_break_subjects",
+  "subject_teachers",
   "section_break_capacity",
   "max_students",
   "student_count",
@@ -97,11 +100,34 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "teaching_model",
+   "fieldtype": "Data",
+   "label": "Modelo de Ensino",
+   "fetch_from": "school_class.teaching_model",
+   "read_only": 1,
+   "print_hide": 1,
+   "hidden": 1
+  },
+  {
    "fieldname": "is_active",
    "fieldtype": "Check",
    "label": "Turma Activa",
    "default": "1",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_subjects",
+   "fieldtype": "Section Break",
+   "label": "Disciplinas e Professores",
+   "depends_on": "eval:doc.teaching_model && doc.teaching_model !== 'Professor Único'"
+  },
+  {
+   "fieldname": "subject_teachers",
+   "fieldtype": "Table",
+   "label": "Disciplinas",
+   "options": "Class Group Subject Line",
+   "depends_on": "eval:doc.teaching_model && doc.teaching_model !== 'Professor Único'",
+   "description": "Disciplinas leccionadas nesta turma e respectivos professores."
   },
   {
    "fieldname": "section_break_capacity",

@@ -13,6 +13,14 @@ frappe.ui.form.on("Class Group", {
 
     refresh(frm) {
         frm.set_query("class_teacher", () => ({ filters: { is_active: 1 } }));
+        frm.set_query("teacher", "subject_teachers", () => ({ filters: { is_active: 1 } }));
+
+        const isSecondary = frm.doc.teaching_model && frm.doc.teaching_model !== "Professor Único";
+        if (isSecondary && frm.doc.school_class) {
+            frm.set_query("subject", "subject_teachers", () => ({
+                filters: [["School Class Subject", "parent", "=", frm.doc.school_class]],
+            }));
+        }
 
         const grid = frm.fields_dict["students"] && frm.fields_dict["students"].grid;
         if (grid) {
@@ -21,6 +29,10 @@ frappe.ui.form.on("Class Group", {
         }
 
         if (!frm.is_new()) {
+            if (isSecondary) {
+                frm.add_custom_button(__("Preencher Disciplinas"), () => _fill_subjects(frm), __("Acções"));
+            }
+
             frm.add_custom_button(__("Gerir Alunos"), () => manage_students_dialog(frm));
             frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_class_group_students(frm), __("Acções"));
 
@@ -490,6 +502,46 @@ function manage_students_dialog(frm) {
         d.$body.find("#add-search").focus();
         _do_search("");
     }, 120);
+}
+
+// ---------------------------------------------------------------------------
+// Fill subjects from School Class
+// ---------------------------------------------------------------------------
+
+async function _fill_subjects(frm) {
+    const r = await frappe.call({
+        method: "escola.escola.doctype.class_group.class_group.get_subjects_for_class_group",
+        args: { class_group: frm.doc.name },
+    });
+
+    if (r.exc || !r.message || !r.message.length) {
+        frappe.msgprint({
+            message: __("Não foram encontradas disciplinas na ficha da Classe. "
+                       + "Adicione as disciplinas na Classe antes de preencher."),
+            title: __("Disciplinas em falta"),
+            indicator: "orange",
+        });
+        return;
+    }
+
+    const existing = new Set((frm.doc.subject_teachers || []).map(r => r.subject));
+    let added = 0;
+
+    for (const s of r.message) {
+        if (existing.has(s.subject)) continue;
+        const row = frm.add_child("subject_teachers");
+        row.subject        = s.subject;
+        row.is_specialist  = s.is_specialist;
+        added++;
+    }
+
+    frm.refresh_field("subject_teachers");
+
+    if (added > 0) {
+        frappe.show_alert({ message: __("{0} disciplina(s) adicionada(s).", [added]), indicator: "green" });
+    } else {
+        frappe.show_alert({ message: __("Todas as disciplinas já estão na lista."), indicator: "blue" });
+    }
 }
 
 // ---------------------------------------------------------------------------
