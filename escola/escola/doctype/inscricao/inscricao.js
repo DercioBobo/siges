@@ -10,8 +10,10 @@ frappe.ui.form.on("Inscricao", {
 		set_queries(frm);
 		_toggle_payments_grid(frm);
 		_load_fee_info(frm);
+		_setup_doc_previews_grid(frm);
 		if (frm.doc.docstatus === 0) {
 			render_turma_picker(frm);
+			_populate_doc_previews(frm);
 		}
 		if (frm.doc.docstatus === 1 && frm.doc.student) {
 			frm.add_custom_button(
@@ -29,6 +31,10 @@ frappe.ui.form.on("Inscricao", {
 		frm.set_value("class_group", null);
 		set_queries(frm);
 		clear_turma_picker(frm);
+	},
+
+	enrollment_type(frm) {
+		_populate_doc_previews(frm, true);
 	},
 
 	school_class(frm) {
@@ -126,6 +132,55 @@ async function _load_fee_info(frm) {
 	} else {
 		wrapper.html("");
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Docs preview (auto-populated child table)
+// ---------------------------------------------------------------------------
+
+function _setup_doc_previews_grid(frm) {
+	const grid = frm.get_field("doc_previews")?.grid;
+	if (!grid) return;
+	const editable = frm.doc.docstatus === 0;
+	grid.toggle_enable(editable);
+	grid.toggle_add_delete_rows(false);
+	grid.editable_grid = true;
+}
+
+async function _populate_doc_previews(frm, force) {
+	if (frm.doc.docstatus !== 0) return;
+
+	const enrollment_type = frm.doc.enrollment_type;
+
+	// On enrollment_type change, always repopulate (force=true).
+	// On refresh, skip if rows already exist (secretary may have added files).
+	const hasRows = frm.doc.doc_previews && frm.doc.doc_previews.length > 0;
+	if (!force && hasRows) return;
+	if (!enrollment_type) return;
+
+	const r = await frappe.call({
+		method: "escola.escola.doctype.inscricao.inscricao.get_required_docs_for_type",
+		args: { enrollment_type },
+	});
+
+	const docs = r.message || [];
+
+	// Preserve any files the secretary already attached before the type change
+	const existing_files = {};
+	(frm.doc.doc_previews || []).forEach(row => {
+		if (row.document_type && row.file) existing_files[row.document_type] = row.file;
+	});
+
+	frm.clear_table("doc_previews");
+
+	docs.forEach(d => {
+		const row = frm.add_child("doc_previews");
+		row.document_type = d.name;
+		row.is_required = d.is_required;
+		if (existing_files[d.name]) row.file = existing_files[d.name];
+	});
+
+	frm.refresh_field("doc_previews");
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "autoname": "field:label",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "column_break_1",
+  "applies_to",
+  "is_required",
+  "is_active",
+  "section_break_desc",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Nome do Documento",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "applies_to",
+   "fieldtype": "Select",
+   "label": "Aplica-se a",
+   "options": "Ambos\nNovo\nTransferido",
+   "default": "Ambos",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "is_required",
+   "fieldtype": "Check",
+   "label": "Obrigatório",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Activo",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "section_break_desc",
+   "fieldtype": "Section Break",
+   "label": "Instruções"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Instruções para o Encarregado",
+   "description": "Texto de ajuda mostrado ao encarregado no portal (ex.: 'Fotocópia simples, válida e legível')."
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Tipo de Documento",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "read": 1,
+   "role": "Secretaria Escolar",
+   "write": 1
+  }
+ ],
+ "sort_field": "applies_to",
+ "sort_order": "ASC",
+ "title_field": "label",
+ "track_changes": 1
+}

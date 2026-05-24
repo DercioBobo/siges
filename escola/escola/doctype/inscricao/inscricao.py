@@ -18,6 +18,7 @@ class Inscricao(Document):
         guardian_name = self._get_or_create_guardian()
         self._create_student(guardian_name)
         self._create_sga()
+        self._seed_student_documents()
         inv = _create_enrollment_invoice(self)
         if inv:
             self.db_set("sales_invoice", inv.name)
@@ -161,6 +162,45 @@ class Inscricao(Document):
             "notes": _("Criado automaticamente pela Inscrição {0}.").format(self.name),
         }).insert(ignore_permissions=True)
 
+    def _seed_student_documents(self):
+        """Populate Student.documents with required document types for this enrollment_type."""
+        if not self.student:
+            return
+        enrollment_type = self.enrollment_type or "Novo"
+        doc_types = frappe.get_all(
+            "Tipo de Documento",
+            filters={"is_active": 1, "applies_to": ["in", ["Ambos", enrollment_type]]},
+            fields=["name", "is_required"],
+            order_by="is_required desc, name asc",
+        )
+        if not doc_types:
+            return
+
+        # Collect any files the secretary pre-uploaded on the Inscricao form
+        preview_files = {
+            row.document_type: row.file
+            for row in (self.doc_previews or [])
+            if row.document_type and row.file
+        }
+
+        student_doc = frappe.get_doc("Student", self.student)
+        existing_types = {row.document_type for row in (student_doc.documents or [])}
+        added = False
+        for dt in doc_types:
+            if dt.name not in existing_types:
+                file_url = preview_files.get(dt.name)
+                student_doc.append("documents", {
+                    "document_type": dt.name,
+                    "is_required": dt.is_required,
+                    "status": "Entregue" if file_url else "Pendente",
+                    "submitted_date": frappe.utils.today() if file_url else None,
+                    "file": file_url or "",
+                    "origin_enrollment": self.name,
+                })
+                added = True
+        if added:
+            student_doc.save(ignore_permissions=True)
+
     def _close_sga(self):
         if not self.student:
             return
@@ -255,6 +295,17 @@ def _create_enrollment_invoice(doc):
         si.submit()
 
     return si
+
+
+@frappe.whitelist()
+def get_required_docs_for_type(enrollment_type):
+    """Return active Tipo de Documento records that apply to the given enrollment_type."""
+    return frappe.get_all(
+        "Tipo de Documento",
+        filters={"is_active": 1, "applies_to": ["in", ["Ambos", enrollment_type]]},
+        fields=["name", "label", "is_required", "description"],
+        order_by="is_required desc, label asc",
+    )
 
 
 @frappe.whitelist()

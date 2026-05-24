@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type",
+  "is_required",
+  "status",
+  "submitted_date",
+  "file",
+  "origin_enrollment",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Tipo de Documento",
+   "options": "Tipo de Documento",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "is_required",
+   "fieldtype": "Check",
+   "label": "Obrigatório",
+   "read_only": 1,
+   "fetch_from": "document_type.is_required",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "Pendente\nEntregue",
+   "default": "Pendente",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "submitted_date",
+   "fieldtype": "Date",
+   "label": "Data de Entrega",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "Ficheiro",
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "origin_enrollment",
+   "fieldtype": "Link",
+   "label": "Inscrição de Origem",
+   "options": "Inscricao",
+   "read_only": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Student Document",
+ "owner": "Administrator",
+ "permissions": []
+}

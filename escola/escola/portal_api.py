@@ -323,6 +323,36 @@ def get_addon_services(student):
 
 
 # ---------------------------------------------------------------------------
+# Student Hub — Documentos
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_student_documents(student):
+    guardian = _get_guardian()
+    _assert_owns_student(guardian.name, student)
+
+    rows = frappe.get_all(
+        "Student Document",
+        filters={"parent": student},
+        fields=["name", "document_type", "is_required", "status", "file", "submitted_date", "notes"],
+        order_by="is_required desc, document_type asc",
+    )
+
+    for row in rows:
+        label = frappe.db.get_value("Tipo de Documento", row.document_type, "label")
+        row["document_label"] = label or row.document_type
+        if row.submitted_date:
+            row["submitted_date"] = frappe.utils.formatdate(row.submitted_date)
+
+    pending_required = sum(1 for r in rows if r.is_required and r.status == "Pendente")
+
+    return {
+        "documents": rows,
+        "pending_required": pending_required,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Profile
 # ---------------------------------------------------------------------------
 

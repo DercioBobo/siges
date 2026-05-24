@@ -37,6 +37,8 @@
   "cb_turma",
   "class_group",
   "turma_picker_html",
+  "section_break_docs_preview",
+  "doc_previews",
   "section_break_payment",
   "fee_info_html",
   "payments",
@@ -233,6 +235,21 @@
    "fieldname": "turma_picker_html",
    "fieldtype": "HTML",
    "label": "Turma Picker"
+  },
+  {
+   "fieldname": "section_break_docs_preview",
+   "fieldtype": "Section Break",
+   "label": "Documentos Necessários",
+   "depends_on": "eval:doc.enrollment_type",
+   "description": "Lista gerada automaticamente pelo Tipo de Matrícula. O ficheiro é opcional — pode ser entregue mais tarde na ficha do aluno."
+  },
+  {
+   "fieldname": "doc_previews",
+   "fieldtype": "Table",
+   "label": "Documentos",
+   "options": "Inscricao Document",
+   "cannot_add_rows": 1,
+   "cannot_delete_rows": 1
   },
   {
    "fieldname": "section_break_payment",

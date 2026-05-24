@@ -23,6 +23,7 @@ frappe.ui.form.on("Student", {
 			_load_financial_summary(frm);
 			_load_academic_history(frm);
 			_load_renewal_status(frm);
+			_load_documents(frm);
 
 			const $btn = frm.add_custom_button(__("Acções"), () => _show_actions_modal(frm));
 			$btn.removeClass("btn-default").addClass("btn-primary");
@@ -1087,4 +1088,160 @@ function build_filters(d) {
 	if (ay) f.academic_year = ay;
 	if (sc) f.school_class  = sc;
 	return f;
+}
+
+// ---------------------------------------------------------------------------
+// Document panel
+// ---------------------------------------------------------------------------
+
+async function _load_documents(frm) {
+	const fd = frm.fields_dict["docs_panel_html"];
+	if (!fd) return;
+	fd.$wrapper.html(
+		`<div style="color:var(--text-muted);font-size:13px;padding:6px 0;">${__("A carregar documentos…")}</div>`
+	);
+	const r = await frappe.call({
+		method: "escola.escola.doctype.student.student.get_student_documents",
+		args: { student: frm.doc.name },
+	});
+	_render_docs_panel(frm, r.message || []);
+}
+
+function _render_docs_panel(frm, docs) {
+	const fd = frm.fields_dict["docs_panel_html"];
+	if (!fd) return;
+
+	if (!docs.length) {
+		fd.$wrapper.html(
+			`<div style="color:var(--text-muted);font-size:13px;padding:6px 0;">${__("Nenhum documento registado para este aluno.")}</div>`
+		);
+		return;
+	}
+
+	const pendingReq = docs.filter(d => d.status === "Pendente" && d.is_required).length;
+	const pendingOpt = docs.filter(d => d.status === "Pendente" && !d.is_required).length;
+
+	let badge = "";
+	if (pendingReq) {
+		badge = `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px;margin-left:8px;">${pendingReq} obrigatório(s) pendente(s)</span>`;
+	} else if (pendingOpt) {
+		badge = `<span style="background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px;margin-left:8px;">${pendingOpt} opcional(is) pendente(s)</span>`;
+	}
+
+	const rows = docs.map(doc => {
+		const isPending = doc.status === "Pendente";
+		const statusHtml = isPending
+			? `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;">${__("Pendente")}</span>`
+			: `<span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;">${__("Entregue")}</span>`;
+
+		const reqHtml = doc.is_required
+			? `<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;margin-left:5px;">${__("Obrigatório")}</span>`
+			: `<span style="font-size:10px;background:#f3f4f6;color:#9ca3af;padding:1px 6px;border-radius:8px;margin-left:5px;">${__("Opcional")}</span>`;
+
+		const fileHtml = doc.file
+			? `<a href="${frappe.utils.escape_html(doc.file)}" target="_blank"
+				style="font-size:11px;color:#2563eb;text-decoration:underline;">${__("Ver ficheiro")}</a>`
+			: "";
+		const dateHtml = doc.submitted_date
+			? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">${frappe.datetime.str_to_user(doc.submitted_date)}</span>`
+			: "";
+
+		const rowBg = (isPending && doc.is_required) ? "background:#fffbeb;" : "";
+
+		const actionHtml = isPending
+			? `<button class="sdoc-btn-deliver" data-row="${frappe.utils.escape_html(doc.name)}"
+				style="font-size:11px;background:#2563eb;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;">
+				${__("Marcar Entregue")}
+			   </button>`
+			: `<button class="sdoc-btn-reset" data-row="${frappe.utils.escape_html(doc.name)}"
+				style="font-size:11px;background:none;color:#6b7280;border:1px solid #e5e7eb;padding:4px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;">
+				${__("Repor")}
+			   </button>`;
+
+		return `
+		<tr style="border-bottom:1px solid #f1f5f9;${rowBg}">
+			<td style="padding:9px 12px;">
+				<span style="font-size:13px;font-weight:500;color:#1e293b;">${frappe.utils.escape_html(doc.document_label || doc.document_type)}</span>
+				${reqHtml}
+			</td>
+			<td style="padding:9px 12px;text-align:center;">${statusHtml}</td>
+			<td style="padding:9px 12px;">${fileHtml}${dateHtml}</td>
+			<td style="padding:9px 12px;text-align:right;">${actionHtml}</td>
+		</tr>`;
+	}).join("");
+
+	const html = `
+	<div style="margin-bottom:6px;">
+		<span style="font-size:13px;font-weight:600;color:#374151;">${__("Documentos registados")}</span>
+		${badge}
+	</div>
+	<div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;">
+		<table style="width:100%;border-collapse:collapse;font-size:13px;">
+			<thead>
+				<tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+					<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">${__("Documento")}</th>
+					<th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">${__("Estado")}</th>
+					<th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">${__("Ficheiro / Data")}</th>
+					<th style="padding:8px 12px;"></th>
+				</tr>
+			</thead>
+			<tbody>${rows}</tbody>
+		</table>
+	</div>`;
+
+	fd.$wrapper.html(html);
+
+	// Event delegation
+	fd.$wrapper.off("click.sdoc").on("click.sdoc", ".sdoc-btn-deliver", function () {
+		_deliver_doc_dialog(frm, $(this).data("row"));
+	}).on("click.sdoc", ".sdoc-btn-reset", function () {
+		_reset_doc_confirm(frm, $(this).data("row"));
+	});
+}
+
+function _deliver_doc_dialog(frm, row_name) {
+	const d = new frappe.ui.Dialog({
+		title: __("Marcar Documento como Entregue"),
+		fields: [
+			{
+				fieldname: "file",
+				fieldtype: "Attach",
+				label: __("Ficheiro (opcional)"),
+				description: __("Carregue uma cópia digitalizada, se disponível."),
+			},
+			{
+				fieldname: "notes",
+				fieldtype: "Small Text",
+				label: __("Observações"),
+			},
+		],
+		primary_action_label: __("Confirmar Entrega"),
+		primary_action(values) {
+			frappe.call({
+				method: "escola.escola.doctype.student.student.mark_document_delivered",
+				args: {
+					student:  frm.doc.name,
+					row_name,
+					file_url: values.file || "",
+					notes:    values.notes || "",
+				},
+				freeze: true,
+				freeze_message: __("A guardar…"),
+				callback() { frm.reload_doc(); },
+			});
+			d.hide();
+		},
+	});
+	d.show();
+}
+
+function _reset_doc_confirm(frm, row_name) {
+	frappe.confirm(
+		__("Repor o documento para estado Pendente?"),
+		() => frappe.call({
+			method: "escola.escola.doctype.student.student.reset_document_status",
+			args: { student: frm.doc.name, row_name },
+			callback() { frm.reload_doc(); },
+		})
+	);
 }

@@ -26,12 +26,16 @@
   "admission_date",
   "current_status",
   "financial_status",
+  "pending_required_docs",
   "column_break_8",
   "current_school_class",
   "current_class_group",
   "renovation_status_html",
   "section_break_guardian",
   "primary_guardian",
+  "section_break_documents",
+  "docs_panel_html",
+  "documents",
   "section_break_withdrawal",
   "withdrawal_date",
   "column_break_withdrawal",
@@ -170,6 +174,14 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "pending_required_docs",
+   "fieldtype": "Int",
+   "label": "Docs Pendentes Obrigatórios",
+   "read_only": 1,
+   "default": "0",
+   "hidden": 1
+  },
+  {
    "fieldname": "column_break_8",
    "fieldtype": "Column Break"
   },
@@ -204,6 +216,23 @@
    "label": "Encarregado Principal",
    "options": "Guardian",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_documents",
+   "fieldtype": "Section Break",
+   "label": "Documentação"
+  },
+  {
+   "fieldname": "docs_panel_html",
+   "fieldtype": "HTML",
+   "label": "Documentação"
+  },
+  {
+   "fieldname": "documents",
+   "fieldtype": "Table",
+   "label": "Documentos",
+   "options": "Student Document",
+   "hidden": 1
   },
   {
    "fieldname": "section_break_withdrawal",

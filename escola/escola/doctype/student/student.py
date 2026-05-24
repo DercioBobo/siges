@@ -249,6 +249,10 @@ class Student(Document):
         self.idade = _calc_age(self.date_of_birth)
         if not self.current_status:
             self.current_status = "Activo"
+        self.pending_required_docs = sum(
+            1 for row in (self.documents or [])
+            if row.is_required and row.status == "Pendente"
+        )
 
     def _sync_full_name(self):
         parts = filter(None, [self.first_name, self.last_name])
@@ -315,3 +319,56 @@ def ensure_customer_for_student(student_name):
 
     customer.insert(ignore_permissions=True)
     return customer.name
+
+
+# ---------------------------------------------------------------------------
+# Document management
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_student_documents(student):
+    """Return document rows enriched with the Tipo de Documento label."""
+    rows = frappe.get_all(
+        "Student Document",
+        filters={"parent": student},
+        fields=["name", "document_type", "is_required", "status", "file", "submitted_date", "origin_enrollment", "notes"],
+        order_by="is_required desc, document_type asc",
+    )
+    label_map = {}
+    for row in rows:
+        if row.document_type not in label_map:
+            label_map[row.document_type] = (
+                frappe.db.get_value("Tipo de Documento", row.document_type, "label") or row.document_type
+            )
+        row["document_label"] = label_map[row.document_type]
+    return rows
+
+
+@frappe.whitelist()
+def mark_document_delivered(student, row_name, file_url=None, notes=None):
+    """Set a Student Document row to Entregue, optionally attaching a file."""
+    doc = frappe.get_doc("Student", student)
+    for row in doc.documents:
+        if row.name == row_name:
+            row.status = "Entregue"
+            row.submitted_date = today()
+            if file_url:
+                row.file = file_url
+            if notes:
+                row.notes = notes
+            break
+    doc.save(ignore_permissions=True)
+    return True
+
+
+@frappe.whitelist()
+def reset_document_status(student, row_name):
+    """Reset a Student Document row back to Pendente."""
+    doc = frappe.get_doc("Student", student)
+    for row in doc.documents:
+        if row.name == row_name:
+            row.status = "Pendente"
+            row.submitted_date = None
+            break
+    doc.save(ignore_permissions=True)
+    return True
