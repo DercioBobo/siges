@@ -437,6 +437,9 @@
         : '';
       const absBadge = yr.total_absences != null
         ? `<span class="text-xs text-slate-400">${yr.total_absences} falta(s)</span>` : '';
+      const compBadge = yr.comportamento_anual
+        ? `<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">${yr.comportamento_anual}</span>`
+        : '';
 
       // Term headers
       const termHeaders = yr.term_labels.map(t =>
@@ -472,7 +475,7 @@
             ${yr.school_class ? `<span class="px-2.5 py-0.5 bg-[#e8f1fd] text-[#024ba5] rounded-md text-xs font-medium">${yr.school_class}</span>` : ''}
             ${yr.class_group ? `<span class="text-xs text-slate-400">${yr.class_group}</span>` : ''}
           </div>
-          <div class="flex items-center gap-2">${absBadge}${decBadge}</div>
+          <div class="flex items-center gap-2">${absBadge}${compBadge}${decBadge}</div>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm min-w-[360px]">
