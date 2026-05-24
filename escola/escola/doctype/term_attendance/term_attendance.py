@@ -54,6 +54,7 @@ class TermAttendance(Document):
     def validate(self):
         self._validate_uniqueness()
         self._calculate_totals()
+        self._validate_comportamento()
 
     def _validate_uniqueness(self):
         existing = frappe.db.get_value(
@@ -86,6 +87,19 @@ class TermAttendance(Document):
                 at_risk_count += 1
         self.total_students = len(self.attendance_rows)
         self.students_at_risk = at_risk_count
+
+    def _validate_comportamento(self):
+        required = frappe.db.get_single_value("School Settings", "comportamento_obrigatorio")
+        if not required:
+            return
+        missing = [row.student for row in self.attendance_rows if not row.comportamento]
+        if missing:
+            frappe.throw(
+                _("O campo Comportamento é obrigatório. {0} aluno(s) sem comportamento preenchido.").format(
+                    len(missing)
+                ),
+                title=_("Comportamento obrigatório"),
+            )
 
 
 @frappe.whitelist()

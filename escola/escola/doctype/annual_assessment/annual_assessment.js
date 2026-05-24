@@ -262,6 +262,9 @@ function _render_summary_html(frm, rows) {
 		const res = r.result || "—";
 		const badge_color = res === "Aprovado" ? "#16a34a" : res === "Reprovado" ? "#dc2626" : "#6b7280";
 		const badge_bg    = res === "Aprovado" ? "#dcfce7" : res === "Reprovado" ? "#fee2e2" : "#f3f4f6";
+		const comp = r.comportamento_anual
+			? `<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">${frappe.utils.escape_html(__(r.comportamento_anual))}</span>`
+			: "—";
 		return `<tr>
 			<td style="padding:7px 12px;">
 				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
@@ -277,6 +280,7 @@ function _render_summary_html(frm, rows) {
 				<span style="background:${badge_bg};color:${badge_color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">${__(res)}</span>
 			</td>
 			<td style="padding:7px 12px;text-align:center;color:#6b7280;">${r.total_absences != null ? r.total_absences : "—"}</td>
+			<td style="padding:7px 12px;text-align:center;">${comp}</td>
 		</tr>`;
 	}).join("");
 
@@ -292,6 +296,7 @@ function _render_summary_html(frm, rows) {
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Média")}</th>
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Resultado")}</th>
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Faltas")}</th>
+      <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Comportamento")}</th>
     </tr>
   </thead>
   <tbody>${tbody}</tbody>
@@ -315,6 +320,9 @@ function _render_grades_html(frm, rows, details, terms) {
 		const res = r.result || "—";
 		const badge_color = res === "Aprovado" ? "#16a34a" : res === "Reprovado" ? "#dc2626" : "#6b7280";
 		const badge_bg    = res === "Aprovado" ? "#dcfce7" : res === "Reprovado" ? "#fee2e2" : "#f3f4f6";
+		const comp = r.comportamento_anual
+			? `<span style="background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">${frappe.utils.escape_html(__(r.comportamento_anual))}</span>`
+			: "—";
 		return `<tr>
 			<td style="padding:7px 12px;">
 				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
@@ -330,6 +338,7 @@ function _render_grades_html(frm, rows, details, terms) {
 				<span style="background:${badge_bg};color:${badge_color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;">${__(res)}</span>
 			</td>
 			<td style="padding:7px 12px;text-align:center;color:#6b7280;">${r.total_absences != null ? r.total_absences : "—"}</td>
+			<td style="padding:7px 12px;text-align:center;">${comp}</td>
 		</tr>`;
 	}).join("");
 
@@ -345,6 +354,7 @@ function _render_grades_html(frm, rows, details, terms) {
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Média Geral")}</th>
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Resultado")}</th>
       <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Faltas")}</th>
+      <th style="padding:8px 12px;text-align:center;font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid #e2e8f0;">${__("Comportamento")}</th>
     </tr>
   </thead>
   <tbody>${tbody}</tbody>

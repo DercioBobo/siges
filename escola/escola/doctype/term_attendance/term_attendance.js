@@ -113,6 +113,9 @@ function _set_queries(frm) {
         if (frm.doc.academic_year) f.academic_year = frm.doc.academic_year;
         return { filters: f };
     });
+    frm.set_query("comportamento", "attendance_rows", () => ({
+        filters: { is_active: 1 },
+    }));
 }
 
 async function _auto_fill_term(frm, academic_year) {

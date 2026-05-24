@@ -14,7 +14,8 @@
   "column_break_result",
   "result",
   "total_absences",
-  "remarks"
+  "remarks",
+  "comportamento_anual"
  ],
  "fields": [
   {
@@ -93,6 +94,14 @@
    "label": "Observação",
    "in_list_view": 1,
    "columns": 3
+  },
+  {
+   "fieldname": "comportamento_anual",
+   "fieldtype": "Data",
+   "label": "Comportamento",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
   }
  ],
  "istable": 1,

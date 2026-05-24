@@ -114,8 +114,9 @@ def _build_year(student, sga):
         "subjects":        subjects,
         "term_averages":   term_averages,
         "overall_average": overall,
-        "final_decision":  _get_final_decision(student, sga),
-        "total_absences":  _get_absences(student, sga),
+        "final_decision":     _get_final_decision(student, sga),
+        "total_absences":     _get_absences(student, sga),
+        "comportamento_anual": _get_comportamento_anual(student, sga),
     }
 
 
@@ -169,3 +170,18 @@ def _get_absences(student, sga):
         "total_absences",
     )
     return int(val) if val is not None else None
+
+
+def _get_comportamento_anual(student, sga):
+    ann = frappe.db.get_value(
+        "Annual Assessment",
+        {"academic_year": sga.academic_year, "class_group": sga.class_group},
+        "name",
+    )
+    if not ann:
+        return None
+    return frappe.db.get_value(
+        "Annual Assessment Row",
+        {"parent": ann, "student": student},
+        "comportamento_anual",
+    ) or None

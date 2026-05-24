@@ -84,6 +84,8 @@
   "column_break_sibling",
   "sibling_discount_percent",
   "sibling_discount_applies_to_addons",
+  "section_comportamento",
+  "comportamento_obrigatorio",
   "section_portal",
   "guardian_portal_enabled"
  ],
@@ -580,6 +582,18 @@
    "default": "0",
    "description": "Se activo, o desconto de irmãos também é aplicado nas facturas de serviços extras mensais.",
    "depends_on": "eval:doc.sibling_discount_enabled"
+  },
+  {
+   "fieldname": "section_comportamento",
+   "fieldtype": "Section Break",
+   "label": "Comportamento"
+  },
+  {
+   "fieldname": "comportamento_obrigatorio",
+   "fieldtype": "Check",
+   "label": "Comportamento Obrigatório nas Faltas",
+   "default": "0",
+   "description": "Se activo, o campo Comportamento é obrigatório ao guardar um Resumo de Faltas por Período."
   },
   {
    "fieldname": "section_portal",

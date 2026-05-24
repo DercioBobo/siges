@@ -1,3 +1,4 @@
+import math
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -88,6 +89,7 @@ def calculate_assessment(doc_name):
         return {"error": "no_grades"}
 
     absences = get_annual_absences(doc.class_group, doc.academic_year)
+    comportamentos = _compute_annual_comportamento(doc.class_group, doc.academic_year)
     abs_threshold = int(
         frappe.db.get_single_value("School Settings", "max_absences_threshold") or 0
     )
@@ -124,13 +126,14 @@ def calculate_assessment(doc_name):
         result        = "Aprovado" if final_grade >= min_passing else "Reprovado"
 
         result_rows.append({
-            "student":        student,
-            "term_1_average": term_avgs.get(1),
-            "term_2_average": term_avgs.get(2) if max_terms >= 2 else None,
-            "term_3_average": term_avgs.get(3) if max_terms >= 3 else None,
-            "final_grade":    final_grade,
-            "total_absences": total_abs,
-            "result":         result,
+            "student":            student,
+            "term_1_average":     term_avgs.get(1),
+            "term_2_average":     term_avgs.get(2) if max_terms >= 2 else None,
+            "term_3_average":     term_avgs.get(3) if max_terms >= 3 else None,
+            "final_grade":        final_grade,
+            "total_absences":     total_abs,
+            "result":             result,
+            "comportamento_anual": comportamentos.get(student),
         })
 
         # Details for HTML: subject → {t1, t2, t3, avg}
@@ -238,6 +241,57 @@ class AnnualAssessment(Document):
                     title=_("Aluno duplicado"),
                 )
             seen.add(row.student)
+
+
+def _compute_annual_comportamento(class_group, academic_year):
+    """Average comportamento weights per student across all terms, apply ceiling, return {student: label}."""
+    records = frappe.get_all(
+        "Term Attendance",
+        filters={"class_group": class_group, "academic_year": academic_year, "docstatus": ("!=", 2)},
+        fields=["name"],
+    )
+    if not records:
+        return {}
+
+    ta_names = [r.name for r in records]
+    placeholders = ", ".join(["%s"] * len(ta_names))
+    rows = frappe.db.sql(
+        f"SELECT student, comportamento FROM `tabTerm Attendance Row` "
+        f"WHERE parent IN ({placeholders}) AND comportamento IS NOT NULL AND comportamento != ''",
+        ta_names,
+        as_dict=True,
+    )
+    if not rows:
+        return {}
+
+    options = frappe.get_all(
+        "Behaviour Option",
+        filters={"is_active": 1},
+        fields=["name", "weight"],
+        order_by="weight asc",
+    )
+    if not options:
+        return {}
+
+    weight_map = {o.name: int(o.weight or 0) for o in options}
+
+    student_weights = {}
+    for row in rows:
+        w = weight_map.get(row.comportamento)
+        if w is not None:
+            student_weights.setdefault(row.student, []).append(w)
+
+    result = {}
+    for student, weights in student_weights.items():
+        ceil_val = math.ceil(sum(weights) / len(weights))
+        match = next((o.name for o in options if int(o.weight or 0) == ceil_val), None)
+        if not match:
+            match = next((o.name for o in options if int(o.weight or 0) >= ceil_val), None)
+        if not match:
+            match = options[-1].name
+        result[student] = match
+
+    return result
 
 
 @frappe.whitelist()

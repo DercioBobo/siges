@@ -287,6 +287,9 @@ function _ba_year_html(yr, filterTerm, viewMode) {
 		? `<span class="ba-decision-badge" style="background:${dc.bg};color:${dc.color};">
 			${__(yr.final_decision)}
 		   </span>` : "";
+	const compHtml = yr.comportamento_anual
+		? `<span class="ba-comportamento-badge">${frappe.utils.escape_html(__(yr.comportamento_anual))}</span>`
+		: "";
 
 	return `
 	<div class="ba-year-card">
@@ -300,6 +303,7 @@ function _ba_year_html(yr, filterTerm, viewMode) {
 			</div>
 			<div class="ba-year-right">
 				${absText}
+				${compHtml}
 				${decisionHtml}
 			</div>
 		</div>
@@ -402,6 +406,11 @@ function _ba_inject_styles() {
 .ba-year-label { font-size: 16px; font-weight: 700; color: var(--heading-color); }
 .ba-class-tag  { font-size: 12px; color: var(--text-muted); }
 .ba-absences   { font-size: 12px; color: var(--text-muted); }
+.ba-comportamento-badge {
+	font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+	background: #ede9fe; color: #5b21b6;
+}
+
 .ba-decision-badge {
 	font-size: 12px; font-weight: 700;
 	padding: 4px 14px; border-radius: 14px;

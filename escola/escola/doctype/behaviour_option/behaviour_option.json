@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "autoname": "field:label",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "column_break_1",
+  "weight",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Classificação",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "columns": 5
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Int",
+   "label": "Peso",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3,
+   "description": "Valor numérico para cálculo da média (ex.: 1=Muito Bom, 2=Bom, 3=Suficiente)."
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Activo",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Behaviour Option",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "read": 1,
+   "role": "Secretaria Escolar",
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "read": 1,
+   "role": "Professor",
+   "write": 0
+  }
+ ],
+ "sort_field": "weight",
+ "sort_order": "ASC",
+ "title_field": "label",
+ "track_changes": 1
+}

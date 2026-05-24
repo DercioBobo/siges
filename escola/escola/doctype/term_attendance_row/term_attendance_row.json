@@ -10,7 +10,8 @@
   "justified_absences",
   "unjustified_absences",
   "total_absences",
-  "at_risk"
+  "at_risk",
+  "comportamento"
  ],
  "fields": [
   {
@@ -58,6 +59,14 @@
    "read_only": 1,
    "in_list_view": 1,
    "columns": 1
+  },
+  {
+   "fieldname": "comportamento",
+   "fieldtype": "Link",
+   "label": "Comportamento",
+   "options": "Behaviour Option",
+   "in_list_view": 1,
+   "columns": 2
   }
  ],
  "istable": 1,
