@@ -104,7 +104,7 @@ def get_dashboard():
     today_lessons = []
     if today_pt:
         today_lessons = frappe.db.sql("""
-            SELECT te.subject, te.time_slot, te.is_double,
+            SELECT te.subject, te.time_slot,
                    t.class_group, cg.school_class, cg.section_name, cg.shift,
                    ts.start_time, ts.label
             FROM `tabTimetable Entry` te
@@ -134,11 +134,10 @@ def get_dashboard():
             "Grade Entry",
             filters={
                 "class_group": ("in", [t["name"] for t in turmas]),
-                "teacher": teacher.name,
                 "docstatus": ("!=", 2),
             },
-            fields=["name", "class_group", "academic_term", "assessment_name", "evaluation_type", "assessment_date"],
-            order_by="assessment_date desc",
+            fields=["name", "class_group", "academic_term", "subject"],
+            order_by="modified desc",
             limit=5,
         )
 
@@ -171,7 +170,7 @@ def get_timetable():
     teacher = _get_teacher()
 
     entries = frappe.db.sql("""
-        SELECT te.day_of_week, te.time_slot, te.subject, te.is_double,
+        SELECT te.day_of_week, te.time_slot, te.subject,
                t.class_group, cg.school_class, cg.section_name, cg.shift,
                ts.start_time, ts.end_time, ts.label, ts.sort_order, ts.slot_type
         FROM `tabTimetable Entry` te
@@ -226,123 +225,223 @@ def get_grade_entries(turma, term):
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
 
-    entries = frappe.db.get_all(
-        "Grade Entry",
-        filters={"class_group": turma, "academic_term": term, "docstatus": ("!=", 2)},
-        fields=["name", "assessment_name", "evaluation_type", "subject", "assessment_date", "max_score", "total_approved", "total_failed"],
-        order_by="assessment_date desc",
+    # Subjects this teacher teaches in this turma (from active timetable)
+    subj_rows = frappe.db.sql("""
+        SELECT DISTINCT te.subject
+        FROM `tabTimetable Entry` te
+        JOIN `tabTimetable` t ON t.name = te.parent
+        WHERE te.teacher = %s AND t.class_group = %s AND t.status = 'Activo'
+          AND te.subject IS NOT NULL AND te.subject != ''
+        ORDER BY te.subject
+    """, (teacher.name, turma), as_dict=True)
+    subj_names = [r.subject for r in subj_rows]
+
+    # Fall back to curriculum when teacher has no subject assignments (e.g. class director)
+    if not subj_names:
+        curriculum = frappe.db.get_value(
+            "Class Curriculum",
+            {"class_group": turma, "is_active": 1},
+            "name",
+        )
+        if curriculum:
+            lines = frappe.get_all(
+                "Class Curriculum Line",
+                filters={"parent": curriculum},
+                fields=["subject"],
+                order_by="idx asc",
+            )
+            subj_names = [l.subject for l in lines if l.subject]
+
+    if not subj_names:
+        return {"entries": []}
+
+    # Batch-fetch all Grade Entries for this turma/term
+    existing_ges = {
+        ge.subject: ge
+        for ge in frappe.get_all(
+            "Grade Entry",
+            filters={"class_group": turma, "academic_term": term, "docstatus": ("!=", 2)},
+            fields=["name", "subject"],
+        )
+    }
+
+    student_count = frappe.db.count(
+        "Class Group Student",
+        {"parent": turma, "parentfield": "students"},
     )
+
+    entries = []
+    for sn in subj_names:
+        ge = existing_ges.get(sn)
+        counts = {"complete": 0, "in_progress": 0, "absent": 0, "total": student_count}
+        status = "Vazio"
+
+        if ge:
+            for r in frappe.get_all(
+                "Grade Entry Row",
+                filters={"parent": ge.name},
+                fields=["is_absent", "mt"],
+            ):
+                if r.is_absent:
+                    counts["absent"] += 1
+                    counts["complete"] += 1
+                elif r.mt is not None:
+                    counts["complete"] += 1
+                else:
+                    counts["in_progress"] += 1
+
+            if counts["complete"] + counts["in_progress"] == 0:
+                status = "Vazio"
+            elif counts["complete"] >= student_count:
+                status = "Completo"
+            else:
+                status = "Em Curso"
+
+        entries.append({
+            "subject": sn,
+            "entry_name": ge.name if ge else None,
+            "status": status,
+            "counts": counts,
+        })
+
     return {"entries": entries}
 
 
 @frappe.whitelist()
-def get_grade_entry_rows(entry_name):
+def get_grade_entry_rows(turma, term, subject):
     teacher = _get_teacher()
-    entry = frappe.get_doc("Grade Entry", entry_name)
-    _assert_teacher_owns_turma(teacher.name, entry.class_group)
+    _assert_teacher_owns_turma(teacher.name, turma)
 
-    rows = frappe.db.get_all(
-        "Grade Entry Row",
-        filters={"parent": entry_name},
-        fields=["student", "subject", "score", "is_absent", "is_approved"],
-        order_by="student",
+    ge_name = frappe.db.get_value(
+        "Grade Entry",
+        {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
+        "name",
     )
 
-    # Enrich with student names
-    student_names = {r.student: frappe.db.get_value("Student", r.student, "full_name") or r.student for r in rows}
-    for r in rows:
-        r["student_name"] = student_names.get(r.student, r.student)
+    students = frappe.db.sql("""
+        SELECT cgs.student, cgs.student_name, s.student_code
+        FROM `tabClass Group Student` cgs
+        LEFT JOIN `tabStudent` s ON s.name = cgs.student
+        WHERE cgs.parent = %s AND cgs.parentfield = 'students'
+        ORDER BY cgs.student_name
+    """, turma, as_dict=True)
 
-    return {
-        "entry": {
-            "name": entry.name,
-            "class_group": entry.class_group,
-            "academic_term": entry.academic_term,
-            "assessment_name": entry.assessment_name,
-            "evaluation_type": entry.evaluation_type,
-            "subject": entry.subject or "",
-            "assessment_date": frappe.utils.formatdate(entry.assessment_date) if entry.assessment_date else "",
-            "max_score": entry.max_score or 20,
-            "notes": entry.notes or "",
-        },
-        "rows": rows,
-    }
+    existing = {}
+    if ge_name:
+        for r in frappe.get_all(
+            "Grade Entry Row",
+            filters={"parent": ge_name},
+            fields=["student", "acsp_1", "acsp_2", "acsp_3",
+                    "acse_1", "acse_2", "acse_3", "acp",
+                    "macsp", "macs", "mt", "is_absent"],
+        ):
+            existing[r.student] = r
+
+    rows = []
+    for s in students:
+        ex = existing.get(s.student, {})
+        rows.append({
+            "student":      s.student,
+            "student_name": s.student_name or s.student,
+            "student_code": s.student_code or "",
+            "acsp_1":  ex.get("acsp_1"),
+            "acsp_2":  ex.get("acsp_2"),
+            "acsp_3":  ex.get("acsp_3"),
+            "acse_1":  ex.get("acse_1"),
+            "acse_2":  ex.get("acse_2"),
+            "acse_3":  ex.get("acse_3"),
+            "acp":     ex.get("acp"),
+            "macsp":   ex.get("macsp"),
+            "macs":    ex.get("macs"),
+            "mt":      ex.get("mt"),
+            "is_absent": int(ex.get("is_absent") or 0),
+        })
+
+    return {"entry_name": ge_name, "subject": subject, "rows": rows}
 
 
 @frappe.whitelist()
-def save_grade_entry(turma, term, assessment_name, evaluation_type, max_score, rows, subject=None, assessment_date=None, notes=None):
+def save_grade_entry(turma, term, subject, rows, notes=None):
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
 
     import json
     if isinstance(rows, str):
         rows = json.loads(rows)
-    max_score = float(max_score or 20)
 
-    min_passing = float(
-        frappe.db.get_single_value("School Settings", "minimum_passing_grade") or 10
-    )
-    cg = frappe.db.get_value("Class Group", turma, ["school_class", "academic_year"], as_dict=True) or {}
+    student_names = {
+        s.name: s.full_name
+        for s in frappe.get_all(
+            "Student",
+            filters={"name": ("in", [r["student"] for r in rows])},
+            fields=["name", "full_name"],
+        )
+    }
 
-    # Check if entry already exists for this turma + term + assessment_name
-    existing = frappe.db.get_value(
+    def _apply(row, data):
+        for f in ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp"]:
+            v = data.get(f)
+            row.set(f, float(v) if v is not None and v != "" else None)
+        row.is_absent = int(data.get("is_absent") or 0)
+
+    ge_name = frappe.db.get_value(
         "Grade Entry",
-        {"class_group": turma, "academic_term": term, "assessment_name": assessment_name, "docstatus": ("!=", 2)},
+        {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
         "name",
     )
 
-    if existing:
-        entry = frappe.get_doc("Grade Entry", existing)
+    if ge_name:
+        doc = frappe.get_doc("Grade Entry", ge_name)
+        by_student = {r.student: r for r in doc.grade_rows}
+        for r in rows:
+            if r["student"] in by_student:
+                _apply(by_student[r["student"]], r)
+            else:
+                new_row = doc.append("grade_rows", {
+                    "student": r["student"],
+                    "student_name": student_names.get(r["student"], ""),
+                })
+                _apply(new_row, r)
     else:
-        entry = frappe.new_doc("Grade Entry")
-        entry.class_group    = turma
-        entry.academic_term  = term
-        entry.school_class   = cg.get("school_class") or ""
-        entry.academic_year  = cg.get("academic_year") or ""
+        cg_info = frappe.db.get_value(
+            "Class Group", turma, ["academic_year", "school_class"], as_dict=True
+        ) or {}
+        doc = frappe.new_doc("Grade Entry")
+        doc.class_group   = turma
+        doc.academic_term = term
+        doc.subject       = subject
+        doc.academic_year = cg_info.get("academic_year") or ""
+        doc.school_class  = cg_info.get("school_class") or ""
+        doc.teacher       = teacher.name
+        for r in rows:
+            new_row = doc.append("grade_rows", {
+                "student": r["student"],
+                "student_name": student_names.get(r["student"], ""),
+            })
+            _apply(new_row, r)
 
-    entry.assessment_name  = assessment_name
-    entry.evaluation_type  = evaluation_type
-    entry.subject          = subject or ""
-    entry.teacher          = teacher.name
-    entry.max_score        = max_score
-    entry.notes            = notes or ""
-    if assessment_date:
-        entry.assessment_date = assessment_date
-
-    entry.set("grade_rows", [])
-    approved = failed = 0
-    for r in rows:
-        score = r.get("score")
-        is_absent = int(r.get("is_absent") or 0)
-        is_approved = 0
-        if not is_absent and score is not None:
-            try:
-                score = float(score)
-                is_approved = 1 if score >= min_passing else 0
-                if is_approved:
-                    approved += 1
-                else:
-                    failed += 1
-            except (TypeError, ValueError):
-                score = None
-        entry.append("grade_rows", {
-            "student":     r.get("student"),
-            "subject":     r.get("subject") or subject or "",
-            "score":       score,
-            "is_absent":   is_absent,
-            "is_approved": is_approved,
-        })
-
-    entry.total_approved = approved
-    entry.total_failed   = failed
-
-    if existing:
-        entry.save(ignore_permissions=True)
-    else:
-        entry.insert(ignore_permissions=True)
-
+    doc.save(ignore_permissions=True)
     frappe.db.commit()
-    return {"name": entry.name, "created": not existing}
+
+    saved_rows = frappe.get_all(
+        "Grade Entry Row",
+        filters={"parent": doc.name},
+        fields=["student", "acsp_1", "acsp_2", "acsp_3",
+                "acse_1", "acse_2", "acse_3", "acp",
+                "macsp", "macs", "mt", "is_absent"],
+        order_by="idx asc",
+    )
+
+    current_set = {r["student"] for r in rows}
+    status_rows = [sr for sr in saved_rows if sr.student in current_set]
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import _subject_status
+    return {
+        "name": doc.name,
+        "created": not ge_name,
+        "status": _subject_status(status_rows),
+        "rows": saved_rows,
+    }
 
 
 # ---------------------------------------------------------------------------

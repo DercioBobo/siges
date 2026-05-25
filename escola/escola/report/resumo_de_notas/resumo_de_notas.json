@@ -25,10 +25,10 @@
    "options": "Academic Term"
   },
   {
-   "fieldname": "evaluation_type",
-   "fieldtype": "Select",
-   "label": "Tipo de Avaliação",
-   "options": "\nTrabalho\nTeste\nExame\nAvaliação Contínua\nOutro"
+   "fieldname": "subject",
+   "fieldtype": "Link",
+   "label": "Disciplina",
+   "options": "Subject"
   }
  ],
  "is_standard": "Yes",

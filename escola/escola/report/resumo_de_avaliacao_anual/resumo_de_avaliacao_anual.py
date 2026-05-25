@@ -20,24 +20,50 @@ def execute(filters=None):
             "width": 210,
         },
         {
-            "label": _("Disciplina"),
-            "fieldname": "subject",
-            "fieldtype": "Link",
-            "options": "Subject",
-            "width": 160,
+            "label": _("Média T1"),
+            "fieldname": "term_1_average",
+            "fieldtype": "Float",
+            "width": 80,
+            "precision": 2,
         },
         {
-            "label": _("Nota Final"),
+            "label": _("Média T2"),
+            "fieldname": "term_2_average",
+            "fieldtype": "Float",
+            "width": 80,
+            "precision": 2,
+        },
+        {
+            "label": _("Média T3"),
+            "fieldname": "term_3_average",
+            "fieldtype": "Float",
+            "width": 80,
+            "precision": 2,
+        },
+        {
+            "label": _("Média Geral"),
             "fieldname": "final_grade",
             "fieldtype": "Float",
             "width": 90,
-            "precision": 1,
+            "precision": 2,
         },
         {
             "label": _("Resultado"),
             "fieldname": "result",
             "fieldtype": "Data",
             "width": 100,
+        },
+        {
+            "label": _("Faltas"),
+            "fieldname": "total_absences",
+            "fieldtype": "Int",
+            "width": 70,
+        },
+        {
+            "label": _("Comportamento"),
+            "fieldname": "comportamento_anual",
+            "fieldtype": "Data",
+            "width": 120,
         },
         {
             "label": _("Observações"),
@@ -60,15 +86,19 @@ def execute(filters=None):
         SELECT
             aar.student,
             s.full_name,
-            aar.subject,
+            aar.term_1_average,
+            aar.term_2_average,
+            aar.term_3_average,
             aar.final_grade,
             aar.result,
+            aar.total_absences,
+            aar.comportamento_anual,
             aar.remarks
         FROM `tabAnnual Assessment Row` aar
         INNER JOIN `tabAnnual Assessment` aa ON aa.name = aar.parent
         INNER JOIN `tabStudent`           s  ON s.name  = aar.student
         WHERE {where}
-        ORDER BY s.full_name, aar.subject
+        ORDER BY s.full_name
         """,
         filters,
         as_dict=True,

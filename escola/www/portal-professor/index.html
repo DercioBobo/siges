@@ -145,18 +145,9 @@
 
   <!-- ─── PAUTAS ────────────────────────────────────────────────── -->
   <div id="view-pautas" class="view">
-    <div class="flex items-start justify-between gap-4 mb-5">
-      <div class="page-header mb-0">
-        <h2>Pautas de Notas</h2>
-        <p>Crie e edite avaliações por turma e período lectivo.</p>
-      </div>
-      <button onclick="openNewGradeEntry()"
-              class="shrink-0 flex items-center gap-1.5 bg-brand text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-brand-dark transition-colors shadow-sm">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-        </svg>
-        Nova Pauta
-      </button>
+    <div class="page-header mb-5">
+      <h2>Pautas de Notas</h2>
+      <p>Registe as notas por disciplina e período lectivo.</p>
     </div>
     <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
       <select id="pautas-turma" onchange="loadPautas()" class="field flex-1 min-w-[150px] bg-slate-50">
@@ -383,7 +374,6 @@ let _terms  = [];
 let _currentTerm = null;
 let _dashData = null;
 
-const EVAL_TYPES = ['Trabalho','Teste','Exame','Oral','Avaliação Contínua','Outro'];
 const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
 const SHORT_DAYS = ['Seg','Ter','Qua','Qui','Sex'];
 const SHIFT_CFG = {
@@ -600,12 +590,11 @@ function loadHome() {
   if (d.recent_entries && d.recent_entries.length) {
     const items = d.recent_entries.map(e => `
       <div class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 -mx-4 px-4 transition-colors"
-           onclick="openEditGradeEntry('${esc(e.name)}')">
+           onclick="openGradeEntry('${esc(e.class_group)}','${esc(e.academic_term)}','${esc(e.subject)}')">
         <div class="flex-1">
-          <div class="text-sm font-semibold text-slate-800">${esc(e.assessment_name)}</div>
-          <div class="text-xs text-slate-400">${esc(e.class_group)} · ${esc(e.evaluation_type)}</div>
+          <div class="text-sm font-semibold text-slate-800">${esc(e.subject||'—')}</div>
+          <div class="text-xs text-slate-400">${esc(e.class_group)} · ${esc(e.academic_term)}</div>
         </div>
-        <div class="text-xs text-slate-400 shrink-0">${e.assessment_date||''}</div>
       </div>`).join('');
     recentHtml = `
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -923,34 +912,37 @@ async function loadPautas() {
     const entries = data.entries || [];
 
     if (!entries.length) {
-      list.innerHTML = emptyHtml('Nenhuma pauta encontrada para esta turma e período.',
-        `<button onclick="openNewGradeEntry()" class="text-sm font-semibold text-brand border border-brand px-4 py-2 rounded-xl hover:bg-brand hover:text-white transition-colors">+ Criar primeira pauta</button>`);
+      list.innerHTML = emptyHtml('Nenhuma disciplina encontrada para esta turma e período.');
       return;
     }
 
+    const STATUS_CFG = {
+      'Completo': { border:'border-emerald-200', badge:'bg-emerald-100 text-emerald-700', dot:'bg-emerald-500', bar:'bg-emerald-400' },
+      'Em Curso': { border:'border-amber-200',   badge:'bg-amber-100 text-amber-700',     dot:'bg-amber-500',   bar:'bg-amber-400' },
+      'Vazio':    { border:'border-slate-200',    badge:'bg-slate-100 text-slate-500',     dot:'bg-slate-300',   bar:'bg-slate-200' },
+    };
+
     list.innerHTML = entries.map(e => {
-      const total = (e.total_approved||0) + (e.total_failed||0);
-      const pct = total ? Math.round((e.total_approved||0)/total*100) : null;
+      const cfg = STATUS_CFG[e.status] || STATUS_CFG['Vazio'];
+      const cnt = e.counts || {};
+      const pct = cnt.total ? Math.round((cnt.complete||0) / cnt.total * 100) : 0;
       return `
-      <div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
-           onclick="openEditGradeEntry('${esc(e.name)}')">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold text-slate-800 group-hover:text-brand transition-colors truncate">${esc(e.assessment_name)}</div>
-            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-              <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">${esc(e.evaluation_type)}</span>
-              ${e.subject?`<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">${esc(e.subject)}</span>`:''}
-            </div>
+      <div class="bg-white rounded-xl border ${cfg.border} p-4 hover:shadow-md transition-all cursor-pointer group"
+           onclick="openGradeEntry('${esc(turma)}','${esc(term)}','${esc(e.subject)}')">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}"></div>
+            <div class="font-semibold text-slate-800 group-hover:text-brand transition-colors truncate">${esc(e.subject)}</div>
           </div>
-          <div class="text-right shrink-0">
-            <div class="text-xs text-slate-400 mb-1">${e.assessment_date||''}</div>
-            <div class="flex items-center gap-2 justify-end">
-              <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">${e.total_approved||0} ✓</span>
-              <span class="text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">${e.total_failed||0} ✗</span>
-            </div>
-            ${pct!==null?`<div class="text-[10px] text-slate-400 mt-1">${pct}% aprovação</div>`:''}
-          </div>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${cfg.badge}">${esc(e.status)}</span>
         </div>
+        ${cnt.total ? `
+        <div class="mt-2.5 flex items-center gap-2">
+          <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full ${cfg.bar} transition-all" style="width:${pct}%"></div>
+          </div>
+          <span class="text-xs text-slate-400 shrink-0">${cnt.complete||0}/${cnt.total} alunos</span>
+        </div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -959,290 +951,195 @@ async function loadPautas() {
   }
 }
 
-async function openNewGradeEntry() {
-  const turma = document.getElementById('pautas-turma').value;
-  const term  = document.getElementById('pautas-term').value;
-
-  openDrawer('Nova Pauta de Notas', '');
-  document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(turma, term, null);
-  document.getElementById('drawer-footer').innerHTML = `
-    <button onclick="submitGradeEntry()"
-            class="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
-      Guardar Pauta
-    </button>`;
-
-  if (turma) {
-    await Promise.all([
-      loadGradeEntrySubjects(turma, null),
-      loadGradeEntryStudents(turma, null),
-    ]);
-  } else {
-    const sel = document.getElementById('ge-subject');
-    if (sel) sel.innerHTML = `<option value="">— Seleccione a turma primeiro —</option>`;
-  }
-}
-
-async function openEditGradeEntry(entryName) {
-  openDrawer('A carregar…', '');
+async function openGradeEntry(turma, term, subject) {
+  openDrawer(subject, '');
   document.getElementById('drawer-body').innerHTML = spinnerHtml();
+  document.getElementById('drawer-footer').innerHTML = '';
 
   try {
-    const data = await api('get_grade_entry_rows', { entry_name: entryName });
-    const e = data.entry;
-    document.getElementById('drawer-title').textContent = e.assessment_name;
-    document.getElementById('drawer-body').innerHTML = buildGradeEntryForm(e.class_group, e.academic_term, e);
+    const data = await api('get_grade_entry_rows', { turma, term, subject });
+    const turmaLabel = _turmas.find(t => t.name === turma);
+    const termLabel  = _terms.find(t => t.name === term);
+    const rows = data.rows || [];
+
+    document.getElementById('drawer-body').innerHTML = `
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${esc(turmaLabel?.school_class||turma)}</span>
+        <span class="text-slate-300 text-xs">·</span>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${esc(termLabel?.term_name||term)}</span>
+        <span class="text-xs text-slate-400 ml-1">${rows.length} aluno${rows.length!==1?'s':''}</span>
+      </div>
+      ${_buildGradeTable(rows)}
+      <p class="text-[11px] text-slate-400 mt-2 px-1">
+        MACSP = média ACSP · MACS = média(MACSP + ACSE) · MT = (2×MACS + ACP) ÷ 3
+      </p>`;
+
     document.getElementById('drawer-footer').innerHTML = `
-      <button onclick="submitGradeEntry('${esc(e.assessment_name)}')"
+      <button onclick="saveGradeEntry('${esc(turma)}','${esc(term)}','${esc(subject)}')"
               class="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
-        Guardar Alterações
+        Guardar Pautas
       </button>`;
-    // Load subjects dropdown and student rows (with pre-filled scores)
-    await Promise.all([
-      loadGradeEntrySubjects(e.class_group, e.subject),
-      loadGradeEntryStudents(e.class_group, data.rows),
-    ]);
+
+    // Recalc derived fields for pre-filled rows
+    document.querySelectorAll('#ge-table [data-student]').forEach(tr => _recalcRow(tr));
   } catch(err) {
-    document.getElementById('drawer-body').innerHTML = errorHtml(err.message, `openEditGradeEntry('${entryName}')`);
+    document.getElementById('drawer-body').innerHTML = errorHtml(err.message, `openGradeEntry('${esc(turma)}','${esc(term)}','${esc(subject)}')`);
   }
 }
 
-function buildGradeEntryForm(turma, term, existing) {
-  const turmaOpts = _turmas.map(t =>
-    `<option value="${esc(t.name)}" ${turma&&t.name===turma?'selected':''}>${esc(t.school_class||t.name)}${t.section_name?' — '+t.section_name:''}</option>`
+function _buildGradeTable(rows) {
+  const COL_GROUPS = [
+    { label:'Avaliação Contínua Sem Peso', span:4, cls:'bg-blue-50 text-blue-700' },
+    { label:'Avaliação Contínua Sem Exame', span:4, cls:'bg-purple-50 text-purple-700' },
+    { label:'ACP', span:1, cls:'bg-orange-50 text-orange-700' },
+    { label:'MT', span:1, cls:'bg-emerald-50 text-emerald-700' },
+    { label:'', span:1, cls:'' },
+  ];
+  const COLS = [
+    { key:'acsp_1', label:'1', calc:false }, { key:'acsp_2', label:'2', calc:false },
+    { key:'acsp_3', label:'3', calc:false }, { key:'macsp',  label:'MACSP', calc:true },
+    { key:'acse_1', label:'1', calc:false }, { key:'acse_2', label:'2', calc:false },
+    { key:'acse_3', label:'3', calc:false }, { key:'macs',   label:'MACS', calc:true },
+    { key:'acp',    label:'ACP', calc:false },
+    { key:'mt',     label:'MT',  calc:true  },
+    { key:'_abs',   label:'S/N', calc:false, special:'absent' },
+  ];
+
+  const groupRow = COL_GROUPS.map(g =>
+    `<th colspan="${g.span}" class="py-1.5 px-1 text-center text-[10px] font-semibold ${g.cls}" style="white-space:nowrap">${g.label}</th>`
   ).join('');
-  const termOpts = _terms.map(t =>
-    `<option value="${esc(t.name)}" ${term&&t.name===term?'selected':''}>${esc(t.term_name||t.name)}</option>`
+
+  const colRow = COLS.map(c =>
+    `<th class="py-1.5 px-1 text-center text-[10px] font-semibold text-slate-500" style="min-width:44px">${c.label}</th>`
   ).join('');
-  const evalOpts = EVAL_TYPES.map(e =>
-    `<option value="${esc(e)}" ${existing&&e===existing.evaluation_type?'selected':''}>${e}</option>`
-  ).join('');
-  const dis = existing ? 'disabled' : '';
 
-  return `
-    <div class="space-y-3 pb-2">
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="lbl">Turma *</label>
-          <select id="ge-turma" onchange="onGeTurmaChange()" class="field" ${dis}>
-            <option value="">Seleccionar…</option>${turmaOpts}
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Período *</label>
-          <select id="ge-term" class="field" ${dis}>
-            <option value="">Seleccionar…</option>${termOpts}
-          </select>
-        </div>
-      </div>
+  const bodyRows = rows.map((r, i) => {
+    const absent = !!r.is_absent;
+    const cells = COLS.map(c => {
+      if (c.special === 'absent') {
+        return `<td class="py-1.5 px-1 text-center">
+          <input type="checkbox" class="absent-cb w-4 h-4 rounded cursor-pointer accent-red-500" ${absent?'checked':''}
+                 onchange="toggleAbsent(this)">
+        </td>`;
+      }
+      const val = r[c.key];
+      const disp = (val !== null && val !== undefined) ? parseFloat(val).toFixed(2) : '';
+      if (c.calc) {
+        const isMt = c.key === 'mt';
+        const mtStyle = (isMt && disp) ? (parseFloat(disp) >= MIN_PASS ? 'color:#166534;font-weight:700' : 'color:#991b1b;font-weight:700') : '';
+        return `<td class="py-1.5 px-1 text-center">
+          <span data-field="${c.key}" class="text-[11px] tabular-nums" style="${mtStyle}">${disp}</span>
+        </td>`;
+      }
+      return `<td class="py-1.5 px-1">
+        <input type="number" min="0" max="20" step="0.5"
+               data-field="${c.key}" value="${(val !== null && val !== undefined) ? val : ''}"
+               class="w-full text-center py-1 px-0.5 bg-white border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-brand/30"
+               style="min-width:42px${absent?';opacity:.35;pointer-events:none':''}"
+               ${absent?'disabled':''}
+               oninput="_recalcRow(this.closest('[data-student]'))">
+      </td>`;
+    }).join('');
 
-      <div>
-        <label class="lbl">Nome da Avaliação *</label>
-        <input id="ge-name" type="text" value="${existing?esc(existing.assessment_name):''}"
-               placeholder="Ex.: Teste 1, Trabalho de Grupo…" class="field" ${existing?'readonly':''}>
-      </div>
+    return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
+        data-student="${esc(r.student)}" style="${absent?'opacity:.5':''}">
+      <td class="py-2 px-2 sticky left-0 bg-white" style="min-width:130px;max-width:160px">
+        <div class="text-xs font-semibold text-slate-800 truncate">${esc(r.student_name||r.student)}</div>
+        ${r.student_code?`<div class="text-[10px] text-slate-400">${esc(r.student_code)}</div>`:''}
+      </td>
+      ${cells}
+    </tr>`;
+  }).join('');
 
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="lbl">Tipo *</label>
-          <select id="ge-type" class="field">
-            <option value="">Seleccionar…</option>${evalOpts}
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Data</label>
-          <input id="ge-date" type="date" value="${existing?existing.assessment_date:new Date().toISOString().split('T')[0]}" class="field">
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="lbl">Disciplina</label>
-          <select id="ge-subject" class="field">
-            <option value="">A carregar…</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Nota Máxima</label>
-          <input id="ge-max" type="number" value="${existing?existing.max_score:SCALE_MAX}" min="0" max="100" step="0.5" class="field">
-        </div>
-      </div>
-
-      <div class="pt-1">
-        <div class="flex items-center justify-between mb-2">
-          <span class="lbl mb-0">Notas dos Alunos</span>
-          <span class="text-xs text-slate-400">Máx: <strong id="ge-max-display" class="text-slate-600">${existing?existing.max_score:SCALE_MAX}</strong></span>
-        </div>
-        <div id="ge-students-wrap">
-          ${turma ? spinnerHtml() : emptyHtml('Seleccione a turma para ver os alunos.')}
-        </div>
-      </div>
-    </div>`;
+  return `<div class="overflow-x-auto -mx-1 rounded-xl border border-slate-200">
+    <table class="w-full border-collapse text-sm" style="min-width:620px">
+      <thead>
+        <tr class="border-b border-slate-100">
+          <th class="py-1.5 px-2 text-left text-[10px] font-semibold text-slate-400 sticky left-0 bg-white" style="min-width:130px">Aluno</th>
+          ${groupRow}
+        </tr>
+        <tr class="border-b-2 border-slate-100 bg-slate-50/80">
+          <th class="sticky left-0 bg-slate-50/80"></th>
+          ${colRow}
+        </tr>
+      </thead>
+      <tbody id="ge-table">${bodyRows}</tbody>
+    </table>
+  </div>`;
 }
 
-async function onGeTurmaChange() {
-  const turma = document.getElementById('ge-turma').value;
-  if (!turma) return;
-  await Promise.all([
-    loadGradeEntrySubjects(turma, null),
-    loadGradeEntryStudents(turma, null),
-  ]);
-}
-
-async function loadGradeEntrySubjects(turma, currentSubject) {
-  const sel = document.getElementById('ge-subject');
-  if (!sel) return;
-  sel.innerHTML = `<option value="">A carregar…</option>`;
-  try {
-    const data = await api('get_teacher_subjects', { turma });
-    const subjects = data.subjects || [];
-    sel.innerHTML = `<option value="">— Todas as disciplinas —</option>` +
-      subjects.map(s => `<option value="${esc(s)}" ${s===currentSubject?'selected':''}>${esc(s)}</option>`).join('');
-    if (!subjects.length) {
-      sel.innerHTML = `<option value="">Sem disciplinas no horário activo</option>`;
+function _recalcRow(tr) {
+  if (!tr) return;
+  const get = f => {
+    const el = tr.querySelector(`[data-field="${f}"]`);
+    const v = el?.value;
+    return (v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v))) ? parseFloat(v) : null;
+  };
+  const setCalc = (f, v) => {
+    const el = tr.querySelector(`[data-field="${f}"]`);
+    if (!el) return;
+    el.textContent = v !== null ? v.toFixed(2) : '';
+    if (f === 'mt') {
+      el.style.color = v !== null ? (v >= MIN_PASS ? '#166534' : '#991b1b') : '';
+      el.style.fontWeight = v !== null ? '700' : '';
     }
-  } catch(e) {
-    sel.innerHTML = `<option value="">Erro ao carregar disciplinas</option>`;
-  }
-}
+  };
 
-async function loadGradeEntryStudents(turma, existingRows) {
-  const wrap = document.getElementById('ge-students-wrap');
-  if (!wrap) return;
-  wrap.innerHTML = spinnerHtml();
+  const acsp = [get('acsp_1'), get('acsp_2'), get('acsp_3')].filter(v => v !== null);
+  const macsp = acsp.length ? acsp.reduce((a, b) => a + b, 0) / acsp.length : null;
+  setCalc('macsp', macsp);
 
-  try {
-    const data = await api('get_turma_students', { turma });
-    const students = data.students || [];
+  const acse = [get('acse_1'), get('acse_2'), get('acse_3')].filter(v => v !== null);
+  const macsVals = (macsp !== null ? [macsp] : []).concat(acse);
+  const macs = macsVals.length ? macsVals.reduce((a, b) => a + b, 0) / macsVals.length : null;
+  setCalc('macs', macs);
 
-    if (!students.length) {
-      wrap.innerHTML = emptyHtml('Nenhum aluno inscrito nesta turma.');
-      return;
-    }
-
-    const maxEl = document.getElementById('ge-max');
-    const maxScore = parseFloat(maxEl?.value || SCALE_MAX);
-
-    const rowMap = {};
-    (existingRows||[]).forEach(r => { rowMap[r.student] = r; });
-
-    // Re-apply max display on score change
-    const updateMaxDisplay = () => {
-      const v = parseFloat(document.getElementById('ge-max')?.value || SCALE_MAX);
-      const el = document.getElementById('ge-max-display');
-      if (el) el.textContent = v;
-    };
-    maxEl?.removeEventListener('input', updateMaxDisplay);
-    maxEl?.addEventListener('input', updateMaxDisplay);
-
-    const scoreStyle = (row) => {
-      if (!row || row.is_absent) return '';
-      const v = parseFloat(row.score);
-      if (isNaN(v)) return '';
-      return v >= MIN_PASS ? 'color:#166534;font-weight:600' : 'color:#991b1b;font-weight:600';
-    };
-
-    wrap.innerHTML = `
-      <div class="rounded-xl border border-slate-200 overflow-hidden">
-        <div class="bg-slate-50 px-3 py-2 border-b border-slate-200 flex text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-          <span class="flex-1">Aluno</span>
-          <span class="w-20 text-center">Nota</span>
-          <span class="w-12 text-center">Falta</span>
-        </div>
-        <div id="ge-tbody" class="divide-y divide-slate-100">
-          ${students.map((s, i) => {
-            const row = rowMap[s.student] || {};
-            const absent = !!row.is_absent;
-            return `
-            <div class="flex items-center px-3 py-2 hover:bg-slate-50 transition-colors ${i%2===0?'':'bg-slate-50/30'}"
-                 data-student="${esc(s.student)}">
-              <div class="flex-1 min-w-0 pr-2">
-                <div class="text-sm font-medium text-slate-700 truncate">${esc(s.student_name||s.student)}</div>
-                ${s.student_code?`<div class="text-xs text-slate-400">${esc(s.student_code)}</div>`:''}
-              </div>
-              <div class="w-20 flex justify-center">
-                <input type="number" min="0" max="${maxScore}" step="0.5"
-                       value="${row.score!=null&&!absent?row.score:''}"
-                       style="${scoreStyle(row)}"
-                       class="score-input px-2 py-1 bg-white border border-slate-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand/30 ${absent?'opacity-30':''}"
-                       ${absent?'disabled':''}
-                       oninput="updateGradeColor(this)">
-              </div>
-              <div class="w-12 flex justify-center">
-                <input type="checkbox" class="absent-toggle w-4 h-4 rounded cursor-pointer" ${absent?'checked':''}
-                       onchange="toggleAbsent(this)">
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div class="bg-slate-50 px-3 py-2 border-t border-slate-200 text-xs text-slate-400">
-          ${students.length} aluno${students.length!==1?'s':''}
-          · <span class="text-emerald-600 font-medium">verde ≥ ${MIN_PASS}</span>
-          · <span class="text-red-600 font-medium">vermelho &lt; ${MIN_PASS}</span>
-        </div>
-      </div>`;
-
-    // Apply initial colors to pre-filled scores
-    wrap.querySelectorAll('input[type="number"]').forEach(inp => {
-      if (inp.value !== '') updateGradeColor(inp);
-    });
-  } catch(e) {
-    wrap.innerHTML = errorHtml(e.message);
-  }
-}
-
-function updateGradeColor(input) {
-  const v = parseFloat(input.value);
-  const maxEl = document.getElementById('ge-max');
-  const max = parseFloat(maxEl?.value || SCALE_MAX);
-  if (!isNaN(v)) {
-    input.style.color = v >= MIN_PASS ? '#166534' : '#991b1b';
-    input.style.fontWeight = '600';
-  } else {
-    input.style.color = '';
-    input.style.fontWeight = '';
-  }
+  const acp = get('acp');
+  const mt = (macs !== null && acp !== null) ? (2 * macs + acp) / 3 : null;
+  setCalc('mt', mt);
 }
 
 function toggleAbsent(cb) {
-  const row = cb.closest('[data-student]');
-  const scoreInput = row?.querySelector('input[type="number"]');
-  if (scoreInput) {
-    scoreInput.disabled = cb.checked;
-    scoreInput.classList.toggle('opacity-30', cb.checked);
-    if (cb.checked) { scoreInput.value = ''; scoreInput.style.color=''; scoreInput.style.fontWeight=''; }
+  const tr = cb.closest('[data-student]');
+  if (!tr) return;
+  tr.style.opacity = cb.checked ? '.5' : '';
+  tr.querySelectorAll('input[type="number"]').forEach(inp => {
+    inp.disabled = cb.checked;
+    inp.style.opacity = cb.checked ? '.35' : '';
+    inp.style.pointerEvents = cb.checked ? 'none' : '';
+    if (cb.checked) inp.value = '';
+  });
+  if (cb.checked) {
+    ['macsp','macs','mt'].forEach(f => {
+      const el = tr.querySelector(`[data-field="${f}"]`);
+      if (el) { el.textContent = ''; el.style.color = ''; el.style.fontWeight = ''; }
+    });
   }
 }
 
-async function submitGradeEntry(overrideAssessmentName) {
-  const turma   = document.getElementById('ge-turma')?.value;
-  const term    = document.getElementById('ge-term')?.value;
-  const type    = document.getElementById('ge-type')?.value;
-  const aname   = overrideAssessmentName || document.getElementById('ge-name')?.value?.trim();
-  const max     = document.getElementById('ge-max')?.value;
-  const subject = document.getElementById('ge-subject')?.value || '';
-  const date    = document.getElementById('ge-date')?.value;
-
-  if (!turma||!term||!type||!aname) {
-    showToast('Preencha os campos obrigatórios (Turma, Período, Tipo, Nome).', false);
-    return;
-  }
-
+async function saveGradeEntry(turma, term, subject) {
   const rows = [];
-  document.querySelectorAll('#ge-tbody [data-student]').forEach(el => {
-    const student = el.dataset.student;
-    const scoreInput = el.querySelector('input[type="number"]');
-    const absentCb  = el.querySelector('input[type="checkbox"]');
+  document.querySelectorAll('#ge-table [data-student]').forEach(tr => {
+    const student = tr.dataset.student;
+    const absent  = tr.querySelector('.absent-cb')?.checked ? 1 : 0;
+    const getVal  = f => {
+      if (absent) return null;
+      const el = tr.querySelector(`[data-field="${f}"]`);
+      const v = el?.value;
+      return (v !== '' && v !== null && !isNaN(parseFloat(v))) ? parseFloat(v) : null;
+    };
     rows.push({
       student,
-      subject: subject || '',
-      score: scoreInput?.value !== '' ? parseFloat(scoreInput.value) : null,
-      is_absent: absentCb?.checked ? 1 : 0,
+      is_absent: absent,
+      acsp_1: getVal('acsp_1'), acsp_2: getVal('acsp_2'), acsp_3: getVal('acsp_3'),
+      acse_1: getVal('acse_1'), acse_2: getVal('acse_2'), acse_3: getVal('acse_3'),
+      acp:    getVal('acp'),
     });
   });
 
   try {
-    await api('save_grade_entry', { turma, term, assessment_name: aname, evaluation_type: type, max_score: max, rows, subject, assessment_date: date });
-    showToast('Pauta guardada com sucesso!');
+    await api('save_grade_entry', { turma, term, subject, rows: JSON.stringify(rows) });
+    showToast('Pautas guardadas com sucesso!');
     closeDrawer();
     loadPautas();
   } catch(e) {

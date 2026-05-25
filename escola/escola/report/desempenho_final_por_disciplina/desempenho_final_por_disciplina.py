@@ -5,6 +5,10 @@ from frappe import _
 def execute(filters=None):
     filters = filters or {}
 
+    min_passing = float(
+        frappe.db.get_single_value("School Settings", "minimum_passing_grade") or 10
+    )
+
     columns = [
         {
             "label": _("Disciplina"),
@@ -27,11 +31,11 @@ def execute(filters=None):
             "width": 210,
         },
         {
-            "label": _("Nota Final"),
-            "fieldname": "final_grade",
+            "label": _("Média Anual"),
+            "fieldname": "annual_avg",
             "fieldtype": "Float",
             "width": 100,
-            "precision": 1,
+            "precision": 2,
         },
         {
             "label": _("Resultado"),
@@ -41,32 +45,36 @@ def execute(filters=None):
         },
     ]
 
-    conditions = []
+    conditions = ["ge.docstatus != 2", "ger.is_absent = 0", "ger.mt IS NOT NULL"]
     if filters.get("class_group"):
-        conditions.append("aa.class_group = %(class_group)s")
+        conditions.append("ge.class_group = %(class_group)s")
     if filters.get("academic_year"):
-        conditions.append("aa.academic_year = %(academic_year)s")
+        conditions.append("ge.academic_year = %(academic_year)s")
     if filters.get("subject"):
-        conditions.append("aar.subject = %(subject)s")
+        conditions.append("ge.subject = %(subject)s")
 
-    where = " AND ".join(conditions) if conditions else "1=1"
+    where = " AND ".join(conditions)
 
-    data = frappe.db.sql(
+    rows = frappe.db.sql(
         f"""
         SELECT
-            aar.subject,
-            aar.student,
+            ge.subject,
+            ger.student,
             s.full_name,
-            aar.final_grade,
-            aar.result
-        FROM `tabAnnual Assessment Row` aar
-        INNER JOIN `tabAnnual Assessment` aa ON aa.name = aar.parent
-        INNER JOIN `tabStudent`           s  ON s.name  = aar.student
+            ROUND(AVG(ger.mt), 2) AS annual_avg
+        FROM `tabGrade Entry Row` ger
+        INNER JOIN `tabGrade Entry` ge ON ge.name = ger.parent
+        INNER JOIN `tabStudent`     s  ON s.name  = ger.student
         WHERE {where}
-        ORDER BY aar.subject, s.full_name
+        GROUP BY ge.subject, ger.student, s.full_name
+        ORDER BY ge.subject, s.full_name
         """,
         filters,
         as_dict=True,
     )
 
-    return columns, data
+    for r in rows:
+        avg = float(r.annual_avg) if r.annual_avg is not None else None
+        r["result"] = ("Aprovado" if avg >= min_passing else "Reprovado") if avg is not None else "—"
+
+    return columns, rows
