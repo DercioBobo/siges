@@ -180,7 +180,7 @@ function _set_queries(frm) {
         return { filters: f };
     });
     frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
-    frm.set_query("subject", () => ({ filters: { disabled: 0 } }));
+    frm.set_query("subject", () => ({ filters: { is_active: 1 } }));
 }
 
 // ---------------------------------------------------------------------------
