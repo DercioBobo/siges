@@ -403,31 +403,39 @@ def get_student_financial_summary(student_name):
 
     total_outstanding = sum(i["_owed"] for i in owed_invoices)
 
-    # Find worst (most overdue) invoice
-    worst_inv  = None
-    worst_pd   = None
+    # Compute penalty per invoice; track worst for status/alert fields
+    worst_inv      = None
+    worst_pd       = None
+    total_penalty  = 0.0
     for inv in owed_invoices:
-        pd = _compute_penalty(inv.due_date, settings)
+        pd   = _compute_penalty(inv.due_date, settings)
+        base = _get_base_total(inv.name)
+        total_penalty += round(base * pd["penalty_amount_factor"], 2)
         if worst_pd is None or pd["periods"] > worst_pd["periods"]:
             worst_inv = inv
             worst_pd  = pd
 
-    base_worst     = _get_base_total(worst_inv.name)
-    penalty_amount = round(base_worst * worst_pd["penalty_amount_factor"], 2)
+    total_penalty = round(total_penalty, 2)
+
+    # Effective rate as a display value: total_penalty / total_outstanding * 100
+    if total_outstanding > 0:
+        effective_rate = round(total_penalty / total_outstanding * 100, 1)
+    else:
+        effective_rate = 0.0
 
     return {
-        "student":           student_name,
-        "total_outstanding": total_outstanding,
-        "invoice_count":     len(owed_invoices),
-        "worst_invoice":     worst_inv.name,
-        "days_overdue":      worst_pd["days_overdue"],
-        "periods":           worst_pd["periods"],
-        "penalty_rate":      worst_pd["penalty_rate"],
-        "penalty_amount":    penalty_amount,
-        "total_with_penalty": round(total_outstanding + penalty_amount, 2),
-        "financial_status":  _financial_status_from_periods(worst_pd["periods"], settings),
-        "alert_level":       _alert_level(worst_pd["periods"], settings),
-        "penalty_frequency": settings["penalty_frequency"],
+        "student":            student_name,
+        "total_outstanding":  total_outstanding,
+        "invoice_count":      len(owed_invoices),
+        "worst_invoice":      worst_inv.name,
+        "days_overdue":       worst_pd["days_overdue"],
+        "periods":            worst_pd["periods"],
+        "penalty_rate":       effective_rate,
+        "penalty_amount":     total_penalty,
+        "total_with_penalty": round(total_outstanding + total_penalty, 2),
+        "financial_status":   _financial_status_from_periods(worst_pd["periods"], settings),
+        "alert_level":        _alert_level(worst_pd["periods"], settings),
+        "penalty_frequency":  settings["penalty_frequency"],
     }
 
 
