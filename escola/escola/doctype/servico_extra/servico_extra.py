@@ -11,7 +11,7 @@ class ServicoExtra(Document):
 @frappe.whitelist()
 def update_price(doc_name, new_amount, motive):
     """Update the global price for a service and log the change."""
-    doc = frappe.get_doc("Serviço Extra", doc_name)
+    doc = frappe.get_doc("Servico Extra", doc_name)
     old_amount = float(doc.current_amount or 0)
     new_amount = float(new_amount)
 

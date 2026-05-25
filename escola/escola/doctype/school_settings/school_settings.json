@@ -546,12 +546,12 @@
   {
    "fieldname": "section_sibling_discount",
    "fieldtype": "Section Break",
-   "label": "Desconto de Irmãos"
+   "label": "Desconto de Alunos"
   },
   {
    "fieldname": "sibling_discount_enabled",
    "fieldtype": "Check",
-   "label": "Desconto de Irmãos Activo",
+   "label": "Desconto de Alunos Activo",
    "default": "1",
    "description": "Se activo, encarregados com o mínimo de alunos configurado recebem desconto nas propinas."
   },
@@ -580,7 +580,7 @@
    "fieldtype": "Check",
    "label": "Desconto Também Aplicável a Extras",
    "default": "0",
-   "description": "Se activo, o desconto de irmãos também é aplicado nas facturas de serviços extras mensais.",
+   "description": "Se activo, o desconto de alunos também é aplicado nas facturas de serviços extras mensais.",
    "depends_on": "eval:doc.sibling_discount_enabled"
   },
   {

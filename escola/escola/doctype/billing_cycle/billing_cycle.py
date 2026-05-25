@@ -475,7 +475,7 @@ def _get_active_extras(student, posting_date):
                 se.current_amount,
                 se.item_code
             FROM `tabLinha de Mensalidade Extra` l
-            JOIN `tabServiço Extra` se ON se.name = l.service
+            JOIN `tabServico Extra` se ON se.name = l.service
             WHERE l.parent = %s
               AND l.status = 'Activo'
               AND l.start_date <= %s

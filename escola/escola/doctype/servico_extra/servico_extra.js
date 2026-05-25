@@ -1,7 +1,7 @@
 // Copyright (c) 2024, EntreTech and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Serviço Extra", {
+frappe.ui.form.on("Servico Extra", {
 	refresh(frm) {
 		if (!frm.doc.__islocal) {
 			frm.add_custom_button(__("Actualizar Preço"), () => _update_price_dialog(frm));

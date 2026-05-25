@@ -18,7 +18,7 @@
   {"hidden": 0, "is_query_report": 0, "label": "Excepção de Pagamento",  "link_count": 0, "link_to": "Payment Exception",       "link_type": "DocType", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Adiantamento de Pag.",   "link_count": 0, "link_to": "Adiantamento De Pagamento", "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Aluno",                        "link_count": 0, "link_to": "Student",                        "link_type": "DocType", "onboard": 0, "type": "Link"},
-  {"hidden": 0, "is_query_report": 0, "label": "Serviço Extra",               "link_count": 0, "link_to": "Serviço Extra",                   "link_type": "DocType", "onboard": 0, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Servico Extra",               "link_count": 0, "link_to": "Servico Extra",                   "link_type": "DocType", "onboard": 0, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Mensalidades Extras",         "link_count": 0, "link_to": "Mensalidade Extra do Aluno",       "link_type": "DocType", "onboard": 0, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios de Facturação", "link_count": 0, "onboard": 0, "type": "Card Break"},

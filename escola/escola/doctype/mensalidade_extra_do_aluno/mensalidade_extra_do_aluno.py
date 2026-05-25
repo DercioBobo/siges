@@ -54,7 +54,7 @@ def cancel_services(doc_name, services, motive):
         if row.name in services and row.status == "Activo":
             row.status = "Cancelado"
             row.end_date = end_date
-            service_name = frappe.db.get_value("Serviço Extra", row.service, "service_name") or row.service
+            service_name = frappe.db.get_value("Servico Extra", row.service, "service_name") or row.service
             log_lines.append(
                 '{ts} | CANCELADO: {svc} | "{motive}" | {user}'.format(
                     ts=ts, svc=service_name, motive=motive, user=user,
@@ -92,7 +92,7 @@ def get_active_services_for_student(student):
             l.start_date,
             l.end_date
         FROM `tabLinha de Mensalidade Extra` l
-        JOIN `tabServiço Extra` se ON se.name = l.service
+        JOIN `tabServico Extra` se ON se.name = l.service
         WHERE l.parent = %s
           AND l.status = 'Activo'
           AND l.start_date <= %s
