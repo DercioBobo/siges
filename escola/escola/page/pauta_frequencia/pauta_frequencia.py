@@ -12,8 +12,8 @@ def get_filter_options():
     )
     years = frappe.get_all(
         "Academic Year",
-        fields=["name", "year"],
-        order_by="year desc",
+        fields=["name", "year_name"],
+        order_by="year_name desc",
     )
     return {"class_groups": class_groups, "years": years}
 

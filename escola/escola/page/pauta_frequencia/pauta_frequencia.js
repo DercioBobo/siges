@@ -90,7 +90,7 @@ class PautaFrequencia {
         ).join("");
 
         const year_opts = years.map(y =>
-            `<option value="${y.name}">${frappe.utils.escape_html(y.year || y.name)}</option>`
+            `<option value="${y.name}">${frappe.utils.escape_html(y.year_name || y.name)}</option>`
         ).join("");
 
         this.$filters.html(`
