@@ -113,7 +113,9 @@ def get_curriculum_teacher(class_group, subject):
     2. Primary fallback: class_teacher for non-specialist subjects (Professor Único)
     3. Legacy fallback: active Class Curriculum (existing data)
     """
-    # 1. New path: explicit row on the Class Group itself
+    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
+
+    # 1. Per-turma override: explicit row on the Class Group itself
     teacher = frappe.db.get_value(
         "Class Group Subject Line",
         {"parent": class_group, "subject": subject},
@@ -122,8 +124,17 @@ def get_curriculum_teacher(class_group, subject):
     if teacher:
         return teacher
 
-    # 2. Primary path: Professor Único → class_teacher for non-specialist subjects
-    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
+    # 2. Class-wide default: School Class subjects table
+    if school_class:
+        teacher = frappe.db.get_value(
+            "School Class Subject",
+            {"parent": school_class, "subject": subject},
+            "teacher",
+        )
+        if teacher:
+            return teacher
+
+    # 3. Professor Único → class_teacher for non-specialist subjects
     teaching_model = (
         frappe.db.get_value("School Class", school_class, "teaching_model")
         if school_class else None
@@ -134,7 +145,7 @@ def get_curriculum_teacher(class_group, subject):
             return frappe.db.get_value("Class Group", class_group, "class_teacher")
         return None
 
-    # 3. Legacy fallback: active Class Curriculum (for groups not yet migrated)
+    # 4. Legacy fallback: active Class Curriculum (for groups not yet migrated)
     curriculum = frappe.db.get_value(
         "Class Curriculum",
         {"class_group": class_group, "is_active": 1},
