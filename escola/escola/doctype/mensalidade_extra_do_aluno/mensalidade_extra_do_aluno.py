@@ -6,7 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import formatdate, get_last_day, getdate
 
 
-class MensalidadeExtraDoAluno(Document):
+class MensalidadeExtradoAluno(Document):
     def validate(self):
         existing = frappe.db.get_value(
             "Mensalidade Extra do Aluno",

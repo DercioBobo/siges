@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class LinhaDeMensalidadeExtra(Document):
+class LinhadeMensalidadeExtra(Document):
     pass
