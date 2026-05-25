@@ -111,7 +111,7 @@ def get_student_summary(student):
     if s.current_class_group:
         cg_data = frappe.db.get_value(
             "Class Group", s.current_class_group,
-            ["shift", "academic_year", "class_teacher", "section_name"],
+            ["shift", "academic_year", "class_teacher", "section_name", "classroom"],
             as_dict=True,
         ) or {}
 
@@ -133,6 +133,7 @@ def get_student_summary(student):
         "shift": cg_data.get("shift") or "",
         "academic_year": cg_data.get("academic_year") or "",
         "class_teacher": cg_data.get("class_teacher") or "",
+        "classroom": cg_data.get("classroom") or "",
     }
 
 
@@ -163,7 +164,10 @@ def get_student_timetable(student):
         fields=["day_of_week", "time_slot", "subject", "teacher", "classroom"],
     )
 
-    shift = frappe.db.get_value("Class Group", class_group, "shift")
+    cg_info = frappe.db.get_value(
+        "Class Group", class_group, ["shift", "classroom"], as_dict=True
+    ) or {}
+    shift = cg_info.get("shift") or ""
     ts_filters = {"shift": shift} if shift else {}
     time_slots = frappe.db.get_all(
         "Time Slot",
@@ -172,7 +176,11 @@ def get_student_timetable(student):
         order_by="sort_order",
     )
 
-    return {"entries": entries, "time_slots": time_slots}
+    return {
+        "entries": entries,
+        "time_slots": time_slots,
+        "classroom": cg_info.get("classroom") or "",
+    }
 
 
 # ---------------------------------------------------------------------------

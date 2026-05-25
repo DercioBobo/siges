@@ -43,7 +43,7 @@ def get_timetable_data(class_group, academic_year):
     """
     cg_info = frappe.db.get_value(
         "Class Group", class_group,
-        ["group_name", "shift", "class_teacher", "school_class"],
+        ["group_name", "shift", "class_teacher", "school_class", "classroom"],
         as_dict=True,
     )
     if cg_info and cg_info.class_teacher:
@@ -77,7 +77,7 @@ def get_timetable_data(class_group, academic_year):
         "Time Slot",
         filters=ts_filters,
         fields=["name", "label", "slot_type"],
-        order_by="label asc",
+        order_by="sort_order asc",
     )
 
     # All child entries for this timetable

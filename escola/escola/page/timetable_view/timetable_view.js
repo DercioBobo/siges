@@ -237,6 +237,12 @@ class TimetablePage {
 				<div style="font-size:14px;font-weight:600;color:#374151;">${frappe.utils.escape_html(cg.teacher_name)}</div>
 			   </div>`
 			: "";
+		const classroom_block = cg.classroom
+			? `<div style="border-left:1px solid #E5E7EB;padding-left:20px;">
+				<div style="font-size:11px;color:#9CA3AF;font-weight:700;">SALA</div>
+				<div style="font-size:14px;font-weight:600;color:#374151;">${frappe.utils.escape_html(cg.classroom)}</div>
+			   </div>`
+			: "";
 		const shift_block = cg.shift
 			? `<div>
 				<span style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;
@@ -257,6 +263,7 @@ class TimetablePage {
 					</div>
 				</div>
 				${teacher_block}
+				${classroom_block}
 				${shift_block}
 				<div style="margin-left:auto;">
 					<a href="/app/timetable/${encodeURIComponent(data.timetable_name)}"

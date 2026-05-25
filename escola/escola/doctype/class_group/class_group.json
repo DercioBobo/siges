@@ -14,6 +14,7 @@
   "column_break_2",
   "section_name",
   "shift",
+  "classroom",
   "column_break_3",
   "class_teacher",
   "teaching_model",
@@ -87,6 +88,12 @@
    "fieldtype": "Select",
    "label": "Turno",
    "options": "\nManhã\nTarde\nNoite"
+  },
+  {
+   "fieldname": "classroom",
+   "fieldtype": "Data",
+   "label": "Sala",
+   "description": "Sala onde a turma habitualmente tem aulas"
   },
   {
    "fieldname": "column_break_3",

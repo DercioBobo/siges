@@ -101,19 +101,23 @@ def get_grade_book(class_group, academic_term):
                     fields=["name", "subject_name"],
                 )
             }
+            # Batch lookup: one query for all Grade Entries in this class/term
+            existing_ges = {
+                ge.subject: ge.name
+                for ge in frappe.get_all(
+                    "Grade Entry",
+                    filters={
+                        "class_group": class_group,
+                        "academic_term": academic_term,
+                        "docstatus": ("!=", 2),
+                    },
+                    fields=["name", "subject"],
+                )
+            }
             for sn in subj_names:
                 if sn not in subj_infos:
                     continue
-                ge_name = frappe.db.get_value(
-                    "Grade Entry",
-                    {
-                        "class_group": class_group,
-                        "academic_term": academic_term,
-                        "subject": sn,
-                        "docstatus": ("!=", 2),
-                    },
-                    "name",
-                )
+                ge_name = existing_ges.get(sn)
                 if ge_name:
                     db_rows = frappe.get_all(
                         "Grade Entry Row",
@@ -241,9 +245,13 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
         order_by="idx asc",
     )
 
+    # Compute status only from the current roster to ignore stale rows of removed students
+    current_student_set = {r["student"] for r in rows}
+    status_rows = [sr for sr in saved_rows if sr.student in current_student_set]
+
     return {
         "saved": True,
         "grade_entry": doc.name,
-        "status": _subject_status(saved_rows),
+        "status": _subject_status(status_rows),
         "rows": saved_rows,
     }

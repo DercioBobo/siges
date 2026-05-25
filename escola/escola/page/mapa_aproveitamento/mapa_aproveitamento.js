@@ -466,11 +466,10 @@ class MapaAproveitamento {
     // -----------------------------------------------------------------------
 
     _collect_rows(idx) {
-        const students = this.data.students;
         const rows = [];
         this.$grid_area.find(".ma-grid tbody tr").each((i, tr) => {
             const $tr    = $(tr);
-            const student = students[i] && students[i].student;
+            const student = $tr.data("student");
             if (!student) return;
             const abs  = $tr.find(".ma-absent-chk").is(":checked") ? 1 : 0;
             const _iv  = (f) => { const n = parseInt($tr.find(`[data-field="${f}"]`).val()); return isNaN(n) ? null : n; };
@@ -519,7 +518,7 @@ class MapaAproveitamento {
                 const by_student = {};
                 (resp.rows || []).forEach(sr => { by_student[sr.student] = sr; });
                 this.$grid_area.find(".ma-grid tbody tr").each((i, tr) => {
-                    const sid = d.students[i] && d.students[i].student;
+                    const sid = $(tr).data("student");
                     if (!sid || !by_student[sid]) return;
                     const sr   = by_student[sid];
                     const _f2  = (v) => (v !== null && v !== undefined) ? parseFloat(v).toFixed(2) : "";

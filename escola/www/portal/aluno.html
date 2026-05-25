@@ -248,6 +248,7 @@
               ${row('Classe', d.current_school_class)}
               ${row('Turma', d.current_class_group)}
               ${row('Turno', d.shift)}
+              ${row('Sala', d.classroom)}
               ${row('Ano Lectivo', d.academic_year)}
               ${row('Director de Turma', d.class_teacher)}
               <div><dt class="text-xs text-slate-400 mb-1">Estado</dt><dd>${financialBadge(d.financial_status)}</dd></div>
@@ -351,7 +352,10 @@
       });
 
       tableHtml += `</tbody></table></div>`;
-      panel.innerHTML = card('Horário Semanal', tableHtml);
+      const classroomNote = d.classroom
+        ? `<p class="text-xs text-slate-400 mt-1">Sala: <span class="font-medium text-slate-600">${d.classroom}</span></p>`
+        : '';
+      panel.innerHTML = card('Horário Semanal', classroomNote + tableHtml);
     }
 
     // ── NOTAS ────────────────────────────────────────────────────────────────

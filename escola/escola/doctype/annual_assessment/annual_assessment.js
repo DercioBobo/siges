@@ -567,6 +567,7 @@ function _open_mapa_print_window(data) {
 
 function _build_mapa_html(d) {
 	const fmt = (v) => (v !== null && v !== undefined) ? parseFloat(v).toFixed(2) : "—";
+	const _e  = (v) => frappe.utils.escape_html(v || "");
 	const subjects = d.subjects || [];
 	const terms    = d.terms    || [];
 	const rows     = d.rows     || [];
@@ -575,7 +576,7 @@ function _build_mapa_html(d) {
 	const subj_header_row1 = subjects.map(s =>
 		`<th colspan="${terms.length + 1}" style="border:1px solid #ccc;padding:4px 6px;
 		            background:#1E293B;color:white;text-align:center;font-size:10px;white-space:nowrap;">
-			${s.label}
+			${_e(s.label)}
 		</th>`
 	).join("");
 
@@ -618,7 +619,7 @@ function _build_mapa_html(d) {
 		return `<tr style="border-bottom:1px solid #F3F4F6;">
 			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:10px;color:#9CA3AF;">${r.idx}</td>
 			<td style="border:1px solid #E5E7EB;padding:3px 6px;font-size:10px;font-weight:500;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;"
-			    title="${(r.student_name||"").replace(/"/g,"")}">${r.student_name || r.student}</td>
+			    title="${frappe.utils.escape_html(r.student_name || "")}">${frappe.utils.escape_html(r.student_name || r.student)}</td>
 			${subj_cells}
 			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:11px;
 			     font-weight:800;background:${fg_bg};color:${fg_color};">${fg_n !== null ? fg_n.toFixed(2) : "—"}</td>
@@ -638,7 +639,7 @@ function _build_mapa_html(d) {
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Mapa de Aproveitamento — ${d.class_group_name}</title>
+<title>Mapa de Aproveitamento — ${_e(d.class_group_name)}</title>
 <style>
   @page { size: A4 landscape; margin: 10mm; }
   body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 0; }
@@ -652,15 +653,15 @@ function _build_mapa_html(d) {
   <!-- Header -->
   <div style="text-align:center;margin-bottom:8px;border-bottom:2px solid #1E293B;padding-bottom:6px;">
     <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">
-      ${d.school_name}
+      ${_e(d.school_name)}
     </div>
     <div style="font-size:12px;font-weight:700;margin-top:2px;">
       Mapa de Aproveitamento Pedagógico
     </div>
     <div style="font-size:10px;color:#6B7280;margin-top:4px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
-      <span><b>Turma:</b> ${d.class_group_name}</span>
-      <span><b>Ano Lectivo:</b> ${d.academic_year}</span>
-      ${d.teacher_name ? `<span><b>Director(a) de Turma:</b> ${d.teacher_name}</span>` : ""}
+      <span><b>Turma:</b> ${_e(d.class_group_name)}</span>
+      <span><b>Ano Lectivo:</b> ${_e(d.academic_year)}</span>
+      ${d.teacher_name ? `<span><b>Director(a) de Turma:</b> ${_e(d.teacher_name)}</span>` : ""}
       <span><b>Total de Alunos:</b> ${total}</span>
     </div>
   </div>
