@@ -97,7 +97,7 @@ def get_grade_book(class_group, academic_term):
                 s.name: s.subject_name
                 for s in frappe.get_all(
                     "Subject",
-                    filters={"name": ("in", subj_names), "disabled": 0},
+                    filters={"name": ("in", subj_names)},
                     fields=["name", "subject_name"],
                 )
             }
