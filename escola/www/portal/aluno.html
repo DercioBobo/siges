@@ -337,10 +337,10 @@
             const cls = subjectColors[entry.subject] || 'bg-slate-50 text-slate-700 border-slate-200';
             tableHtml += `
               <td class="p-1.5 align-top">
-                <div class="border rounded-lg p-2 ${cls} ${entry.is_double ? 'ring-1 ring-current ring-opacity-30':''}" title="${entry.teacher||''}">
+                <div class="border rounded-lg p-2 ${cls}" title="${entry.teacher||''}">
                   <div class="text-xs font-semibold leading-tight">${entry.subject}</div>
                   ${entry.teacher ? `<div class="text-xs opacity-70 mt-0.5 leading-tight truncate">${entry.teacher}</div>` : ''}
-                  ${entry.is_double ? `<div class="text-xs opacity-60 mt-0.5">Dupla</div>` : ''}
+                  ${entry.classroom ? `<div class="text-xs opacity-60 mt-0.5 leading-tight">📍 ${entry.classroom}</div>` : ''}
                 </div>
               </td>`;
           } else {
@@ -362,34 +362,34 @@
         return;
       }
 
-      // Group: subject → term → [rows]
+      // Group: subject → term → row
       const bySubject = {};
       d.rows.forEach(r => {
         if (!bySubject[r.subject]) bySubject[r.subject] = {};
-        if (!bySubject[r.subject][r.academic_term]) bySubject[r.subject][r.academic_term] = [];
-        bySubject[r.subject][r.academic_term].push(r);
+        bySubject[r.subject][r.academic_term] = r;
       });
 
-      const terms = [...new Set(d.rows.map(r => r.academic_term))].sort();
+      const fmt2 = v => (v !== null && v !== undefined) ? parseFloat(v).toFixed(2) : '—';
+      const mtColor = v => v !== null && v !== undefined
+        ? (parseFloat(v) >= 10 ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold')
+        : 'text-slate-400';
 
-      let html = `<div class="space-y-5">`;
+      let html = `<div class="space-y-4">`;
       Object.entries(bySubject).sort(([a],[b]) => a.localeCompare(b)).forEach(([subj, byTerm]) => {
-        let rows = '';
-        Object.entries(byTerm).sort(([a],[b]) => a.localeCompare(b)).forEach(([term, entries]) => {
-          entries.forEach(e => {
-            const scoreDisplay = e.is_absent
-              ? `<span class="text-slate-400 italic text-xs">S/Nota</span>`
-              : `<span class="font-semibold ${(e.score||0) >= 10 ? 'text-green-700' : 'text-red-600'}">${e.score !== null ? e.score : '—'}</span><span class="text-slate-400 text-xs">/${e.max_score||20}</span>`;
-            rows += `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
-              <td class="py-2.5 px-3 text-xs text-slate-500">${term || '—'}</td>
-              <td class="py-2.5 px-3 text-xs text-slate-600">${e.evaluation_type || '—'}</td>
-              <td class="py-2.5 px-3 text-xs text-slate-600">${e.assessment_name || '—'}</td>
-              <td class="py-2.5 px-3 text-xs text-slate-400">${e.assessment_date || ''}</td>
-              <td class="py-2.5 px-3 text-right">${scoreDisplay}</td>
-              <td class="py-2.5 px-3 text-center">${e.is_approved ? '<span class="text-green-600 text-xs">✓</span>' : (e.is_absent ? '' : '<span class="text-red-500 text-xs">✗</span>')}</td>
+        const termRows = Object.entries(byTerm).sort(([a],[b]) => a.localeCompare(b)).map(([term, e]) => {
+          if (e.is_absent) {
+            return `<tr class="border-b border-slate-50">
+              <td class="py-2.5 px-3 text-xs text-slate-500">${term}</td>
+              <td colspan="3" class="py-2.5 px-3 text-xs text-slate-400 italic">Sem nota</td>
             </tr>`;
-          });
-        });
+          }
+          return `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
+            <td class="py-2.5 px-3 text-xs text-slate-500">${term}</td>
+            <td class="py-2.5 px-3 text-xs text-slate-600 text-center">${fmt2(e.macs)}</td>
+            <td class="py-2.5 px-3 text-xs text-center">${fmt2(e.macsp)}</td>
+            <td class="py-2.5 px-3 text-sm text-center ${mtColor(e.mt)}">${fmt2(e.mt)}</td>
+          </tr>`;
+        }).join('');
         html += `<div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div class="px-5 py-3 bg-[#e8f1fd] border-b border-blue-100">
             <h4 class="font-semibold text-[#024ba5] text-sm">${subj}</h4>
@@ -398,13 +398,11 @@
             <table class="w-full text-sm">
               <thead><tr class="border-b border-slate-100">
                 <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Período</th>
-                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Tipo</th>
-                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Avaliação</th>
-                <th class="py-2 px-3 text-left text-xs font-medium text-slate-400">Data</th>
-                <th class="py-2 px-3 text-right text-xs font-medium text-slate-400">Nota</th>
-                <th class="py-2 px-3 text-center text-xs font-medium text-slate-400">✓</th>
+                <th class="py-2 px-3 text-center text-xs font-medium text-slate-400" title="Média das ACS">MACS</th>
+                <th class="py-2 px-3 text-center text-xs font-medium text-slate-400" title="Média das ACSP">MACSP</th>
+                <th class="py-2 px-3 text-center text-xs font-medium text-slate-400" title="Média do Trimestre">MT</th>
               </tr></thead>
-              <tbody>${rows}</tbody>
+              <tbody>${termRows}</tbody>
             </table>
           </div>
         </div>`;

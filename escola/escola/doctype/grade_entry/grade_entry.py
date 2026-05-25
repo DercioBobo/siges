@@ -1,24 +1,14 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from escola.escola.doctype.class_curriculum.class_curriculum import get_curriculum_subjects
 
 
 @frappe.whitelist()
 def get_current_academic_year():
-    """Return the name of the current Academic Year.
-
-    Priority:
-    1. Marked as active (is_active = 1)
-    2. Date range covers today
-    3. Most recently started year
-    """
     today = frappe.utils.today()
-
     year = frappe.db.get_value("Academic Year", {"is_active": 1}, "name")
     if year:
         return year
-
     year = frappe.db.get_value(
         "Academic Year",
         {"start_date": ("<=", today), "end_date": (">=", today)},
@@ -26,91 +16,50 @@ def get_current_academic_year():
     )
     if year:
         return year
-
-    year = frappe.db.get_value(
+    return frappe.db.get_value(
         "Academic Year",
         {"start_date": ("<=", today)},
         "name",
         order_by="start_date desc",
     )
-    return year
 
 
 @frappe.whitelist()
 def get_current_academic_term(academic_year):
-    """Return the name of the Academic Term whose date range covers today.
-
-    Falls back to the most recently started term if today is between terms.
-    Returns None if no term exists for the year.
-    """
     today = frappe.utils.today()
-
-    # Exact match: today falls within [start_date, end_date]
     term = frappe.db.get_value(
         "Academic Term",
-        {
-            "academic_year": academic_year,
-            "start_date": ("<=", today),
-            "end_date": (">=", today),
-        },
+        {"academic_year": academic_year, "start_date": ("<=", today), "end_date": (">=", today)},
         "name",
     )
     if term:
         return term
-
-    # Fallback: most recent term that has already started
-    term = frappe.db.get_value(
+    return frappe.db.get_value(
         "Academic Term",
         {"academic_year": academic_year, "start_date": ("<=", today)},
         "name",
         order_by="start_date desc",
     )
-    return term
 
 
 @frappe.whitelist()
-def get_grade_entry_students(class_group, academic_year, subject=None):
-    """Return rows to load into a Grade Entry.
-
-    Single-subject mode (subject given): students × 1 subject.
-    Multi-subject mode (subject omitted): students × all non-specialist subjects
-    from the active curriculum. This is intended for primary-school homeroom
-    teachers who teach all subjects in one session.
-    """
-    students = frappe.get_all(
-        "Student Group Assignment",
-        filters={
-            "class_group": class_group,
-            "academic_year": academic_year,
-            "status": "Activa",
-        },
-        fields=["student"],
-        order_by="student asc",
+def get_grade_entry_students(class_group, academic_year):
+    """Return active students for the class, ordered by name."""
+    rows = frappe.db.sql(
+        """
+        SELECT sga.student, s.full_name AS student_name
+        FROM `tabStudent Group Assignment` sga
+        JOIN `tabStudent` s ON s.name = sga.student
+        WHERE sga.class_group = %s
+          AND sga.academic_year = %s
+          AND sga.status = 'Activa'
+        ORDER BY s.full_name
+        """,
+        (class_group, academic_year),
+        as_dict=True,
     )
-    if not students:
+    if not rows:
         return {"error": "no_students"}
-
-    if subject:
-        return [{"student": s.student, "subject": subject} for s in students]
-
-    # Multi-subject: load non-specialist subjects from the active curriculum
-    curriculum = get_curriculum_subjects(class_group)
-    if not curriculum:
-        return {"error": "no_subjects"}
-
-    subject_names = [sl.subject for sl in curriculum]
-    specialist_records = frappe.get_all(
-        "Subject",
-        filters=[["name", "in", subject_names]],
-        fields=["name", "is_specialist"],
-    )
-    specialist_set = {r.name for r in specialist_records if r.is_specialist}
-    target_subjects = [s for s in subject_names if s not in specialist_set] or subject_names
-
-    rows = []
-    for student in students:
-        for subj in target_subjects:
-            rows.append({"student": student.student, "subject": subj})
     return rows
 
 
@@ -118,10 +67,11 @@ class GradeEntry(Document):
     def validate(self):
         self._validate_term_belongs_to_year()
         self._validate_class_group_compatibility()
+        self._validate_unique_entry()
         self._validate_rows_not_empty()
-        self._validate_no_duplicate_rows()
+        self._validate_no_duplicate_students()
         self._validate_score_ranges()
-        self._compute_approved()
+        self._compute_macs_mt()
         self._calculate_class_summary()
 
     # ------------------------------------------------------------------
@@ -135,9 +85,7 @@ class GradeEntry(Document):
         if year != self.academic_year:
             frappe.throw(
                 _("O Período <b>{0}</b> pertence ao Ano Lectivo <b>{1}</b>, "
-                  "não a <b>{2}</b>.").format(
-                    self.academic_term, year, self.academic_year
-                ),
+                  "não a <b>{2}</b>.").format(self.academic_term, year, self.academic_year),
                 title=_("Período incompatível"),
             )
 
@@ -145,28 +93,39 @@ class GradeEntry(Document):
         if not self.class_group:
             return
         cg = frappe.db.get_value(
-            "Class Group",
-            self.class_group,
-            ["academic_year", "school_class"],
-            as_dict=True,
+            "Class Group", self.class_group,
+            ["academic_year", "school_class"], as_dict=True,
         )
         if not cg:
             return
         if cg.academic_year != self.academic_year:
             frappe.throw(
                 _("A Turma <b>{0}</b> pertence ao Ano Lectivo <b>{1}</b>, "
-                  "não a <b>{2}</b>.").format(
-                    self.class_group, cg.academic_year, self.academic_year
-                ),
+                  "não a <b>{2}</b>.").format(self.class_group, cg.academic_year, self.academic_year),
                 title=_("Turma incompatível"),
             )
-        if self.school_class and cg.school_class != self.school_class:
+
+    def _validate_unique_entry(self):
+        if not (self.class_group and self.academic_term and self.subject):
+            return
+        existing = frappe.db.get_value(
+            "Grade Entry",
+            {
+                "class_group": self.class_group,
+                "academic_term": self.academic_term,
+                "subject": self.subject,
+                "name": ("!=", self.name),
+            },
+            "name",
+        )
+        if existing:
             frappe.throw(
-                _("A Turma <b>{0}</b> pertence à Classe <b>{1}</b>, "
-                  "não a <b>{2}</b>.").format(
-                    self.class_group, cg.school_class, self.school_class
+                _("Já existe uma Pauta para a Turma <b>{0}</b>, Período <b>{1}</b> "
+                  "e Disciplina <b>{2}</b>: "
+                  "<a href='/app/grade-entry/{3}'>{3}</a>.").format(
+                    self.class_group, self.academic_term, self.subject, existing
                 ),
-                title=_("Turma incompatível"),
+                title=_("Pauta duplicada"),
             )
 
     # ------------------------------------------------------------------
@@ -181,64 +140,81 @@ class GradeEntry(Document):
                 title=_("Tabela vazia"),
             )
 
-    def _validate_no_duplicate_rows(self):
+    def _validate_no_duplicate_students(self):
         seen = set()
         for row in self.grade_rows:
-            key = (row.student, row.subject)
-            if key in seen:
+            if row.student in seen:
                 frappe.throw(
-                    _("A combinação Aluno <b>{0}</b> + Disciplina <b>{1}</b> "
-                      "aparece mais de uma vez na tabela.").format(
-                        row.student, row.subject
-                    ),
-                    title=_("Linha duplicada"),
+                    _("O aluno <b>{0}</b> aparece mais de uma vez na tabela.").format(row.student),
+                    title=_("Aluno duplicado"),
                 )
-            seen.add(key)
+            seen.add(row.student)
 
     def _validate_score_ranges(self):
-        max_s = float(self.max_score or 20)
+        score_fields = [
+            ("acsp_1", "ACSP 1"), ("acsp_2", "ACSP 2"), ("acsp_3", "ACSP 3"),
+            ("acse_1", "ACSE 1"), ("acse_2", "ACSE 2"), ("acse_3", "ACSE 3"),
+            ("acp",    "AT"),
+        ]
         for row in self.grade_rows:
-            if row.is_absent or row.score is None:
+            if row.is_absent:
                 continue
-            if row.score < 0 or row.score > max_s:
-                frappe.throw(
-                    _("A nota <b>{0}</b> do aluno <b>{1}</b> / disciplina <b>{2}</b> "
-                      "está fora do intervalo permitido (0 – {3}).").format(
-                        row.score, row.student, row.subject, max_s
-                    ),
-                    title=_("Nota fora do intervalo"),
-                )
+            for fname, label in score_fields:
+                val = row.get(fname)
+                if val is None:
+                    continue
+                if not (0 <= val <= 20):
+                    frappe.throw(
+                        _("{0} do aluno <b>{1}</b> está fora do intervalo (0–20): <b>{2}</b>.").format(
+                            label, row.student, val
+                        ),
+                        title=_("Nota fora do intervalo"),
+                    )
 
     # ------------------------------------------------------------------
     # Calculations
+    #
+    # MACSP = mean(ACSP scores)
+    # MACS  = mean([MACSP if present] + [each ACSE score])
+    # MT    = round((2 × MACS + ACP) / 3, 2)
     # ------------------------------------------------------------------
 
-    def _compute_approved(self):
-        min_pass = 10.0
-        if self.school_class:
-            val = frappe.db.get_value("School Class", self.school_class, "minimum_passing_grade")
-            if val:
-                min_pass = float(val)
+    def _compute_macs_mt(self):
+        absent_fields = ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp", "macsp", "macs", "mt"]
         for row in self.grade_rows:
             if row.is_absent:
-                row.is_approved = 0
-                row.score = None
-            elif row.score is not None:
-                row.is_approved = 1 if row.score >= min_pass else 0
+                for f in absent_fields:
+                    row.set(f, None)
+                continue
+
+            # MACSP — practical average
+            acsp_vals = [v for v in [row.acsp_1, row.acsp_2, row.acsp_3] if v is not None]
+            macsp = round(sum(acsp_vals) / len(acsp_vals), 2) if acsp_vals else None
+            row.macsp = macsp
+
+            # MACS — MACSP counts as ONE element alongside each written score
+            acse_vals = [v for v in [row.acse_1, row.acse_2, row.acse_3] if v is not None]
+            macs_inputs = ([macsp] if macsp is not None else []) + acse_vals
+            macs = round(sum(macs_inputs) / len(macs_inputs), 2) if macs_inputs else None
+            row.macs = macs
+
+            # MT
+            if macs is not None and row.acp is not None:
+                row.mt = round((2 * macs + row.acp) / 3, 2)
             else:
-                row.is_approved = 0
+                row.mt = None
 
     def _calculate_class_summary(self):
-        self.total_approved = sum(1 for row in self.grade_rows if row.is_approved)
+        self.total_approved = sum(1 for r in self.grade_rows if r.mt is not None and r.mt >= 10)
         self.total_failed = sum(
-            1 for row in self.grade_rows
-            if not row.is_approved and not row.is_absent and row.score is not None
+            1 for r in self.grade_rows
+            if r.mt is not None and r.mt < 10 and not r.is_absent
         )
 
 
 @frappe.whitelist()
 def sync_grade_entry_students(doc_name):
-    """Remove rows for students whose current_status is not 'Activo'. Preserves scores."""
+    """Remove rows for students who are no longer active in the class. Preserves scores."""
     doc = frappe.get_doc("Grade Entry", doc_name)
     if not doc.grade_rows:
         return {"removed": 0, "kept": 0}

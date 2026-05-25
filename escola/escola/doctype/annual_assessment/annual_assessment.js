@@ -23,6 +23,7 @@ frappe.ui.form.on("Annual Assessment", {
 			frm.add_custom_button(__("Carregar Alunos"), () => load_students(frm));
 			frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_assessment_students(frm));
 			frm.add_custom_button(__("Calcular Avaliação"), () => maybe_calculate(frm), null, "primary");
+			frm.add_custom_button(__("Imprimir Mapa"), () => _print_mapa(frm));
 
 			_render_from_rows(frm);
 		}
@@ -531,4 +532,165 @@ function round2(v) { return Math.round(v * 100) / 100; }
 function _set_html(frm, html) {
 	const fd = frm.fields_dict["grades_detail_html"];
 	if (fd) fd.$wrapper.html(html);
+}
+
+// ---------------------------------------------------------------------------
+// Imprimir Mapa de Aproveitamento
+// ---------------------------------------------------------------------------
+
+function _print_mapa(frm) {
+	if (!frm.doc.academic_year || !frm.doc.class_group) {
+		frappe.msgprint(__("Seleccione o Ano Lectivo e a Turma antes de imprimir."));
+		return;
+	}
+	frappe.call({
+		method: "escola.escola.doctype.annual_assessment.annual_assessment.get_mapa_print_data",
+		args: { doc_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("A preparar impressão…"),
+		callback(r) {
+			if (!r.message) return;
+			_open_mapa_print_window(r.message);
+		},
+	});
+}
+
+function _open_mapa_print_window(data) {
+	const html = _build_mapa_html(data);
+	const w = window.open("", "_blank");
+	if (!w) { frappe.msgprint(__("Não foi possível abrir a janela de impressão.")); return; }
+	w.document.write(html);
+	w.document.close();
+	w.focus();
+	setTimeout(() => w.print(), 600);
+}
+
+function _build_mapa_html(d) {
+	const fmt = (v) => (v !== null && v !== undefined) ? parseFloat(v).toFixed(2) : "—";
+	const subjects = d.subjects || [];
+	const terms    = d.terms    || [];
+	const rows     = d.rows     || [];
+
+	// Build column headers: per subject show T1/T2/T3 subcolumns + AF
+	const subj_header_row1 = subjects.map(s =>
+		`<th colspan="${terms.length + 1}" style="border:1px solid #ccc;padding:4px 6px;
+		            background:#1E293B;color:white;text-align:center;font-size:10px;white-space:nowrap;">
+			${s.label}
+		</th>`
+	).join("");
+
+	const subj_header_row2 = subjects.map(() =>
+		terms.map((t, i) =>
+			`<th style="border:1px solid #ccc;padding:3px 4px;background:#334155;color:white;
+			            text-align:center;font-size:9px;min-width:32px;">${t.label}</th>`
+		).join("") +
+		`<th style="border:1px solid #ccc;padding:3px 4px;background:#475569;color:white;
+		            text-align:center;font-size:9px;min-width:34px;font-weight:800;">AF</th>`
+	).join("");
+
+	// Data rows
+	const body_rows = rows.map(r => {
+		const subj_cells = subjects.map(s => {
+			const sd = (r.subject_data || {})[s.name] || {};
+			const term_cells = (sd.terms || []).map(v => {
+				const n = v !== null && v !== undefined ? parseFloat(v) : null;
+				const color = n !== null ? (n >= 10 ? "#166534" : "#991B1B") : "#9CA3AF";
+				return `<td style="border:1px solid #E5E7EB;padding:3px 4px;text-align:center;
+				             font-size:10px;color:${color};">${n !== null ? n.toFixed(2) : "—"}</td>`;
+			}).join("");
+			const af_n = sd.af !== null && sd.af !== undefined ? parseFloat(sd.af) : null;
+			const af_color = af_n !== null ? (af_n >= 10 ? "#166534" : "#991B1B") : "#9CA3AF";
+			const af_bg    = af_n !== null ? (af_n >= 10 ? "#F0FDF4" : "#FEF2F2") : "white";
+			return term_cells +
+				`<td style="border:1px solid #E5E7EB;padding:3px 4px;text-align:center;
+				     font-size:10px;font-weight:700;background:${af_bg};color:${af_color};">
+					${af_n !== null ? af_n.toFixed(2) : "—"}
+				</td>`;
+		}).join("");
+
+		const fg_n  = r.final_grade !== null && r.final_grade !== undefined ? parseFloat(r.final_grade) : null;
+		const fg_color  = fg_n !== null ? (fg_n >= 10 ? "#166534" : "#991B1B") : "#9CA3AF";
+		const fg_bg     = fg_n !== null ? (fg_n >= 10 ? "#DCFCE7" : "#FEE2E2") : "white";
+		const res = r.result || "—";
+		const res_color = res === "Aprovado" ? "#166534" : res === "Reprovado" ? "#991B1B" : "#374151";
+		const res_bg    = res === "Aprovado" ? "#DCFCE7" : res === "Reprovado" ? "#FEE2E2" : "#F9FAFB";
+
+		return `<tr style="border-bottom:1px solid #F3F4F6;">
+			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:10px;color:#9CA3AF;">${r.idx}</td>
+			<td style="border:1px solid #E5E7EB;padding:3px 6px;font-size:10px;font-weight:500;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;"
+			    title="${(r.student_name||"").replace(/"/g,"")}">${r.student_name || r.student}</td>
+			${subj_cells}
+			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:11px;
+			     font-weight:800;background:${fg_bg};color:${fg_color};">${fg_n !== null ? fg_n.toFixed(2) : "—"}</td>
+			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:9px;
+			     font-weight:700;background:${res_bg};color:${res_color};">${res}</td>
+			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:10px;color:#6B7280;">${r.total_absences !== null && r.total_absences !== undefined ? r.total_absences : "—"}</td>
+			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:9px;color:#7C3AED;">${r.comportamento || "—"}</td>
+		</tr>`;
+	}).join("");
+
+	// Summary footer
+	const approved = rows.filter(r => r.result === "Aprovado").length;
+	const failed   = rows.filter(r => r.result === "Reprovado").length;
+	const total    = rows.length;
+
+	return `<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Mapa de Aproveitamento — ${d.class_group_name}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:8px;border-bottom:2px solid #1E293B;padding-bottom:6px;">
+    <div style="font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">
+      ${d.school_name}
+    </div>
+    <div style="font-size:12px;font-weight:700;margin-top:2px;">
+      Mapa de Aproveitamento Pedagógico
+    </div>
+    <div style="font-size:10px;color:#6B7280;margin-top:4px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
+      <span><b>Turma:</b> ${d.class_group_name}</span>
+      <span><b>Ano Lectivo:</b> ${d.academic_year}</span>
+      ${d.teacher_name ? `<span><b>Director(a) de Turma:</b> ${d.teacher_name}</span>` : ""}
+      <span><b>Total de Alunos:</b> ${total}</span>
+    </div>
+  </div>
+
+  <!-- Grade table -->
+  <div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#F1F5F9;font-size:10px;text-align:center;min-width:24px;">Nº</th>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#F1F5F9;font-size:10px;text-align:left;min-width:130px;">Nome Completo</th>
+        ${subj_header_row1}
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:36px;">AF</th>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:60px;">Resultado</th>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:30px;">Faltas</th>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:60px;">Comp.</th>
+      </tr>
+      <tr>${subj_header_row2}</tr>
+    </thead>
+    <tbody>${body_rows}</tbody>
+  </table>
+  </div>
+
+  <!-- Footer stats -->
+  <div style="margin-top:10px;display:flex;gap:24px;font-size:10px;color:#374151;">
+    <span><b style="color:#166534;">Aprovados:</b> ${approved}</span>
+    <span><b style="color:#991B1B;">Reprovados:</b> ${failed}</span>
+    <span><b>Total:</b> ${total}</span>
+    <span style="margin-left:auto;color:#9CA3AF;">Impresso em ${new Date().toLocaleDateString('pt-MZ')}</span>
+  </div>
+</body>
+</html>`;
 }

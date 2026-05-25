@@ -58,12 +58,12 @@ def calculate_assessment(doc_name):
             "academic_year": doc.academic_year,
             "docstatus": ("!=", 2),
         },
-        fields=["name", "academic_term"],
+        fields=["name", "academic_term", "subject"],
     )
     if not grade_entries:
         return {"error": "no_grade_entries"}
 
-    # data[student][subject][term_pos] = [score, ...]
+    # data[student][subject][term_pos] = [mt, ...]
     data: dict = {}
     for entry in grade_entries:
         pos = term_position.get(entry.academic_term)
@@ -72,17 +72,17 @@ def calculate_assessment(doc_name):
         rows = frappe.get_all(
             "Grade Entry Row",
             filters={"parent": entry.name, "is_absent": 0},
-            fields=["student", "subject", "score"],
+            fields=["student", "mt"],
         )
         for row in rows:
-            if row.score is None:
+            if row.mt is None:
                 continue
             (
                 data
                 .setdefault(row.student, {})
-                .setdefault(row.subject, {})
+                .setdefault(entry.subject, {})
                 .setdefault(pos, [])
-                .append(float(row.score))
+                .append(float(row.mt))
             )
 
     if not data:
@@ -292,6 +292,138 @@ def _compute_annual_comportamento(class_group, academic_year):
         result[student] = match
 
     return result
+
+
+@frappe.whitelist()
+def get_mapa_print_data(doc_name):
+    """Return full grade matrix for Mapa de Aproveitamento print view."""
+    doc = frappe.get_doc("Annual Assessment", doc_name)
+
+    terms = frappe.get_all(
+        "Academic Term",
+        filters={"academic_year": doc.academic_year},
+        fields=["name", "term_name", "start_date"],
+        order_by="start_date asc",
+    )
+
+    # Subjects from active curriculum
+    curriculum = frappe.db.get_value(
+        "Class Curriculum",
+        {"class_group": doc.class_group, "is_active": 1},
+        "name",
+    )
+    subjects = []
+    if curriculum:
+        lines = frappe.get_all(
+            "Class Curriculum Line",
+            filters={"parent": curriculum},
+            fields=["subject"],
+            order_by="idx asc",
+        )
+        sn_list = [l.subject for l in lines if l.subject]
+        subj_map = {
+            s.name: s.subject_name
+            for s in frappe.get_all(
+                "Subject",
+                filters={"name": ("in", sn_list)},
+                fields=["name", "subject_name"],
+            )
+        }
+        subjects = [{"name": sn, "label": subj_map.get(sn, sn)} for sn in sn_list if sn in subj_map]
+
+    # MT data: student → subject → term_pos → mt
+    grade_data: dict = {}
+    for i, term in enumerate(terms):
+        pos = i + 1
+        ges = frappe.get_all(
+            "Grade Entry",
+            filters={
+                "class_group": doc.class_group,
+                "academic_term": term.name,
+                "docstatus": ("!=", 2),
+            },
+            fields=["name", "subject"],
+        )
+        for ge in ges:
+            ge_rows = frappe.get_all(
+                "Grade Entry Row",
+                filters={"parent": ge.name, "is_absent": 0},
+                fields=["student", "mt"],
+            )
+            for row in ge_rows:
+                if row.mt is not None:
+                    grade_data.setdefault(row.student, {}).setdefault(ge.subject, {})[pos] = float(row.mt)
+
+    # Build student rows
+    assessment_map = {r.student: r for r in doc.assessment_rows}
+    students = frappe.db.sql(
+        """
+        SELECT sga.student, s.full_name AS student_name, s.student_code
+        FROM `tabStudent Group Assignment` sga
+        JOIN `tabStudent` s ON s.name = sga.student
+        WHERE sga.class_group = %s AND sga.academic_year = %s AND sga.status = 'Activa'
+        ORDER BY s.full_name
+        """,
+        (doc.class_group, doc.academic_year),
+        as_dict=True,
+    )
+
+    student_rows = []
+    for idx, s in enumerate(students):
+        sd = grade_data.get(s.student, {})
+        subj_data = {}
+        for subj in subjects:
+            td = sd.get(subj["name"], {})
+            vals = [td.get(p) for p in range(1, len(terms) + 1)]
+            valid = [v for v in vals if v is not None]
+            subj_data[subj["name"]] = {
+                "terms": vals,
+                "af": round(sum(valid) / len(valid), 2) if valid else None,
+            }
+
+        # Per-term class-wide averages
+        term_avgs = []
+        for p in range(1, len(terms) + 1):
+            vals = [sd.get(subj["name"], {}).get(p) for subj in subjects]
+            valid = [v for v in vals if v is not None]
+            term_avgs.append(round(sum(valid) / len(valid), 2) if valid else None)
+
+        valid_ta = [v for v in term_avgs if v is not None]
+        final_grade = round(sum(valid_ta) / len(valid_ta), 2) if valid_ta else None
+
+        ar = assessment_map.get(s.student)
+        student_rows.append({
+            "idx": idx + 1,
+            "student": s.student,
+            "student_name": s.student_name,
+            "subject_data": subj_data,
+            "term_averages": term_avgs,
+            "final_grade": final_grade,
+            "result": ar.result if ar else None,
+            "total_absences": ar.total_absences if ar else None,
+            "comportamento": ar.comportamento_anual if ar else None,
+        })
+
+    # School / class info
+    school_name = frappe.db.get_single_value("School Settings", "school_name") or ""
+    cg_info = frappe.db.get_value(
+        "Class Group", doc.class_group,
+        ["group_name", "class_teacher"],
+        as_dict=True,
+    ) or {}
+    teacher_name = ""
+    if cg_info.get("class_teacher"):
+        teacher_name = frappe.db.get_value("Teacher", cg_info.class_teacher, "full_name") or cg_info.class_teacher
+
+    return {
+        "school_name": school_name,
+        "class_group_name": cg_info.get("group_name") or doc.class_group,
+        "teacher_name": teacher_name,
+        "academic_year": doc.academic_year,
+        "terms": [{"name": t.name, "label": t.term_name or t.name} for t in terms],
+        "subjects": subjects,
+        "rows": student_rows,
+    }
 
 
 @frappe.whitelist()

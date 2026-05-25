@@ -59,7 +59,7 @@ def _build_year(student, sga):
 
     rows = frappe.db.sql(
         f"""
-        SELECT ge.academic_term, ger.subject, AVG(ger.score) AS avg_score
+        SELECT ge.academic_term, ge.subject, ger.mt AS avg_score
         FROM `tabGrade Entry Row` ger
         JOIN `tabGrade Entry` ge ON ge.name = ger.parent
         WHERE ger.student = %s
@@ -67,9 +67,8 @@ def _build_year(student, sga):
           AND ge.academic_term IN ({ph})
           AND ge.docstatus != 2
           AND ger.is_absent = 0
-          AND ger.score IS NOT NULL
-        GROUP BY ge.academic_term, ger.subject
-        ORDER BY ger.subject
+          AND ger.mt IS NOT NULL
+        ORDER BY ge.subject
         """,
         [student, year] + term_names,
         as_dict=True,
@@ -78,7 +77,7 @@ def _build_year(student, sga):
     if not rows:
         return None
 
-    # subject → term → average score
+    # subject → term → MT
     sm = {}
     for r in rows:
         sm.setdefault(r.subject, {})[r.academic_term] = round(float(r.avg_score), 1)

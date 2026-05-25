@@ -160,7 +160,7 @@ def get_student_timetable(student):
     entries = frappe.db.get_all(
         "Timetable Entry",
         filters={"parent": timetable_name},
-        fields=["day_of_week", "time_slot", "subject", "teacher", "is_double"],
+        fields=["day_of_week", "time_slot", "subject", "teacher", "classroom"],
     )
 
     shift = frappe.db.get_value("Class Group", class_group, "shift")
@@ -190,25 +190,19 @@ def get_student_grades(student):
 
     rows = frappe.db.sql("""
         SELECT
-            COALESCE(NULLIF(ger.subject, ''), ge.subject) AS subject,
-            ger.score,
-            ger.is_absent,
-            ger.is_approved,
+            ge.subject,
             ge.academic_term,
-            ge.evaluation_type,
-            ge.assessment_name,
-            ge.assessment_date,
-            ge.max_score
+            ger.macsp,
+            ger.macs,
+            ger.mt,
+            ger.is_absent
         FROM `tabGrade Entry Row` ger
         JOIN `tabGrade Entry` ge ON ge.name = ger.parent
         WHERE ger.student = %s
           AND ge.academic_year = %s
-        ORDER BY ge.academic_term, ger.subject, ge.assessment_date
+          AND ge.docstatus != 2
+        ORDER BY ge.subject, ge.academic_term
     """, (student, academic_year), as_dict=True)
-
-    for r in rows:
-        if r.assessment_date:
-            r["assessment_date"] = frappe.utils.formatdate(r["assessment_date"])
 
     return {"rows": rows, "academic_year": academic_year}
 

@@ -6,11 +6,18 @@
  "engine": "InnoDB",
  "field_order": [
   "student",
-  "subject",
-  "column_break_1",
-  "score",
-  "is_absent",
-  "is_approved"
+  "student_name",
+  "acsp_1",
+  "acsp_2",
+  "acsp_3",
+  "acse_1",
+  "acse_2",
+  "acse_3",
+  "acp",
+  "macsp",
+  "macs",
+  "mt",
+  "is_absent"
  ],
  "fields": [
   {
@@ -19,43 +26,98 @@
    "label": "Aluno",
    "options": "Student",
    "reqd": 1,
+   "read_only": 1,
    "in_list_view": 1,
    "search_index": 1,
-   "columns": 4
+   "columns": 2
   },
   {
-   "fieldname": "subject",
-   "fieldtype": "Link",
-   "label": "Disciplina",
-   "options": "Subject",
-   "reqd": 1,
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "read_only": 1,
+   "fetch_from": "student.full_name",
    "in_list_view": 1,
    "columns": 3
   },
   {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
+   "fieldname": "acsp_1",
+   "fieldtype": "Int",
+   "label": "ACSP 1",
+   "in_list_view": 1,
+   "columns": 1
   },
   {
-   "fieldname": "score",
-   "fieldtype": "Float",
-   "label": "Nota",
+   "fieldname": "acsp_2",
+   "fieldtype": "Int",
+   "label": "ACSP 2",
    "in_list_view": 1,
-   "columns": 2,
-   "precision": "2"
+   "columns": 1
+  },
+  {
+   "fieldname": "acsp_3",
+   "fieldtype": "Int",
+   "label": "ACSP 3",
+   "columns": 1
+  },
+  {
+   "fieldname": "acse_1",
+   "fieldtype": "Int",
+   "label": "ACSE 1",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "acse_2",
+   "fieldtype": "Int",
+   "label": "ACSE 2",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "acse_3",
+   "fieldtype": "Int",
+   "label": "ACSE 3",
+   "columns": 1
+  },
+  {
+   "fieldname": "acp",
+   "fieldtype": "Int",
+   "label": "AT",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "macsp",
+   "fieldtype": "Float",
+   "label": "MACSP",
+   "read_only": 1,
+   "precision": "2",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "macs",
+   "fieldtype": "Float",
+   "label": "MACS",
+   "read_only": 1,
+   "precision": "2",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "mt",
+   "fieldtype": "Float",
+   "label": "MT",
+   "read_only": 1,
+   "precision": "2",
+   "in_list_view": 1,
+   "columns": 1
   },
   {
    "fieldname": "is_absent",
    "fieldtype": "Check",
    "label": "S/Nota",
-   "in_list_view": 1,
-   "columns": 1
-  },
-  {
-   "fieldname": "is_approved",
-   "fieldtype": "Check",
-   "label": "Aprovado",
-   "read_only": 1,
    "in_list_view": 1,
    "columns": 1
   }
