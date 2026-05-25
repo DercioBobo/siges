@@ -12,6 +12,8 @@
   "academic_year",
   "column_break_2",
   "shift",
+  "column_break_classroom",
+  "classroom",
   "column_break_3",
   "status",
   "section_break_entries",
@@ -65,6 +67,18 @@
    "label": "Turno",
    "read_only": 1,
    "fetch_from": "class_group.shift",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_classroom",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "classroom",
+   "fieldtype": "Data",
+   "label": "Sala",
+   "read_only": 1,
+   "fetch_from": "class_group.classroom",
    "in_list_view": 1
   },
   {

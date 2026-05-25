@@ -353,11 +353,6 @@ class TimetablePage {
 	_html_cell(cell) {
 		const color = this._subject_color(cell.subject_code, cell.color);
 
-		const classroom_line = cell.classroom
-			? `<div style="font-size:9px;color:#9CA3AF;margin-top:2px;line-height:1.3;">
-				   <i class="fa fa-map-marker" style="font-size:8px;margin-right:2px;"></i>${frappe.utils.escape_html(cell.classroom)}
-			   </div>`
-			: "";
 		return `
 			<td style="background:white;border-radius:6px;padding:5px 3px;vertical-align:middle;">
 				<div style="background:${color}1A;border-left:3px solid ${color};
@@ -369,7 +364,6 @@ class TimetablePage {
 					<div style="font-size:10px;color:#6B7280;margin-top:2px;line-height:1.3;">
 						${frappe.utils.escape_html(cell.teacher || "")}
 					</div>
-					${classroom_line}
 				</div>
 			</td>
 		`;
