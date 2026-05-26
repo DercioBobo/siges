@@ -56,7 +56,18 @@ def _get_teacher_turmas(teacher_name):
         {year_sql}
     """, params, as_dict=True)
 
-    all_names = director_set | {r.class_group for r in timetable_cgs}
+    # 3. Turmas from School Class Subject assignments
+    sc_year_sql = "AND cg.academic_year = %s" if academic_year else ""
+    sc_params = (teacher_name, academic_year) if academic_year else (teacher_name,)
+    scs_cgs = frappe.db.sql(f"""
+        SELECT DISTINCT cg.name
+        FROM `tabSchool Class Subject` scs
+        JOIN `tabClass Group` cg ON cg.school_class = scs.parent
+        WHERE scs.teacher = %s AND cg.is_active = 1
+        {sc_year_sql}
+    """, sc_params, as_dict=True)
+
+    all_names = director_set | {r.class_group for r in timetable_cgs} | {r.name for r in scs_cgs}
     if not all_names:
         return []
 
@@ -236,17 +247,13 @@ def get_grade_entries(turma, term):
     """, (teacher.name, turma), as_dict=True)
     subj_names = [r.subject for r in subj_rows]
 
-    # Fall back to curriculum when teacher has no subject assignments (e.g. class director)
+    # Fall back to School Class subjects when teacher has no timetable entries (e.g. class director)
     if not subj_names:
-        curriculum = frappe.db.get_value(
-            "Class Curriculum",
-            {"class_group": turma, "is_active": 1},
-            "name",
-        )
-        if curriculum:
+        school_class = frappe.db.get_value("Class Group", turma, "school_class")
+        if school_class:
             lines = frappe.get_all(
-                "Class Curriculum Line",
-                filters={"parent": curriculum},
+                "School Class Subject",
+                filters={"parent": school_class},
                 fields=["subject"],
                 order_by="idx asc",
             )

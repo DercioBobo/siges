@@ -3,11 +3,57 @@ import json
 from frappe import _
 
 
+def _teacher_class_groups():
+    """Return list of class group names for the current user if they are a Professor, else None."""
+    user = frappe.session.user
+    if "Professor" not in frappe.get_roles(user):
+        return None
+    teacher_name = frappe.db.get_value("Teacher", {"user_id": user}, "name")
+    if not teacher_name:
+        return None
+    academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
+    year_sql = "AND cg.academic_year = %s" if academic_year else ""
+
+    cg_filters = {"class_teacher": teacher_name, "is_active": 1}
+    if academic_year:
+        cg_filters["academic_year"] = academic_year
+    names = {cg.name for cg in frappe.db.get_all("Class Group", filters=cg_filters, fields=["name"])}
+
+    params = (teacher_name, academic_year) if academic_year else (teacher_name,)
+    rows = frappe.db.sql(f"""
+        SELECT DISTINCT t.class_group
+        FROM `tabTimetable Entry` te
+        JOIN `tabTimetable` t ON t.name = te.parent
+        JOIN `tabClass Group` cg ON cg.name = t.class_group
+        WHERE te.teacher = %s AND t.status = 'Activo' AND cg.is_active = 1
+        {year_sql}
+    """, params, as_dict=True)
+    names.update(r.class_group for r in rows)
+
+    sc_params = (teacher_name, academic_year) if academic_year else (teacher_name,)
+    sc_rows = frappe.db.sql(f"""
+        SELECT DISTINCT cg.name
+        FROM `tabSchool Class Subject` scs
+        JOIN `tabClass Group` cg ON cg.school_class = scs.parent
+        WHERE scs.teacher = %s AND cg.is_active = 1
+        {year_sql}
+    """, sc_params, as_dict=True)
+    names.update(r.name for r in sc_rows)
+
+    return list(names)
+
+
 @frappe.whitelist()
 def get_filter_options():
+    teacher_cgs = _teacher_class_groups()
+    cg_filters = {"is_active": 1}
+    if teacher_cgs is not None:
+        if not teacher_cgs:
+            return {"class_groups": [], "terms": []}
+        cg_filters["name"] = ("in", teacher_cgs)
     class_groups = frappe.get_all(
         "Class Group",
-        filters={"is_active": 1},
+        filters=cg_filters,
         fields=["name", "group_name", "school_class", "academic_year"],
         order_by="group_name asc",
     )
@@ -77,22 +123,18 @@ def get_grade_book(class_group, academic_term):
     )
     student_ids = [s.student for s in students]
 
-    curriculum = frappe.db.get_value(
-        "Class Curriculum",
-        {"class_group": class_group, "is_active": 1},
-        "name",
-    )
-
     subjects_out = []
-    if curriculum:
+    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
+    subj_names = []
+    if school_class:
         lines = frappe.get_all(
-            "Class Curriculum Line",
-            filters={"parent": curriculum},
+            "School Class Subject",
+            filters={"parent": school_class},
             fields=["subject"],
             order_by="idx asc",
         )
         subj_names = [l.subject for l in lines if l.subject]
-        if subj_names:
+    if subj_names:
             subj_infos = {
                 s.name: s.subject_name
                 for s in frappe.get_all(

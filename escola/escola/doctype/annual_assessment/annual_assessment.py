@@ -306,17 +306,13 @@ def get_mapa_print_data(doc_name):
         order_by="start_date asc",
     )
 
-    # Subjects from active curriculum
-    curriculum = frappe.db.get_value(
-        "Class Curriculum",
-        {"class_group": doc.class_group, "is_active": 1},
-        "name",
-    )
+    # Subjects from School Class
     subjects = []
-    if curriculum:
+    school_class = frappe.db.get_value("Class Group", doc.class_group, "school_class")
+    if school_class:
         lines = frappe.get_all(
-            "Class Curriculum Line",
-            filters={"parent": curriculum},
+            "School Class Subject",
+            filters={"parent": school_class},
             fields=["subject"],
             order_by="idx asc",
         )

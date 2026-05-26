@@ -99,17 +99,14 @@ async function _open_grid_dialog(frm) {
 		const cgDoc = await frappe.db.get_doc("Class Group", frm.doc.class_group);
 		if (cgDoc.subject_teachers && cgDoc.subject_teachers.length) {
 			subjects = cgDoc.subject_teachers.map(l => l.subject).filter(Boolean);
-		} else {
-			// Legacy fallback: active Class Curriculum
-			const curricula = await frappe.db.get_list("Class Curriculum", {
-				filters: { class_group: frm.doc.class_group, is_active: 1 },
-				fields: ["name"],
-				limit: 1,
+		} else if (cgDoc.school_class) {
+			const scSubjects = await frappe.db.get_list("School Class Subject", {
+				filters: { parent: cgDoc.school_class },
+				fields: ["subject"],
+				order_by: "idx asc",
+				limit: 200,
 			});
-			if (curricula.length) {
-				const currDoc = await frappe.db.get_doc("Class Curriculum", curricula[0].name);
-				subjects = (currDoc.subject_lines || []).map(l => l.subject).filter(Boolean);
-			}
+			subjects = scSubjects.map(l => l.subject).filter(Boolean);
 		}
 	}
 	if (!subjects.length) {
