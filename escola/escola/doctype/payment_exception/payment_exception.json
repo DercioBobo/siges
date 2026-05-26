@@ -10,13 +10,10 @@
   "exception_name",
   "cb_id",
   "is_active",
-  "sb_period",
-  "applies_from",
-  "cb_period",
-  "applies_until",
   "sb_config",
-  "extended_due_date",
+  "billing_date",
   "cb_config",
+  "extended_due_date",
   "disable_penalties",
   "sb_reason",
   "reason"
@@ -54,49 +51,35 @@
    "label": "Activa"
   },
   {
-   "fieldname": "sb_period",
-   "fieldtype": "Section Break",
-   "label": "Período de Vigência"
-  },
-  {
-   "fieldname": "applies_from",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Válida de",
-   "reqd": 1
-  },
-  {
-   "fieldname": "cb_period",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "applies_until",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Válida até",
-   "reqd": 1
-  },
-  {
    "fieldname": "sb_config",
    "fieldtype": "Section Break",
-   "label": "Configuração do Pagamento"
+   "label": "Configuração"
   },
   {
-   "fieldname": "extended_due_date",
+   "fieldname": "billing_date",
    "fieldtype": "Date",
-   "label": "Nova Data de Vencimento",
+   "in_list_view": 1,
+   "label": "Data de Facturação",
    "reqd": 1,
-   "description": "Data de vencimento aplicada nas facturas geradas durante este período excepcional."
+   "description": "Data em que o ciclo de facturação foi (ou será) emitido."
   },
   {
    "fieldname": "cb_config",
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "extended_due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Nova Data de Vencimento",
+   "reqd": 1,
+   "description": "Nova data de vencimento a aplicar nas facturas deste ciclo."
+  },
+  {
    "fieldname": "disable_penalties",
    "fieldtype": "Check",
    "label": "Suspender Multas",
-   "description": "Se activo, nenhuma multa por atraso será calculada ou adicionada às facturas deste ciclo."
+   "description": "Se activo, nenhuma multa por atraso será calculada para as facturas deste ciclo."
   },
   {
    "fieldname": "sb_reason",
@@ -135,7 +118,7 @@
    "role": "Secretaria Escolar"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "billing_date",
  "sort_order": "DESC",
  "title_field": "exception_name"
 }

@@ -8,9 +8,6 @@ from frappe.model.document import Document
 
 class BillingSchedule(Document):
     def validate(self):
-        day = int(self.invoice_day or 0)
-        if day < 1 or day > 28:
-            frappe.throw(_("O Dia de Emissão deve estar entre 1 e 28."))
         if self.billing_mode in ("Trimestral", "Anual") and not self.billing_month:
             frappe.throw(_("Defina o Mês de Referência para o modo {0}.").format(self.billing_mode))
         if self.billing_mode == "Trimestral" and not (1 <= int(self.billing_month or 0) <= 3):
@@ -29,8 +26,7 @@ def run_due_schedules():
     schedules = frappe.get_all(
         "Billing Schedule",
         filters={"is_active": 1},
-        fields=["name", "school_class", "billing_mode", "invoice_day",
-                "due_days", "billing_month", "last_billed_date"],
+        fields=["name", "school_class", "billing_mode", "billing_month", "last_billed_date"],
     )
     for s in schedules:
         if not _is_due(s, today):
@@ -134,7 +130,7 @@ def _next_due_day(posting_date, day):
 
 def _is_due(schedule, today):
     """Return True if this schedule should fire today."""
-    day = int(schedule.invoice_day or 0) or _settings_invoice_day()
+    day = _settings_invoice_day()
     if today.day < day:
         return False
 
@@ -171,10 +167,8 @@ def _is_due(schedule, today):
 def _next_trigger_date(schedule):
     """Compute the next calendar date this schedule will fire."""
     today = date.today()
-    day   = min(int(schedule.invoice_day or 25), 28)
     mode  = schedule.billing_mode
-
-    day = min(int(schedule.invoice_day or 0) or _settings_invoice_day(), 28)
+    day   = min(_settings_invoice_day(), 28)
 
     if mode == "Mensal":
         for delta in range(14):
@@ -225,7 +219,12 @@ def _execute_schedule(schedule, today_date):
     if payment_due_day:
         due_date = _next_due_day(today_date, payment_due_day)
     else:
-        due_date = today_date + timedelta(days=int(schedule.due_days or 0) or _settings_due_days())
+        raw = today_date + timedelta(days=_settings_due_days())
+        if raw.weekday() == 5:
+            raw += timedelta(days=2)
+        elif raw.weekday() == 6:
+            raw += timedelta(days=1)
+        due_date = raw
 
     # Check for an active payment exception — overrides due date and penalty behaviour
     exception = get_active_exception(today_date)

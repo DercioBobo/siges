@@ -14,8 +14,7 @@ def get_schedule_data():
     schedules = frappe.get_all(
         "Billing Schedule",
         fields=["name", "schedule_name", "school_class", "billing_mode",
-                "invoice_day", "due_days", "billing_month",
-                "is_active", "last_billed_date"],
+                "billing_month", "is_active", "last_billed_date"],
         order_by="school_class asc, billing_mode asc",
     )
 
@@ -60,7 +59,6 @@ def get_schedule_data():
             "schedule_name":   s.schedule_name,
             "school_class":    s.school_class,
             "billing_mode":    s.billing_mode,
-            "invoice_day":     s.invoice_day,
             "is_active":       s.is_active,
             "last_billed_date":str(s.last_billed_date) if s.last_billed_date else None,
             "next_due_date":   str(next_date) if next_date else None,

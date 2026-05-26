@@ -14,8 +14,6 @@
   "school_class",
   "billing_mode",
   "cb_config",
-  "invoice_day",
-  "due_days",
   "billing_month",
   "sb_estado",
   "last_billed_date",
@@ -78,22 +76,6 @@
   {
    "fieldname": "cb_config",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "invoice_day",
-   "fieldtype": "Int",
-   "default": "25",
-   "label": "Dia de Emissão",
-   "reqd": 1,
-   "description": "Dia do mês em que as facturas são emitidas (1–28)"
-  },
-  {
-   "fieldname": "due_days",
-   "fieldtype": "Int",
-   "default": "15",
-   "label": "Prazo de Pagamento (dias)",
-   "reqd": 1,
-   "description": "Dias após a emissão até ao vencimento"
   },
   {
    "fieldname": "billing_month",

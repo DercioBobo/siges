@@ -4,22 +4,6 @@
 frappe.ui.form.on("Billing Schedule", {
 	onload(frm) {
 		frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
-
-		// Pre-fill invoice_day and due_days from School Settings on new docs
-		if (frm.is_new()) {
-			frappe.db.get_value(
-				"School Settings", "School Settings",
-				["invoice_posting_day", "invoice_due_days"],
-				r => {
-					if (r) {
-						if (!frm.doc.invoice_day && r.invoice_posting_day)
-							frm.set_value("invoice_day", r.invoice_posting_day);
-						if (!frm.doc.due_days && r.invoice_due_days)
-							frm.set_value("due_days", r.invoice_due_days);
-					}
-				}
-			);
-		}
 	},
 
 	refresh(frm) {

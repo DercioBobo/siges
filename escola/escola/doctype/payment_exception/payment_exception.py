@@ -6,53 +6,96 @@ from frappe.utils import getdate, today
 
 class PaymentException(Document):
     def validate(self):
-        if self.applies_from and self.applies_until:
-            if getdate(self.applies_until) < getdate(self.applies_from):
+        if self.billing_date and self.extended_due_date:
+            if getdate(self.extended_due_date) <= getdate(self.billing_date):
                 frappe.throw(
-                    _("A data «Válida até» não pode ser anterior a «Válida de»."),
-                    title=_("Período inválido"),
-                )
-        if self.extended_due_date and self.applies_from:
-            if getdate(self.extended_due_date) < getdate(self.applies_from):
-                frappe.throw(
-                    _("A Nova Data de Vencimento não pode ser anterior ao início do período de excepção."),
-                    title=_("Data de vencimento inválida"),
+                    _("A Nova Data de Vencimento deve ser posterior à Data de Facturação."),
+                    title=_("Data inválida"),
                 )
         if self.is_active:
-            self._validate_no_overlap()
+            self._validate_unique_billing_date()
 
-    def _validate_no_overlap(self):
-        """Prevent two active exceptions from overlapping in time."""
-        if not self.applies_from or not self.applies_until:
-            return
-        overlap = frappe.db.sql(
+    def on_update(self):
+        if self.is_active:
+            self._apply_to_existing_cycles()
+
+    def _validate_unique_billing_date(self):
+        """Only one active exception per billing date."""
+        existing = frappe.db.sql(
             """
             SELECT name FROM `tabPayment Exception`
-            WHERE is_active = 1
-              AND name != %s
-              AND applies_from <= %s
-              AND applies_until >= %s
+            WHERE is_active = 1 AND name != %s AND billing_date = %s
             LIMIT 1
             """,
-            (self.name or "", self.applies_until, self.applies_from),
+            (self.name or "", self.billing_date),
         )
-        if overlap:
+        if existing:
             frappe.throw(
-                _("Já existe uma Excepção de Pagamento activa que se sobrepõe a este período: "
-                  "<b>{0}</b>. Desactive-a antes de criar uma nova.").format(overlap[0][0]),
-                title=_("Sobreposição de excepções"),
+                _("Já existe uma Excepção de Pagamento activa para a data de facturação "
+                  "<b>{0}</b>: <b>{1}</b>.").format(
+                    frappe.format(self.billing_date, {"fieldtype": "Date"}),
+                    existing[0][0],
+                ),
+                title=_("Data de facturação duplicada"),
             )
+
+    def _apply_to_existing_cycles(self):
+        """
+        Push extended_due_date to all non-cancelled cycles whose posting_date
+        matches billing_date, and update due_date on their invoices.
+        """
+        cycles = frappe.get_all(
+            "Billing Cycle",
+            filters={
+                "posting_date": self.billing_date,
+                "status": ("!=", "Cancelado"),
+            },
+            pluck="name",
+        )
+        if not cycles:
+            return
+
+        penalties_flag = int(self.disable_penalties or 0)
+        for cycle_name in cycles:
+            frappe.db.set_value(
+                "Billing Cycle", cycle_name,
+                {
+                    "penalties_disabled": penalties_flag,
+                    "exception_ref": self.name,
+                },
+                update_modified=False,
+            )
+
+        frappe.db.sql(
+            """
+            UPDATE `tabSales Invoice`
+            SET due_date = %s
+            WHERE escola_billing_cycle IN %s AND docstatus = 0
+            """,
+            (self.extended_due_date, tuple(cycles)),
+        )
+
+        inv_count = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
+
+        frappe.msgprint(
+            _("{0} ciclo(s) e {1} factura(s) actualizados com vencimento <b>{2}</b>.").format(
+                len(cycles),
+                inv_count,
+                frappe.format(self.extended_due_date, {"fieldtype": "Date"}),
+            ),
+            title=_("Excepção aplicada"),
+            indicator="green",
+        )
 
 
 def get_active_exception(for_date=None):
-    """Return the active Payment Exception covering for_date, or None."""
+    """Return the active Payment Exception for the given billing date, or None."""
     check_date = for_date or getdate(today())
     rows = frappe.get_all(
         "Payment Exception",
         filters={
             "is_active": 1,
-            "applies_from": ("<=", check_date),
-            "applies_until": (">=", check_date),
+            "billing_date": check_date,
         },
         fields=["name", "extended_due_date", "disable_penalties", "reason"],
         limit=1,
