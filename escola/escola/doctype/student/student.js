@@ -73,20 +73,22 @@ function _inject_student_styles() {
 .srn-all-link { font-size: 11px; color: #6366f1; text-decoration: none; }
 .srn-all-link:hover { text-decoration: underline; }
 .srn-row {
-	display: flex; align-items: center; gap: 10px;
+	display: flex; flex-direction: column; gap: 3px;
 	padding: 7px 10px; border-radius: 7px; margin-bottom: 5px;
 	border: 1px solid var(--border-color); background: var(--fg-color);
 	font-size: 12px;
 }
-.srn-years { font-weight: 700; font-size: 13px; min-width: 160px; }
-.srn-date  { color: var(--text-muted); min-width: 80px; }
+.srn-row-top    { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.srn-row-bottom { display: flex; align-items: center; gap: 6px; }
+.srn-years { font-weight: 700; font-size: 13px; }
+.srn-date  { color: var(--text-muted); font-size: 11px; }
 .srn-badge {
 	font-size: 11px; font-weight: 600; padding: 2px 8px;
 	border-radius: 12px; white-space: nowrap;
 }
 .srn-badge.confirmed { background: #d1fae5; color: #065f46; }
 .srn-badge.draft     { background: #fef3c7; color: #92400e; }
-.srn-ver { margin-left: auto; font-size: 11px; font-weight: 600; color: #6366f1; cursor: pointer; background: none; border: none; padding: 0; }
+.srn-ver { font-size: 11px; font-weight: 600; color: #6366f1; cursor: pointer; background: none; border: none; padding: 0; white-space: nowrap; }
 .srn-ver:hover { text-decoration: underline; }
 .srn-pending {
 	display: flex; align-items: center; gap: 8px;
@@ -540,10 +542,14 @@ function _render_renewal_history(frm, d) {
 
 		return `
 		<div class="srn-row">
-			<span class="srn-years">${frappe.utils.escape_html(ren.academic_year)} → ${frappe.utils.escape_html(ren.target_academic_year)}</span>
-			<span class="srn-date">${date_fmt}</span>
-			${badge}
-			<button class="srn-ver" data-name="${frappe.utils.escape_html(ren.name)}">${__("Ver →")}</button>
+			<div class="srn-row-top">
+				<span class="srn-years">${frappe.utils.escape_html(ren.academic_year)} → ${frappe.utils.escape_html(ren.target_academic_year)}</span>
+				<button class="srn-ver" data-name="${frappe.utils.escape_html(ren.name)}">${__("Ver →")}</button>
+			</div>
+			<div class="srn-row-bottom">
+				<span class="srn-date">${date_fmt}</span>
+				${badge}
+			</div>
 		</div>`;
 	}).join("");
 
@@ -707,12 +713,21 @@ async function _show_services_modal(frm) {
 	const total = services.reduce((s, r) => s + r.current_amount, 0);
 	const mea_name = services[0] && await frappe.db.get_value("Mensalidade Extra do Aluno", { student: frm.doc.name }, "name");
 
-	const rows = services.map(s => `
-		<tr>
+	const fmtDate = d => d ? frappe.datetime.str_to_user(d) : null;
+
+	const rows = services.map(s => {
+		const start = fmtDate(s.start_date) || "—";
+		const end   = s.end_date
+			? `<span style="color:#991b1b;">${fmtDate(s.end_date)}</span>`
+			: `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">Em curso</span>`;
+		return `
+		<tr style="border-bottom:1px solid #f1f5f9;">
 			<td style="padding:10px 14px;font-size:13px;font-weight:500;color:#1e293b;">${frappe.utils.escape_html(s.service_name)}</td>
+			<td style="padding:10px 14px;font-size:12px;color:#475569;text-align:center;">${start}</td>
+			<td style="padding:10px 14px;font-size:12px;text-align:center;">${end}</td>
 			<td style="padding:10px 14px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;">${fmt(s.current_amount)}</td>
-		</tr>`
-	).join("");
+		</tr>`;
+	}).join("");
 
 	const docUrl = mea_name && mea_name.message
 		? `/app/mensalidade-extra-do-aluno/${encodeURIComponent(mea_name.message.name)}`
@@ -729,6 +744,8 @@ async function _show_services_modal(frm) {
 				<thead>
 					<tr style="background:#f0fdfa;">
 						<th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Serviço")}</th>
+						<th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Início")}</th>
+						<th style="padding:8px 14px;text-align:center;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Fim")}</th>
 						<th style="padding:8px 14px;text-align:right;font-size:11px;font-weight:700;color:#0f766e;text-transform:uppercase;letter-spacing:.05em;">${__("Valor/Mês")}</th>
 					</tr>
 				</thead>
@@ -1171,9 +1188,14 @@ function _render_docs_panel(frm, docs) {
 	}).join("");
 
 	const html = `
-	<div style="margin-bottom:6px;">
-		<span style="font-size:13px;font-weight:600;color:#374151;">${__("Documentos registados")}</span>
-		${badge}
+	<div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+		<div>
+			<span style="font-size:13px;font-weight:600;color:#374151;">${__("Documentos registados")}</span>
+			${badge}
+		</div>
+		<button class="sdoc-btn-add btn btn-xs btn-default" style="white-space:nowrap;">
+			${__("+ Adicionar Documento")}
+		</button>
 	</div>
 	<div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;">
 		<table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -1196,6 +1218,8 @@ function _render_docs_panel(frm, docs) {
 		_deliver_doc_dialog(frm, $(this).data("row"));
 	}).on("click.sdoc", ".sdoc-btn-reset", function () {
 		_reset_doc_confirm(frm, $(this).data("row"));
+	}).on("click.sdoc", ".sdoc-btn-add", function () {
+		_add_doc_dialog(frm);
 	});
 }
 
@@ -1244,4 +1268,58 @@ function _reset_doc_confirm(frm, row_name) {
 			callback() { frm.reload_doc(); },
 		})
 	);
+}
+
+function _add_doc_dialog(frm) {
+	const d = new frappe.ui.Dialog({
+		title: __("Adicionar Documento"),
+		fields: [
+			{
+				fieldname: "document_type",
+				fieldtype: "Link",
+				label: __("Tipo de Documento"),
+				options: "Tipo de Documento",
+				filters: { is_active: 1 },
+				reqd: 1,
+			},
+			{
+				fieldname: "status",
+				fieldtype: "Select",
+				label: __("Estado"),
+				options: "Pendente\nEntregue",
+				default: "Pendente",
+				reqd: 1,
+			},
+			{
+				fieldname: "file",
+				fieldtype: "Attach",
+				label: __("Ficheiro (opcional)"),
+			},
+			{
+				fieldname: "notes",
+				fieldtype: "Small Text",
+				label: __("Observações"),
+			},
+		],
+		primary_action_label: __("Adicionar"),
+		primary_action(values) {
+			frappe.call({
+				method: "escola.escola.doctype.student.student.add_student_document",
+				args: {
+					student:       frm.doc.name,
+					document_type: values.document_type,
+					status:        values.status,
+					file_url:      values.file || "",
+					notes:         values.notes || "",
+				},
+				freeze: true,
+				freeze_message: __("A guardar…"),
+				callback(r) {
+					if (!r.exc) frm.reload_doc();
+				},
+			});
+			d.hide();
+		},
+	});
+	d.show();
 }

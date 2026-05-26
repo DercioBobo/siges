@@ -11,6 +11,20 @@ frappe.ui.form.on("Grade Entry", {
 
         if (!frm.doc.__islocal) {
             frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_students(frm));
+
+            if (frm.doc.class_group && frm.doc.academic_term) {
+                frm.add_custom_button(
+                    __("Mapa de Aproveitamento"),
+                    () => {
+                        frappe.route_options = {
+                            class_group:   frm.doc.class_group,
+                            academic_term: frm.doc.academic_term,
+                        };
+                        frappe.set_route("mapa-aproveitamento");
+                    },
+                    __("Ver")
+                );
+            }
         }
     },
 

@@ -4,18 +4,27 @@ frappe.pages["mapa-aproveitamento"].on_page_load = function (wrapper) {
         title: __("Mapa de Aproveitamento"),
         single_column: true,
     });
-    new MapaAproveitamento(page, wrapper);
+    wrapper._mapa = new MapaAproveitamento(page, wrapper);
+};
+
+frappe.pages["mapa-aproveitamento"].on_page_show = function (wrapper) {
+    if (!frappe.route_options || !wrapper._mapa) return;
+    wrapper._mapa._preselect = frappe.route_options;
+    frappe.route_options = null;
+    wrapper._mapa._apply_preselect();
 };
 
 // ---------------------------------------------------------------------------
 
 class MapaAproveitamento {
     constructor(page, wrapper) {
-        this.page    = page;
-        this.wrapper = wrapper;
-        this.data    = null;
-        this._idx    = 0;
-        this._dirty  = new Set();
+        this.page      = page;
+        this.wrapper   = wrapper;
+        this.data      = null;
+        this._idx      = 0;
+        this._dirty    = new Set();
+        this._preselect = frappe.route_options || null;
+        if (this._preselect) frappe.route_options = null;
 
         this._inject_styles();
         this._build_skeleton();
@@ -97,50 +106,56 @@ class MapaAproveitamento {
     }
 
     _render_filters({ class_groups, terms }) {
-        // Build year map for filtering terms by class group's academic_year
         this._cg_year_map = {};
         class_groups.forEach(c => { this._cg_year_map[c.name] = c.academic_year; });
         this._all_terms = terms;
 
-        const cg_opts = class_groups.map(c =>
-            `<option value="${c.name}">${frappe.utils.escape_html(c.group_name)}</option>`
-        ).join("");
-
         this.$filters.html(`
-            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                <div>
-                    <label class="ma-label">TURMA</label>
-                    <select id="ma-cg" class="form-control" style="min-width:200px;">
-                        <option value="">— Selecione a Turma —</option>
-                        ${cg_opts}
-                    </select>
-                </div>
-                <div>
-                    <label class="ma-label">PERÍODO</label>
-                    <select id="ma-term" class="form-control" style="min-width:200px;">
-                        <option value="">— Selecione o Período —</option>
-                    </select>
-                </div>
-                <div>
-                    <button id="ma-load" class="btn btn-primary btn-sm">
-                        <i class="fa fa-table"></i>&nbsp;Carregar
-                    </button>
-                </div>
-            </div>
-        `);
+            <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:18px 0 12px;">
+                <div style="min-width:220px;" id="ma-ctrl-cg"></div>
+                <div style="min-width:220px;" id="ma-ctrl-term"></div>
+            </div>`);
 
-        this.$filters.find("#ma-cg").on("change", () => this._populate_terms());
-        this.$filters.find("#ma-load").on("click", () => this._load());
+        this._cg_ctrl = escola.utils.make_filter_select(
+            this.$filters.find("#ma-ctrl-cg")[0],
+            { label: __("TURMA"), placeholder: __("Pesquisar turma…"),
+              options: class_groups.map(c => ({ value: c.name, label: c.group_name })) }
+        );
+        this._term_ctrl = escola.utils.make_filter_select(
+            this.$filters.find("#ma-ctrl-term")[0],
+            { label: __("PERÍODO"), placeholder: __("Selecionar período…"), options: [] }
+        );
+
+        this._cg_ctrl.on_change(cg => {
+            this._populate_terms(cg);
+            this._maybe_load();
+        });
+        this._term_ctrl.on_change(() => this._maybe_load());
+
+        this._apply_preselect();
     }
 
-    _populate_terms() {
-        const cg_val = this.$filters.find("#ma-cg").val();
-        const year   = this._cg_year_map && this._cg_year_map[cg_val];
+    _apply_preselect() {
+        if (!this._preselect) return;
+        const { class_group, academic_term } = this._preselect;
+        this._preselect = null;
+        if (!class_group) return;
+        this._cg_ctrl.set_value(class_group);
+        this._populate_terms(class_group);
+        if (academic_term) this._term_ctrl.set_value(academic_term);
+        this._maybe_load();
+    }
+
+    _populate_terms(cg) {
+        const year = this._cg_year_map && this._cg_year_map[cg];
         const filtered = (this._all_terms || []).filter(t => !year || t.academic_year === year);
-        const opts = filtered.map(t =>
-            `<option value="${t.name}">${frappe.utils.escape_html(t.term_name || t.name)} (${t.academic_year})</option>`
-        ).join("");
-        this.$filters.find("#ma-term").html(`<option value="">— Selecione o Período —</option>${opts}`);
+        this._term_ctrl.set_options(
+            filtered.map(t => ({ value: t.name, label: `${t.term_name || t.name} (${t.academic_year})` }))
+        );
+    }
+
+    _maybe_load() {
+        if (this._cg_ctrl.get_value() && this._term_ctrl.get_value()) this._load();
     }
 
     // -----------------------------------------------------------------------
@@ -148,12 +163,9 @@ class MapaAproveitamento {
     // -----------------------------------------------------------------------
 
     _load() {
-        const cg   = this.$filters.find("#ma-cg").val();
-        const term = this.$filters.find("#ma-term").val();
-        if (!cg || !term) {
-            frappe.msgprint(__("Selecione a Turma e o Período."));
-            return;
-        }
+        const cg   = this._cg_ctrl.get_value();
+        const term = this._term_ctrl.get_value();
+        if (!cg || !term) return;
         if (this._dirty.size > 0) {
             frappe.confirm(
                 __("Há notas não guardadas. Carregar nova seleção sem guardar?"),

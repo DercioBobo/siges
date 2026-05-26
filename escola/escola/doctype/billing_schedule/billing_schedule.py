@@ -14,6 +14,18 @@ class BillingSchedule(Document):
             frappe.throw(_("Para Trimestral, o Mês de Referência deve ser 1, 2 ou 3."))
         if self.billing_mode == "Anual" and not (1 <= int(self.billing_month or 0) <= 12):
             frappe.throw(_("Para Anual, o Mês de Referência deve ser entre 1 e 12."))
+        if self.is_active and self.school_class:
+            existing = frappe.db.get_value(
+                "Billing Schedule",
+                {"school_class": self.school_class, "is_active": 1, "name": ("!=", self.name)},
+                "name",
+            )
+            if existing:
+                frappe.throw(
+                    _("Já existe um Agendamento de Cobrança activo para a Classe <b>{0}</b>: "
+                      "<b>{1}</b>.").format(self.school_class, existing),
+                    title=_("Classe duplicada"),
+                )
 
 
 # ---------------------------------------------------------------------------

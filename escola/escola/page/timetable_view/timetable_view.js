@@ -104,49 +104,34 @@ class TimetablePage {
 		const years   = opts.years        || [];
 		const classes = opts.class_groups || [];
 
-		const year_opts = years.map(
-			y => `<option value="${y.name}">${y.year_name || y.name}</option>`
-		).join("");
-
-		const cg_opts = classes.map(
-			c => `<option value="${c.name}" data-shift="${c.shift || ''}">`
-				 + `${c.group_name}${c.shift ? " · " + c.shift : ""}</option>`
-		).join("");
-
 		this.$filters.html(`
-			<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-				<div>
-					<label class="tt-label">ANO LECTIVO</label>
-					<select id="tt-year" class="form-control" style="min-width:200px;">
-						<option value="">— Selecione o Ano —</option>
-						${year_opts}
-					</select>
-				</div>
-				<div>
-					<label class="tt-label">TURMA</label>
-					<select id="tt-cg" class="form-control" style="min-width:200px;">
-						<option value="">— Selecione a Turma —</option>
-						${cg_opts}
-					</select>
-				</div>
-			</div>
-			<style>
-				.tt-label { font-size:11px; color:#6B7280; font-weight:700;
-				            display:block; margin-bottom:4px; letter-spacing:.5px; }
-			</style>
-		`);
+			<div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:18px 0 8px;">
+				<div style="min-width:190px;" id="tt-ctrl-year"></div>
+				<div style="min-width:220px;" id="tt-ctrl-cg"></div>
+			</div>`);
 
-		// Auto-select current academic year from School Settings
+		this._year_ctrl = escola.utils.make_filter_select(
+			this.$filters.find("#tt-ctrl-year")[0],
+			{ label: __("ANO LECTIVO"), placeholder: __("Selecionar ano…"),
+			  options: years.map(y => ({ value: y.name, label: y.year_name || y.name })) }
+		);
+		this._cg_ctrl = escola.utils.make_filter_select(
+			this.$filters.find("#tt-ctrl-cg")[0],
+			{ label: __("TURMA"), placeholder: __("Pesquisar turma…"),
+			  options: classes.map(c => ({ value: c.name, label: c.group_name + (c.shift ? " · " + c.shift : "") })) }
+		);
+
+		this._year_ctrl.on_change(() => this._maybe_load());
+		this._cg_ctrl.on_change(()   => this._maybe_load());
+
+		// Auto-select current academic year
 		frappe.db.get_single_value("School Settings", "current_academic_year").then(val => {
-			if (val) this.$filters.find("#tt-year").val(val);
+			if (val) this._year_ctrl.set_value(val);
 		});
+	}
 
-		// Auto-load timetable when turma is selected
-		this.$filters.find("#tt-cg").on("change", () => this._load_timetable());
-		// Also reload if year changes after a turma is already selected
-		this.$filters.find("#tt-year").on("change", () => {
-			if (this.$filters.find("#tt-cg").val()) this._load_timetable();
-		});
+	_maybe_load() {
+		if (this._year_ctrl.get_value() && this._cg_ctrl.get_value()) this._load_timetable();
 	}
 
 	// -----------------------------------------------------------------------
@@ -154,13 +139,9 @@ class TimetablePage {
 	// -----------------------------------------------------------------------
 
 	_load_timetable() {
-		const year = this.$filters.find("#tt-year").val();
-		const cg   = this.$filters.find("#tt-cg").val();
-
-		if (!year || !cg) {
-			frappe.msgprint(__("Selecione o Ano Lectivo e a Turma."));
-			return;
-		}
+		const year = this._year_ctrl.get_value();
+		const cg   = this._cg_ctrl.get_value();
+		if (!year || !cg) return;
 
 		this.$content.html(`
 			<div style="text-align:center;padding:60px;color:#9CA3AF;">

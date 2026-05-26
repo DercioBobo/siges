@@ -17,6 +17,10 @@ class PautaFrequencia {
 
         this._inject_styles();
         this._build_skeleton();
+        this.page.add_button(__("Imprimir"), () => {
+            if (!this.data) { frappe.msgprint(__("Gere a pauta primeiro.")); return; }
+            this._print();
+        }, { icon: "fa fa-print" });
         this._load_filter_options();
     }
 
@@ -85,52 +89,34 @@ class PautaFrequencia {
         this._cg_year_map = {};
         class_groups.forEach(c => { this._cg_year_map[c.name] = c.academic_year; });
 
-        const cg_opts = class_groups.map(c =>
-            `<option value="${c.name}">${frappe.utils.escape_html(c.group_name)}</option>`
-        ).join("");
-
-        const year_opts = years.map(y =>
-            `<option value="${y.name}">${frappe.utils.escape_html(y.year_name || y.name)}</option>`
-        ).join("");
-
         this.$filters.html(`
-            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                <div>
-                    <label class="pf-label">TURMA</label>
-                    <select id="pf-cg" class="form-control" style="min-width:200px;">
-                        <option value="">— Selecione a Turma —</option>
-                        ${cg_opts}
-                    </select>
-                </div>
-                <div>
-                    <label class="pf-label">ANO LECTIVO</label>
-                    <select id="pf-year" class="form-control" style="min-width:160px;">
-                        <option value="">— Ano Lectivo —</option>
-                        ${year_opts}
-                    </select>
-                </div>
-                <div>
-                    <button id="pf-load" class="btn btn-primary btn-sm">
-                        <i class="fa fa-refresh"></i>&nbsp;Gerar Pauta
-                    </button>
-                </div>
-                <div>
-                    <button id="pf-print" class="btn btn-default btn-sm" disabled>
-                        <i class="fa fa-print"></i>&nbsp;Imprimir
-                    </button>
-                </div>
-            </div>
-        `);
+            <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:18px 0 12px;">
+                <div style="min-width:220px;" id="pf-ctrl-cg"></div>
+                <div style="min-width:180px;" id="pf-ctrl-year"></div>
+            </div>`);
 
-        // Auto-select academic year when turma is chosen
-        this.$filters.find("#pf-cg").on("change", () => {
-            const cg  = this.$filters.find("#pf-cg").val();
-            const yr  = this._cg_year_map[cg];
-            if (yr) this.$filters.find("#pf-year").val(yr);
+        this._cg_ctrl = escola.utils.make_filter_select(
+            this.$filters.find("#pf-ctrl-cg")[0],
+            { label: __("TURMA"), placeholder: __("Pesquisar turma…"),
+              options: class_groups.map(c => ({ value: c.name, label: c.group_name })) }
+        );
+        this._year_ctrl = escola.utils.make_filter_select(
+            this.$filters.find("#pf-ctrl-year")[0],
+            { label: __("ANO LECTIVO"), placeholder: __("Selecionar ano…"),
+              options: years.map(y => ({ value: y.name, label: y.year_name || y.name })) }
+        );
+
+        this._cg_ctrl.on_change(cg => {
+            const yr = this._cg_year_map[cg];
+            if (yr) this._year_ctrl.set_value(yr);
+            this._maybe_load();
         });
+        this._year_ctrl.on_change(() => this._maybe_load());
 
-        this.$filters.find("#pf-load").on("click",  () => this._load());
-        this.$filters.find("#pf-print").on("click", () => this._print());
+    }
+
+    _maybe_load() {
+        if (this._cg_ctrl.get_value() && this._year_ctrl.get_value()) this._load();
     }
 
     // -----------------------------------------------------------------------
@@ -138,14 +124,10 @@ class PautaFrequencia {
     // -----------------------------------------------------------------------
 
     _load() {
-        const cg   = this.$filters.find("#pf-cg").val();
-        const year = this.$filters.find("#pf-year").val();
-        if (!cg || !year) {
-            frappe.msgprint(__("Selecione a Turma e o Ano Lectivo."));
-            return;
-        }
+        const cg   = this._cg_ctrl.get_value();
+        const year = this._year_ctrl.get_value();
+        if (!cg || !year) return;
 
-        this.$filters.find("#pf-print").prop("disabled", true);
         this.$body.html(`
             <div style="text-align:center;padding:60px;color:#9CA3AF;">
                 <i class="fa fa-spinner fa-spin fa-2x"></i>
@@ -160,7 +142,6 @@ class PautaFrequencia {
                 if (r.exc) { this.$body.empty(); return; }
                 this.data = r.message;
                 this._render();
-                this.$filters.find("#pf-print").prop("disabled", false);
             },
         });
     }

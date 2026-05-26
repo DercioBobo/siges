@@ -572,6 +572,11 @@ function _build_mapa_html(d) {
 	const terms    = d.terms    || [];
 	const rows     = d.rows     || [];
 
+	// Estimate table width vs. A4 landscape content area (~1020px at 96dpi with 10mm margins)
+	// Nº(24) + Name(130) + per-subject(terms*26 + 32) + AF(36) + Resultado(60) + Faltas(28) + Comp(60)
+	const est_width = 24 + 130 + subjects.length * (terms.length * 26 + 32) + 36 + 60 + 28 + 60;
+	const scale = est_width > 1020 ? +(1020 / est_width).toFixed(3) : 1;
+
 	// Build column headers: per subject show T1/T2/T3 subcolumns + AF
 	const subj_header_row1 = subjects.map(s =>
 		`<th colspan="${terms.length + 1}" style="border:1px solid #ccc;padding:4px 6px;
@@ -645,7 +650,7 @@ function _build_mapa_html(d) {
   body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
   @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; zoom: ${scale}; }
   }
 </style>
 </head>
@@ -667,7 +672,6 @@ function _build_mapa_html(d) {
   </div>
 
   <!-- Grade table -->
-  <div style="overflow-x:auto;">
   <table>
     <thead>
       <tr>
@@ -683,7 +687,6 @@ function _build_mapa_html(d) {
     </thead>
     <tbody>${body_rows}</tbody>
   </table>
-  </div>
 
   <!-- Footer stats -->
   <div style="margin-top:10px;display:flex;gap:24px;font-size:10px;color:#374151;">

@@ -372,3 +372,26 @@ def reset_document_status(student, row_name):
             break
     doc.save(ignore_permissions=True)
     return True
+
+
+@frappe.whitelist()
+def add_student_document(student, document_type, status, file_url=None, notes=None):
+    """Append a new document row to a Student record."""
+    doc = frappe.get_doc("Student", student)
+    already = any(r.document_type == document_type for r in doc.documents)
+    if already:
+        frappe.throw(
+            _("O documento <b>{0}</b> já está registado para este aluno.").format(document_type),
+            title=_("Documento duplicado"),
+        )
+    is_required = frappe.db.get_value("Tipo de Documento", document_type, "is_required") or 0
+    doc.append("documents", {
+        "document_type":    document_type,
+        "is_required":      is_required,
+        "status":           status or "Pendente",
+        "submitted_date":   today() if status == "Entregue" else None,
+        "file":             file_url or "",
+        "notes":            notes or "",
+    })
+    doc.save(ignore_permissions=True)
+    return True

@@ -4,6 +4,7 @@
 frappe.ui.form.on("Inscricao", {
 	onload(frm) {
 		escola.utils.auto_fill_academic_year(frm);
+		_apply_novo_class_filter(frm);
 	},
 
 	refresh(frm) {
@@ -35,6 +36,7 @@ frappe.ui.form.on("Inscricao", {
 
 	enrollment_type(frm) {
 		_populate_doc_previews(frm, true);
+		_apply_novo_class_filter(frm);
 	},
 
 	school_class(frm) {
@@ -91,7 +93,6 @@ function set_queries(frm) {
 function _toggle_payments_grid(frm) {
 	const editable = frm.doc.docstatus === 0;
 	const grid = frm.get_field("payments").grid;
-	grid.toggle_enable(editable);
 	grid.toggle_add_delete_rows(editable);
 	grid.editable_grid = true;
 
@@ -141,8 +142,6 @@ async function _load_fee_info(frm) {
 function _setup_doc_previews_grid(frm) {
 	const grid = frm.get_field("doc_previews")?.grid;
 	if (!grid) return;
-	const editable = frm.doc.docstatus === 0;
-	grid.toggle_enable(editable);
 	grid.toggle_add_delete_rows(false);
 	grid.editable_grid = true;
 }
@@ -270,4 +269,34 @@ function highlight_selected_card(frm) {
 
 function clear_turma_picker(frm) {
 	frm.fields_dict.turma_picker_html?.$wrapper.html("");
+}
+
+// ---------------------------------------------------------------------------
+// Novo enrollment: restrict school_class to the entry level
+// ---------------------------------------------------------------------------
+
+async function _apply_novo_class_filter(frm) {
+	if (frm.doc.enrollment_type !== "Novo") {
+		frm.set_query("school_class", () => ({ filters: { is_active: 1 } }));
+		return;
+	}
+
+	const rows = await frappe.db.get_list("School Class", {
+		filters: { is_active: 1 },
+		fields: ["name", "class_level"],
+		order_by: "class_level asc",
+		limit: 1,
+	});
+
+	if (!rows.length) return;
+
+	const min_level = rows[0].class_level;
+
+	frm.set_query("school_class", () => ({
+		filters: { is_active: 1, class_level: min_level },
+	}));
+
+	if (!frm.doc.school_class) {
+		frm.set_value("school_class", rows[0].name);
+	}
 }
