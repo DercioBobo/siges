@@ -261,7 +261,13 @@ function _show_actions_modal(frm) {
 // Assign class group dialog
 // ---------------------------------------------------------------------------
 
-function _assign_class_group_dialog(frm) {
+async function _assign_class_group_dialog(frm) {
+	const [ay_r] = await Promise.all([
+		frappe.db.get_single_value("School Settings", "current_academic_year"),
+	]);
+	const default_year  = ay_r || null;
+	const default_class = frm.doc.current_school_class || null;
+
 	const d = new frappe.ui.Dialog({
 		title: __("Atribuir Turma · {0}", [frm.doc.full_name]),
 		fields: [
@@ -271,6 +277,7 @@ function _assign_class_group_dialog(frm) {
 				options:   "Academic Year",
 				label:     __("Ano Lectivo"),
 				reqd:      1,
+				default:   default_year,
 				onchange() {
 					d.set_value("school_class", null);
 					d.set_value("class_group",  null);
@@ -281,6 +288,7 @@ function _assign_class_group_dialog(frm) {
 				fieldtype: "Link",
 				options:   "School Class",
 				label:     __("Classe"),
+				default:   default_class,
 				get_query: () => ({ filters: { is_active: 1 } }),
 				onchange() {
 					d.set_value("class_group", null);

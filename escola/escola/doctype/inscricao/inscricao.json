@@ -228,7 +228,6 @@
    "fieldtype": "Link",
    "label": "Turma",
    "options": "Class Group",
-   "reqd": 1,
    "in_list_view": 1
   },
   {

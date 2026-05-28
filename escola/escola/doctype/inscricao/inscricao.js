@@ -252,6 +252,10 @@ function _render_cards(frm, groups) {
 			.turma-card-badge{display:inline-block;margin-top:4px;font-size:10px;background:var(--red-light);color:var(--red);padding:1px 6px;border-radius:4px;}
 		</style>
 		<div class="turma-picker">${cards_html}</div>
+		<p style="margin:6px 0 0;font-size:12px;color:var(--text-muted);">
+			<i class="fa fa-info-circle"></i>
+			${__("Turma opcional — se não seleccionar, o aluno ficará como <b>Pendente de Turma</b> até ser alocado.")}
+		</p>
 	`);
 
 	wrapper.find(".turma-card:not(.full)").on("click", function () {

@@ -16,6 +16,12 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 
 		if (frm.doc.docstatus === 0) {
 			frm.add_custom_button(__("Carregar Períodos Disponíveis"), () => _load_periods(frm), __("Ferramentas"));
+
+			if (frm.doc.student) {
+				frappe.db.get_value("Student", frm.doc.student, "financial_status").then(r => {
+					_set_debt_alert(frm, r.message && r.message.financial_status);
+				});
+			}
 		}
 
 		if (frm.doc.docstatus === 1 && frm.doc.sales_invoice) {
@@ -25,35 +31,54 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 		}
 	},
 
-	student(frm) {
+	async student(frm) {
 		if (!frm.doc.student) {
+			frm.set_value("student_full_name", "");
+			frm.set_value("school_class", "");
+			frm.clear_table("periods");
+			frm.refresh_field("periods");
+			_set_debt_alert(frm, null);
+			return;
+		}
+
+		const r = await frappe.db.get_value(
+			"Student", frm.doc.student,
+			["full_name", "current_school_class", "current_class_group", "financial_status"]
+		);
+		if (!r.message) return;
+
+		const status = r.message.financial_status || "Regular";
+		_set_debt_alert(frm, status);
+
+		if (status !== "Regular") {
+			frappe.msgprint({
+				title:     __("Adiantamento bloqueado"),
+				message:   __("O aluno <b>{0}</b> tem dívidas em atraso (<b>{1}</b>). "
+				             + "Regularize os pagamentos em atraso antes de criar um adiantamento.",
+				             [frm.doc.student, __(status)]),
+				indicator: "red",
+			});
+			frm.set_value("student", "");
 			frm.set_value("student_full_name", "");
 			frm.set_value("school_class", "");
 			frm.clear_table("periods");
 			frm.refresh_field("periods");
 			return;
 		}
-		frappe.db.get_value("Student", frm.doc.student, ["full_name", "current_school_class", "current_class_group"])
-			.then(r => {
-				if (!r.message) return;
-				frm.set_value("student_full_name", r.message.full_name || "");
-				frm.set_value("school_class",      r.message.current_school_class || "");
 
-				// Auto-fill academic_year from current class group if not already set
-				if (!frm.doc.academic_year && r.message.current_class_group) {
-					frappe.db.get_value("Class Group", r.message.current_class_group, "academic_year")
-						.then(cg => {
-							if (cg.message && cg.message.academic_year) {
-								frm.set_value("academic_year", cg.message.academic_year);
-							}
-						});
-				}
+		frm.set_value("student_full_name", r.message.full_name || "");
+		frm.set_value("school_class",      r.message.current_school_class || "");
 
-				// Clear periods when student changes
-				frm.clear_table("periods");
-				frm.refresh_field("periods");
-				_recalculate(frm);
-			});
+		if (!frm.doc.academic_year && r.message.current_class_group) {
+			const cg = await frappe.db.get_value("Class Group", r.message.current_class_group, "academic_year");
+			if (cg.message && cg.message.academic_year) {
+				frm.set_value("academic_year", cg.message.academic_year);
+			}
+		}
+
+		frm.clear_table("periods");
+		frm.refresh_field("periods");
+		_recalculate(frm);
 	},
 
 	academic_year(frm) {
@@ -190,7 +215,16 @@ function _sync_payments_total(frm, net_total) {
 	if (!frm.doc.is_pos) return;
 	const payments = frm.doc.payments || [];
 	if (payments.length !== 1) return;
-	// If there's exactly one payment row, auto-update its amount to match net_total
 	frappe.model.set_value(payments[0].doctype, payments[0].name, "amount", net_total);
 	frm.refresh_field("payments");
+}
+
+function _set_debt_alert(frm, status) {
+	if (status && status !== "Regular") {
+		frm.dashboard.set_headline(
+			`<span style="color:#DC2626;font-weight:600;">⚠ ${__("Adiantamento bloqueado — Aluno com dívida em atraso:")} ${frappe.utils.escape_html(__(status))}</span>`
+		);
+	} else {
+		frm.dashboard.set_headline("");
+	}
 }

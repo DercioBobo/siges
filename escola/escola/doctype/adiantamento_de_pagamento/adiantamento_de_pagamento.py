@@ -20,6 +20,7 @@ class AdiantamentoDePagamento(Document):
         self._recalculate_summary()
 
     def validate(self):
+        self._validate_no_overdue_debt()
         if not self.periods:
             frappe.throw(
                 _("Seleccione pelo menos um período. Use o botão <b>Carregar Períodos</b>."),
@@ -44,6 +45,19 @@ class AdiantamentoDePagamento(Document):
         self._cancel_invoice()
 
     # ------------------------------------------------------------------
+
+    def _validate_no_overdue_debt(self):
+        if not self.student:
+            return
+        status = frappe.db.get_value("Student", self.student, "financial_status") or "Regular"
+        if status != "Regular":
+            frappe.throw(
+                _("O aluno <b>{0}</b> tem dívidas em atraso (<b>{1}</b>). "
+                  "Regularize os pagamentos em atraso antes de criar um adiantamento.").format(
+                    self.student, _(status)
+                ),
+                title=_("Adiantamento bloqueado"),
+            )
 
     def _fetch_student_info(self):
         if not self.student:

@@ -111,11 +111,14 @@ class StudentGroupAssignment(Document):
 def _sync_student_current_turma(sga):
     """Keep current_class_group and current_school_class on Student in sync with active SGA."""
     if sga.status == "Activa":
-        frappe.db.set_value(
-            "Student", sga.student,
-            {"current_class_group": sga.class_group, "current_school_class": sga.school_class},
-            update_modified=False,
-        )
+        updates = {
+            "current_class_group": sga.class_group,
+            "current_school_class": sga.school_class,
+        }
+        # Promote a pending student to active now that they have a turma
+        if frappe.db.get_value("Student", sga.student, "current_status") == "Pendente de Turma":
+            updates["current_status"] = "Activo"
+        frappe.db.set_value("Student", sga.student, updates, update_modified=False)
     else:
         # If another active SGA exists (shouldn't normally), use it; otherwise clear.
         active = frappe.db.get_value(

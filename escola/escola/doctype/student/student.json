@@ -160,7 +160,7 @@
    "fieldname": "current_status",
    "fieldtype": "Select",
    "label": "Estado Actual",
-   "options": "\nActivo\nPendente de Renovação\nTransferido\nDesistente\nConcluiu",
+   "options": "\nPendente de Turma\nActivo\nPendente de Renovação\nTransferido\nDesistente\nConcluiu",
    "default": "Activo",
    "in_list_view": 1
   },

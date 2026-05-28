@@ -134,6 +134,7 @@ class Inscricao(Document):
         return g.name
 
     def _create_student(self, guardian_name):
+        status = "Activo" if self.class_group else "Pendente de Turma"
         student = frappe.get_doc({
             "doctype": "Student",
             "first_name": self.first_name,
@@ -144,13 +145,16 @@ class Inscricao(Document):
             "phone": self.phone or "",
             "address": self.address or "",
             "admission_date": self.enrollment_date,
-            "current_status": "Activo",
+            "current_status": status,
+            "current_school_class": self.school_class or "",
             "primary_guardian": guardian_name,
         })
         student.insert(ignore_permissions=True)
         self.db_set("student", student.name)
 
     def _create_sga(self):
+        if not self.class_group:
+            return  # no turma yet — student stays Pendente de Turma
         frappe.get_doc({
             "doctype": "Student Group Assignment",
             "student": self.student,
@@ -202,7 +206,7 @@ class Inscricao(Document):
             student_doc.save(ignore_permissions=True)
 
     def _close_sga(self):
-        if not self.student:
+        if not self.student or not self.class_group:
             return
         sga_name = frappe.db.get_value(
             "Student Group Assignment",
