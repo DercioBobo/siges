@@ -91,9 +91,7 @@ def get_pauta_data(class_group, academic_year):
 
     school_name = frappe.db.get_single_value("School Settings", "school_name") or ""
     min_passing = float(
-        frappe.db.get_value("School Class", cg.school_class, "minimum_passing_grade")
-        or frappe.db.get_single_value("School Settings", "minimum_passing_grade")
-        or 10
+        frappe.db.get_single_value("School Settings", "minimum_passing_grade") or 10
     )
 
     terms = frappe.get_all(

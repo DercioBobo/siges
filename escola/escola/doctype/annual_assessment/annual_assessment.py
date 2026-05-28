@@ -46,9 +46,7 @@ def calculate_assessment(doc_name):
     term_labels   = [t.term_name or t.name for t in terms]
 
     min_passing = float(
-        frappe.db.get_value("School Class", doc.school_class, "minimum_passing_grade")
-        or frappe.db.get_single_value("School Settings", "minimum_passing_grade")
-        or 10
+        frappe.db.get_single_value("School Settings", "minimum_passing_grade") or 10
     )
 
     grade_entries = frappe.get_all(

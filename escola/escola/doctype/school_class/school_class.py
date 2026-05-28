@@ -34,11 +34,6 @@ class SchoolClass(Document):
                 frappe._("O Nível da Classe não pode ser negativo."),
                 title=frappe._("Nível inválido"),
             )
-        if self.minimum_passing_grade is not None and self.minimum_passing_grade < 0:
-            frappe.throw(
-                frappe._("A Nota Mínima de Aprovação não pode ser negativa."),
-                title=frappe._("Nota inválida"),
-            )
         if self.default_teacher:
             is_active = frappe.db.get_value("Teacher", self.default_teacher, "is_active")
             if not is_active:

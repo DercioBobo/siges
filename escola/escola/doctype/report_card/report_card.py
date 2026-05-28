@@ -78,9 +78,7 @@ def _build_report_card_data(annual_name, student, school_class):
         return None
 
     min_passing = float(
-        frappe.db.get_value("School Class", school_class, "minimum_passing_grade")
-        or frappe.db.get_single_value("School Settings", "minimum_passing_grade")
-        or 10
+        frappe.db.get_single_value("School Settings", "minimum_passing_grade") or 10
     )
 
     rows = []
