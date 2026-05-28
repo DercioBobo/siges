@@ -4,7 +4,19 @@ frappe.pages["pauta-frequencia"].on_page_load = function (wrapper) {
         title: __("Pauta de Frequência"),
         single_column: true,
     });
-    new PautaFrequencia(page, wrapper);
+    wrapper._pauta = new PautaFrequencia(page, wrapper);
+};
+
+frappe.pages["pauta-frequencia"].on_page_show = function (wrapper) {
+    if (!frappe.route_options || !wrapper._pauta) return;
+    const { class_group } = frappe.route_options;
+    frappe.route_options = null;
+    if (!class_group) return;
+    const p = wrapper._pauta;
+    p._cg_ctrl.set_value(class_group);
+    const yr = p._cg_year_map && p._cg_year_map[class_group];
+    if (yr) p._year_ctrl.set_value(yr);
+    p._maybe_load();
 };
 
 // ---------------------------------------------------------------------------

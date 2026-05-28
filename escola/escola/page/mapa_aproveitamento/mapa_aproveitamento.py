@@ -186,6 +186,24 @@ def get_grade_book(class_group, academic_term):
                     "rows": rows,
                 })
 
+    # Term Attendance — fetched once for the whole class/term
+    attendance = {}
+    ta_name = frappe.db.get_value(
+        "Term Attendance",
+        {"class_group": class_group, "academic_term": academic_term, "docstatus": ("!=", 2)},
+        "name",
+    )
+    if ta_name:
+        for r in frappe.get_all(
+            "Term Attendance Row",
+            filters={"parent": ta_name},
+            fields=["student", "total_absences", "comportamento"],
+        ):
+            attendance[r.student] = {
+                "total_absences": r.total_absences,
+                "comportamento":  r.comportamento,
+            }
+
     return {
         "class_group": class_group,
         "class_group_name": cg.group_name,
@@ -193,6 +211,7 @@ def get_grade_book(class_group, academic_term):
         "academic_year": cg.academic_year,
         "academic_term": academic_term,
         "term_name": term.term_name,
+        "attendance": attendance,
         "students": [
             {"student": s.student, "student_name": s.student_name, "student_code": s.student_code}
             for s in students
@@ -361,6 +380,26 @@ def get_annual_grade_book(class_group, academic_year):
             fields=["name", "subject", "academic_term"],
         ) if term_names else []
 
+        # Batch-fetch Term Attendance for all terms: term → student → data
+        ta_records = frappe.get_all(
+            "Term Attendance",
+            filters={
+                "class_group": class_group,
+                "academic_term": ("in", term_names) if term_names else ["__never__"],
+                "docstatus": ("!=", 2),
+            },
+            fields=["name", "academic_term"],
+        ) if term_names else []
+        ta_name_by_term = {ta.academic_term: ta.name for ta in ta_records}
+        att_by_ta = {}
+        if ta_records:
+            for r in frappe.get_all(
+                "Term Attendance Row",
+                filters={"parent": ("in", [ta.name for ta in ta_records])},
+                fields=["parent", "student", "total_absences", "comportamento"],
+            ):
+                att_by_ta.setdefault(r.parent, {})[r.student] = r
+
         # subject → term → ge_name
         ge_map = {}
         for ge in all_ges:
@@ -389,8 +428,10 @@ def get_annual_grade_book(class_group, academic_year):
             for sid in student_ids:
                 term_entries = []
                 for term in terms:
-                    ge_name = ge_map.get(sn, {}).get(term.name)
-                    td = (rows_by_ge.get(ge_name) or {}).get(sid) or {}
+                    ge_name  = ge_map.get(sn, {}).get(term.name)
+                    td       = (rows_by_ge.get(ge_name) or {}).get(sid) or {}
+                    ta_n     = ta_name_by_term.get(term.name)
+                    att      = (att_by_ta.get(ta_n) or {}).get(sid) or {}
                     term_entries.append({
                         "acsp_1":  td.get("acsp_1"),
                         "acsp_2":  td.get("acsp_2"),
@@ -400,7 +441,9 @@ def get_annual_grade_book(class_group, academic_year):
                         "macs":    td.get("macs"),
                         "acp":     td.get("acp"),
                         "mt":      td.get("mt"),
-                        "is_absent": int(td.get("is_absent") or 0),
+                        "is_absent":      int(td.get("is_absent") or 0),
+                        "total_absences": att.get("total_absences"),
+                        "comportamento":  att.get("comportamento"),
                     })
 
                 mt_vals = [t["mt"] for t in term_entries if t["mt"] is not None and not t["is_absent"]]

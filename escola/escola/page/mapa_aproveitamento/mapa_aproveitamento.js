@@ -387,27 +387,45 @@ class MapaAproveitamento {
             </div>
         `;
 
-        this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students));
+        this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students, d.attendance));
         this.$grid_area.find(".ma-save-btn").on("click", () => this._save(idx));
         this._setup_grid_events(idx);
         this._update_footer(idx);
     }
 
-    _build_grid_html(subj, students) {
+    _build_grid_html(subj, students, attendance) {
         const row_map = {};
         (subj.rows || []).forEach(r => { row_map[r.student] = r; });
 
-        const _v  = (v) => (v !== null && v !== undefined) ? v : "";
-        const _f2 = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const _v    = (v) => (v !== null && v !== undefined) ? v : "";
+        const _f2   = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const _abbr = (v) => {
+            if (!v) return "";
+            const m = {"Muito Bom":"MB","Bom":"B","Satisfatório":"S","Suficiente":"SF","Insatisfatório":"I","Mau":"M","Muito Mau":"MM"};
+            return m[v] || v.substring(0,2).toUpperCase();
+        };
+        const _comp_st = (v) => {
+            if (!v) return "color:#9CA3AF;";
+            if (v === "Muito Bom" || v === "Bom") return "color:#065F46;font-weight:700;";
+            if (v === "Insatisfatório" || v === "Mau" || v === "Muito Mau") return "color:#991B1B;font-weight:700;";
+            return "color:#374151;font-weight:600;";
+        };
 
         const rows_html = students.map((s, i) => {
             const r   = row_map[s.student] || {};
             const abs = r.is_absent ? 1 : 0;
             const dis = abs ? " disabled" : "";
+            const att = (attendance || {})[s.student] || {};
 
             const inp = (f) =>
                 `<input type="number" class="ma-score" data-field="${f}"
                         min="0" max="20" step="1" value="${_v(r[f])}"${dis}>`;
+
+            const faltasN  = att.total_absences != null ? att.total_absences : "";
+            const faltasSt = (faltasN !== "" && faltasN > 0) ? "color:#92400E;font-weight:700;" : "color:#6B7280;";
+            const compV    = att.comportamento || "";
+            const compSh   = _abbr(compV);
+            const compSt   = _comp_st(compV);
 
             return `
                 <tr data-student="${frappe.utils.escape_html(s.student)}">
@@ -423,6 +441,9 @@ class MapaAproveitamento {
                     <td class="computed" data-field="macs">${_f2(r.macs)}</td>
                     <td>${inp("acp")}</td>
                     <td class="computed mt-cell" data-field="mt">${_f2(r.mt)}</td>
+                    <td style="font-size:12px;text-align:center;${faltasSt}">${faltasN}</td>
+                    <td style="font-size:12px;text-align:center;${compSt}"
+                        title="${frappe.utils.escape_html(compV)}">${compSh}</td>
                 </tr>`;
         }).join("");
 
@@ -441,6 +462,8 @@ class MapaAproveitamento {
                         <th title="Média das ACS">MACS</th>
                         <th title="Avaliação de Término Parcial">AT</th>
                         <th title="Média do Trimestre">MT</th>
+                        <th title="Faltas no período">Falt.</th>
+                        <th title="Comportamento no período">Comp.</th>
                     </tr>
                 </thead>
                 <tbody>${rows_html}</tbody>
@@ -702,16 +725,27 @@ class MapaAproveitamento {
         };
 
         const TERM_COLORS  = ["#1D4ED8", "#7C3AED", "#047857"];
-        const SUB_LABELS   = ["ACSP1","ACSP2","MACSP","ACSE1","ACSE2","MACS","AT","MT"];
-        const SUB_KEYS     = ["acsp_1","acsp_2","macsp","acse_1","acse_2","macs","acp","mt"];
+        const SUB_LABELS   = ["ACSP1","ACSP2","MACSP","ACSE1","ACSE2","MACS","AT","MT","Falt.","Comp."];
+        const SUB_KEYS     = ["acsp_1","acsp_2","macsp","acse_1","acse_2","macs","acp","mt","total_absences","comportamento"];
         const CALC_KEYS    = new Set(["macsp","macs","mt"]);
+        const _abbr_c = (v) => {
+            if (!v) return "";
+            const m = {"Muito Bom":"MB","Bom":"B","Satisfatório":"S","Suficiente":"SF","Insatisfatório":"I","Mau":"M","Muito Mau":"MM"};
+            return m[v] || v.substring(0,2).toUpperCase();
+        };
+        const _comp_color = (v) => {
+            if (!v) return "color:#9CA3AF;";
+            if (v === "Muito Bom" || v === "Bom") return "color:#065F46;font-weight:700;";
+            if (v === "Insatisfatório" || v === "Mau" || v === "Muito Mau") return "color:#991B1B;font-weight:700;";
+            return "color:#374151;font-weight:600;";
+        };
 
         // Header row 1: term group cells + summary
         let head1 = `<th rowspan="2">#</th>
                      <th class="left" rowspan="2" style="min-width:150px;">Nome</th>`;
         terms.forEach((t, i) => {
             const bg = TERM_COLORS[i] || "#334155";
-            head1 += `<th colspan="8" class="ma-annual-term-sep"
+            head1 += `<th colspan="10" class="ma-annual-term-sep"
                           style="background:${bg};text-align:center;white-space:nowrap;">
                           ${frappe.utils.escape_html(t.term_name)}
                       </th>`;
@@ -745,6 +779,19 @@ class MapaAproveitamento {
                     const sepCls  = isFirst ? ' class="ma-annual-term-sep"' : '';
                     if (abs) {
                         return `<td${sepCls} style="color:#D1D5DB;text-align:center;">—</td>`;
+                    }
+                    if (k === "total_absences") {
+                        const n  = td.total_absences;
+                        const v  = n != null ? n : "";
+                        const st = (v !== "" && v > 0) ? "color:#92400E;font-weight:700;" : "color:#6B7280;";
+                        return `<td${sepCls} style="text-align:center;font-size:12px;${st}">${v}</td>`;
+                    }
+                    if (k === "comportamento") {
+                        const v   = td.comportamento || "";
+                        const sh  = _abbr_c(v);
+                        const st  = _comp_color(v);
+                        return `<td${sepCls} style="text-align:center;font-size:12px;${st}"
+                                    title="${frappe.utils.escape_html(v)}">${sh}</td>`;
                     }
                     const val  = _f2(td[k]);
                     const calc = CALC_KEYS.has(k);

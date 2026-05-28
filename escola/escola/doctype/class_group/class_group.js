@@ -62,6 +62,22 @@ frappe.ui.form.on("Class Group", {
                 __("Ver")
             );
             frm.add_custom_button(
+                __("Mapa de Aproveitamento"),
+                () => {
+                    frappe.route_options = { class_group: frm.doc.name };
+                    frappe.set_route("mapa-aproveitamento");
+                },
+                __("Ver")
+            );
+            frm.add_custom_button(
+                __("Mapa de Frequência"),
+                () => {
+                    frappe.route_options = { class_group: frm.doc.name };
+                    frappe.set_route("pauta-frequencia");
+                },
+                __("Ver")
+            );
+            frm.add_custom_button(
                 __("Reconstruir Pauta"),
                 () => rebuild_roster(frm),
                 __("Acções")
