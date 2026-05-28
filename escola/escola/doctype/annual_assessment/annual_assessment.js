@@ -635,7 +635,7 @@ function _build_mapa_html(d) {
 			            text-align:center;font-size:9px;min-width:32px;">${t.label}</th>`
 		).join("") +
 		`<th style="border:1px solid #ccc;padding:3px 4px;background:#475569;color:white;
-		            text-align:center;font-size:9px;min-width:34px;font-weight:800;">AF</th>`
+		            text-align:center;font-size:9px;min-width:34px;font-weight:800;">MG</th>`
 	).join("");
 
 	// Data rows
@@ -722,7 +722,7 @@ function _build_mapa_html(d) {
         <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#F1F5F9;font-size:10px;text-align:center;min-width:24px;">Nº</th>
         <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#F1F5F9;font-size:10px;text-align:left;min-width:130px;">Nome Completo</th>
         ${subj_header_row1}
-        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:36px;">AF</th>
+        <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:36px;">MG</th>
         <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:60px;">Resultado</th>
         <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:30px;">Faltas</th>
         <th rowspan="2" style="border:1px solid #ccc;padding:4px;background:#0F172A;color:white;font-size:10px;text-align:center;min-width:60px;">Comp.</th>
