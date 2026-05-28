@@ -125,15 +125,13 @@
   {
    "fieldname": "section_break_subjects",
    "fieldtype": "Section Break",
-   "label": "Disciplinas e Professores",
-   "depends_on": "eval:doc.teaching_model && doc.teaching_model !== 'Professor Único'"
+   "label": "Disciplinas e Professores"
   },
   {
    "fieldname": "subject_teachers",
    "fieldtype": "Table",
    "label": "Disciplinas",
    "options": "Class Group Subject Line",
-   "depends_on": "eval:doc.teaching_model && doc.teaching_model !== 'Professor Único'",
    "description": "Disciplinas leccionadas nesta turma e respectivos professores."
   },
   {

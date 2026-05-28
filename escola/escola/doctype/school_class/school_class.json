@@ -17,7 +17,6 @@
   "next_class",
   "section_break_model",
   "teaching_model",
-  "default_teacher",
   "column_break_3",
   "section_break_subjects",
   "subjects",
@@ -93,19 +92,10 @@
    "fieldname": "teaching_model",
    "fieldtype": "Select",
    "label": "Modelo de Ensino",
-   "reqd": 1,
    "options": "\nProfessor Único\nProfessores por Disciplina",
+   "read_only": 1,
    "in_list_view": 1,
-   "description": "Define se a turma tem um único professor ou um professor por disciplina."
-  },
-  {
-   "fieldname": "default_teacher",
-   "fieldtype": "Link",
-   "label": "Director de Turma",
-   "options": "Teacher",
-   "depends_on": "eval:doc.teaching_model=='Professor Único'",
-   "mandatory_depends_on": "eval:doc.teaching_model=='Professor Único'",
-   "description": "Professor responsável pela maioria das disciplinas. Pode ser substituído por disciplina nas Atribuições de Disciplina."
+   "description": "Definido automaticamente pelo Nível de Ensino."
   },
   {
    "fieldname": "column_break_3",

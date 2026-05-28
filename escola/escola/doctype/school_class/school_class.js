@@ -3,80 +3,29 @@
 
 frappe.ui.form.on("School Class", {
 	refresh(frm) {
-		frm.set_query("default_teacher", () => ({ filters: { is_active: 1 } }));
+		_apply_education_level(frm);
 
 		if (!frm.is_new()) {
 			_inject_styles();
 			_render_turmas(frm);
 		}
-
-		if (frm.doc.teaching_model === "Professor Único" && frm.doc.default_teacher) {
-			frm.add_custom_button(
-				__("Auto-preencher Professores"),
-				() => _autofill_subject_teachers(frm),
-				__("Acções")
-			);
-		}
 	},
 
 	education_level(frm) {
-		if (frm.doc.education_level === "Primário" && !frm.doc.teaching_model) {
-			frm.set_value("teaching_model", "Professor Único");
-		}
-	},
-
-	teaching_model(frm) {
-		if (frm.doc.teaching_model !== "Professor Único") {
-			frm.set_value("default_teacher", null);
-		} else if (frm.doc.default_teacher) {
-			_autofill_subject_teachers(frm);
-		}
-	},
-
-	async default_teacher(frm) {
-		if (frm.doc.teaching_model === "Professor Único" && frm.doc.default_teacher) {
-			await _autofill_subject_teachers(frm);
-		}
+		_apply_education_level(frm);
 	},
 });
 
-frappe.ui.form.on("School Class Subject", {
-	async subject(frm, cdt, cdn) {
-		if (frm.doc.teaching_model !== "Professor Único" || !frm.doc.default_teacher) return;
-		const row = frappe.get_doc(cdt, cdn);
-		if (!row.subject || row.teacher) return;
-		const r = await frappe.db.get_value("Subject", row.subject, "is_specialist");
-		if (r.message && !r.message.is_specialist) {
-			frappe.model.set_value(cdt, cdn, "teacher", frm.doc.default_teacher);
-		}
-	},
-});
+// ─── Education level → teaching model ────────────────────────────────────────
 
-// ─── Auto-fill subject teachers ─────────────────────────────────────────────
-
-async function _autofill_subject_teachers(frm) {
-	if (!frm.doc.subjects || !frm.doc.subjects.length || !frm.doc.default_teacher) return;
-
-	const subject_names = [...new Set(frm.doc.subjects.map(r => r.subject).filter(Boolean))];
-	if (!subject_names.length) return;
-
-	const specialist_list = await frappe.db.get_list("Subject", {
-		filters: [["name", "in", subject_names], ["is_specialist", "=", 1]],
-		fields: ["name"],
-		limit: subject_names.length,
-	});
-	const specialists = new Set(specialist_list.map(s => s.name));
-
-	let changed = false;
-	for (const row of frm.doc.subjects) {
-		if (!row.subject || row.teacher || specialists.has(row.subject)) continue;
-		frappe.model.set_value(row.doctype, row.name, "teacher", frm.doc.default_teacher);
-		changed = true;
-	}
-
-	if (changed) {
-		frm.refresh_field("subjects");
-		frappe.show_alert({ message: __("Professores preenchidos automaticamente."), indicator: "green" });
+function _apply_education_level(frm) {
+	const map = {
+		"Primário": "Professor Único",
+		"Secundário": "Professores por Disciplina",
+	};
+	const model = map[frm.doc.education_level] || null;
+	if (model && frm.doc.teaching_model !== model) {
+		frm.set_value("teaching_model", model);
 	}
 }
 

@@ -227,7 +227,7 @@ class PautaFrequencia {
                         ${frappe.utils.escape_html(s.subject_code || s.subject_name)}
                     </th>`;
         });
-        th1 += `<th colspan="${n}" class="subj-header">PORTAME</th>`;
+        th1 += `<th colspan="${n}" class="subj-header">COMP.</th>`;
         th1 += `<th colspan="${subjects.length + 1}" class="annual-header">MÉDIAS ANUAIS</th>`;
         th1 += `<th rowspan="3" class="annual-header">RESULTADO</th>`;
 
@@ -457,7 +457,7 @@ class PautaFrequencia {
             const cols = n * 3;
             th1 += `<th colspan="${cols}">${esc(s.subject_code || s.subject_name)}</th>`;
         });
-        th1 += `<th colspan="${n}">PORT</th>`;
+        th1 += `<th colspan="${n}">COMP.</th>`;
         th1 += `<th colspan="${subjects.length + 1}">MÉDIAS ANUAIS</th>`;
         th1 += `<th rowspan="3">RES.</th>`;
 

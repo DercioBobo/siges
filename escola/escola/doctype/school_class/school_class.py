@@ -28,35 +28,19 @@ def get_turmas_summary(school_class):
 class SchoolClass(Document):
     def validate(self):
         self._sort_subjects_by_order()
-        self._auto_fill_subject_teachers()
+        self._enforce_teaching_model()
         if self.class_level is not None and self.class_level < 0:
             frappe.throw(
                 frappe._("O Nível da Classe não pode ser negativo."),
                 title=frappe._("Nível inválido"),
             )
-        if self.default_teacher:
-            is_active = frappe.db.get_value("Teacher", self.default_teacher, "is_active")
-            if not is_active:
-                frappe.throw(
-                    frappe._("O professor <b>{0}</b> não está activo.").format(
-                        self.default_teacher
-                    ),
-                    title=frappe._("Professor inactivo"),
-                )
 
-    def _auto_fill_subject_teachers(self):
-        """Professor Único: fill blank non-specialist subject rows with default_teacher."""
-        if self.teaching_model != "Professor Único" or not self.default_teacher:
-            return
-        if not self.subjects:
-            return
-        specialist_subjects = set(frappe.get_all(
-            "Subject", filters={"is_specialist": 1}, pluck="name"
-        ))
-        for row in self.subjects:
-            if not row.subject or row.teacher or row.subject in specialist_subjects:
-                continue
-            row.teacher = self.default_teacher
+    def _enforce_teaching_model(self):
+        """teaching_model is strictly determined by education_level — cannot be overridden."""
+        if self.education_level == "Primário":
+            self.teaching_model = "Professor Único"
+        elif self.education_level == "Secundário":
+            self.teaching_model = "Professores por Disciplina"
 
     def _sort_subjects_by_order(self):
         if not self.subjects:

@@ -25,38 +25,37 @@ class ClassGroup(Document):
 
 
 @frappe.whitelist()
-def get_subjects_for_class_group(class_group):
-    """
-    Return subjects defined on the linked School Class, with is_specialist flag.
-    Used by the 'Preencher Disciplinas' button to pre-populate subject_teachers.
-    """
-    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
-    if not school_class:
-        return []
-
+def get_subjects_for_school_class(school_class):
+    """Return subjects + teachers defined on a School Class. Called on new Class Group forms."""
     rows = frappe.db.get_all(
         "School Class Subject",
         filters={"parent": school_class},
         fields=["subject", "teacher"],
         order_by="sort_order asc, idx asc",
     )
-
-    # Batch-fetch is_specialist for all subjects at once
     subject_names = [r.subject for r in rows if r.subject]
     specialist_set = set(frappe.get_all(
         "Subject",
         filters={"name": ("in", subject_names), "is_specialist": 1},
         pluck="name",
     )) if subject_names else set()
-
     return [
         {
-            "subject":      row.subject,
-            "teacher":      row.teacher or "",
+            "subject":       row.subject,
+            "teacher":       row.teacher or "",
             "is_specialist": 1 if row.subject in specialist_set else 0,
         }
         for row in rows if row.subject
     ]
+
+
+@frappe.whitelist()
+def get_subjects_for_class_group(class_group):
+    """Used by the 'Preencher Disciplinas' button on saved Class Group forms."""
+    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
+    if not school_class:
+        return []
+    return get_subjects_for_school_class(school_class)
 
 
 @frappe.whitelist()

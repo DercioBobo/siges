@@ -4,7 +4,10 @@ frappe.ui.form.on("Class Group", {
     },
 
     school_class(frm) {
-        if (frm.is_new()) _suggest_group_name(frm);
+        if (frm.is_new()) {
+            _suggest_group_name(frm);
+            _prefill_subjects(frm);
+        }
     },
 
     academic_year(frm) {
@@ -13,10 +16,18 @@ frappe.ui.form.on("Class Group", {
 
     refresh(frm) {
         frm.set_query("class_teacher", () => ({ filters: { is_active: 1 } }));
-        frm.set_query("teacher", "subject_teachers", () => ({ filters: { is_active: 1 } }));
+        frm.set_query("teacher", "subject_teachers", (doc, cdt, cdn) => {
+            const row = frappe.get_doc(cdt, cdn);
+            if (!row || !row.subject) return { filters: { is_active: 1 } };
+            return {
+                filters: [
+                    ["Teacher Subject", "subject", "=", row.subject],
+                    ["Teacher", "is_active", "=", 1],
+                ],
+            };
+        });
 
-        const isSecondary = frm.doc.teaching_model && frm.doc.teaching_model !== "Professor Único";
-        if (isSecondary && frm.doc.school_class) {
+        if (frm.doc.school_class) {
             frm.set_query("subject", "subject_teachers", () => ({
                 filters: [["School Class Subject", "parent", "=", frm.doc.school_class]],
             }));
@@ -29,9 +40,7 @@ frappe.ui.form.on("Class Group", {
         }
 
         if (!frm.is_new()) {
-            if (isSecondary) {
-                frm.add_custom_button(__("Preencher Disciplinas"), () => _fill_subjects(frm), __("Acções"));
-            }
+            frm.add_custom_button(__("Preencher Disciplinas"), () => _fill_subjects(frm), __("Acções"));
 
             frm.add_custom_button(__("Gerir Alunos"), () => manage_students_dialog(frm));
             frm.add_custom_button(__("Sincronizar Alunos"), () => _sync_class_group_students(frm), __("Acções"));
@@ -85,6 +94,12 @@ frappe.ui.form.on("Class Group", {
         }
 
         _render_capacity_badge(frm);
+    },
+});
+
+frappe.ui.form.on("Class Group Subject Line", {
+    subject(frm, cdt, cdn) {
+        frappe.model.set_value(cdt, cdn, "teacher", null);
     },
 });
 
@@ -526,7 +541,28 @@ function manage_students_dialog(frm) {
 }
 
 // ---------------------------------------------------------------------------
-// Fill subjects from School Class
+// Auto-prefill subjects on new doc (school_class selected)
+// ---------------------------------------------------------------------------
+
+async function _prefill_subjects(frm) {
+    if (!frm.doc.school_class) return;
+    const r = await frappe.call({
+        method: "escola.escola.doctype.class_group.class_group.get_subjects_for_school_class",
+        args: { school_class: frm.doc.school_class },
+    });
+    if (!r.message || !r.message.length) return;
+    frm.doc.subject_teachers = [];
+    for (const s of r.message) {
+        const row = frm.add_child("subject_teachers");
+        row.subject = s.subject;
+        row.is_specialist = s.is_specialist;
+        if (s.teacher) row.teacher = s.teacher;
+    }
+    frm.refresh_field("subject_teachers");
+}
+
+// ---------------------------------------------------------------------------
+// Fill subjects from School Class (manual button, saved docs)
 // ---------------------------------------------------------------------------
 
 async function _fill_subjects(frm) {
