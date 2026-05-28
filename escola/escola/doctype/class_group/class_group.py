@@ -37,16 +37,26 @@ def get_subjects_for_class_group(class_group):
     rows = frappe.db.get_all(
         "School Class Subject",
         filters={"parent": school_class},
-        fields=["subject"],
+        fields=["subject", "teacher"],
         order_by="sort_order asc, idx asc",
     )
 
-    result = []
-    for row in rows:
-        is_specialist = frappe.db.get_value("Subject", row.subject, "is_specialist") or 0
-        result.append({"subject": row.subject, "is_specialist": is_specialist})
+    # Batch-fetch is_specialist for all subjects at once
+    subject_names = [r.subject for r in rows if r.subject]
+    specialist_set = set(frappe.get_all(
+        "Subject",
+        filters={"name": ("in", subject_names), "is_specialist": 1},
+        pluck="name",
+    )) if subject_names else set()
 
-    return result
+    return [
+        {
+            "subject":      row.subject,
+            "teacher":      row.teacher or "",
+            "is_specialist": 1 if row.subject in specialist_set else 0,
+        }
+        for row in rows if row.subject
+    ]
 
 
 @frappe.whitelist()

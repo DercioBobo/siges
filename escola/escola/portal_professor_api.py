@@ -56,18 +56,34 @@ def _get_teacher_turmas(teacher_name):
         {year_sql}
     """, params, as_dict=True)
 
-    # 3. Turmas from School Class Subject assignments
-    sc_year_sql = "AND cg.academic_year = %s" if academic_year else ""
-    sc_params = (teacher_name, academic_year) if academic_year else (teacher_name,)
-    scs_cgs = frappe.db.sql(f"""
+    # 3a. Primário (Professor Único): class-level assignment covers all turmas of that class
+    prim_cgs = frappe.db.sql(f"""
         SELECT DISTINCT cg.name
         FROM `tabSchool Class Subject` scs
         JOIN `tabClass Group` cg ON cg.school_class = scs.parent
-        WHERE scs.teacher = %s AND cg.is_active = 1
-        {sc_year_sql}
-    """, sc_params, as_dict=True)
+        JOIN `tabSchool Class` sc ON sc.name = scs.parent
+        WHERE scs.teacher = %s
+          AND cg.is_active = 1
+          AND sc.teaching_model = 'Professor Único'
+        {year_sql}
+    """, (teacher_name, academic_year) if academic_year else (teacher_name,), as_dict=True)
 
-    all_names = director_set | {r.class_group for r in timetable_cgs} | {r.name for r in scs_cgs}
+    # 3b. Secundário (Professores por Disciplina): only turmas with explicit assignment
+    sec_cgs = frappe.db.sql(f"""
+        SELECT DISTINCT cgsl.parent AS class_group
+        FROM `tabClass Group Subject Line` cgsl
+        JOIN `tabClass Group` cg ON cg.name = cgsl.parent
+        WHERE cgsl.teacher = %s
+          AND cg.is_active = 1
+        {year_sql}
+    """, (teacher_name, academic_year) if academic_year else (teacher_name,), as_dict=True)
+
+    all_names = (
+        director_set
+        | {r.class_group for r in timetable_cgs}
+        | {r.name for r in prim_cgs}
+        | {r.class_group for r in sec_cgs}
+    )
     if not all_names:
         return []
 
@@ -123,7 +139,7 @@ def get_dashboard():
             JOIN `tabClass Group` cg ON cg.name = t.class_group
             LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
             WHERE te.teacher = %s AND te.day_of_week = %s AND t.status = 'Activo'
-            ORDER BY ts.sort_order
+            ORDER BY ts.start_time, ts.sort_order
         """, (teacher.name, today_pt), as_dict=True)
 
     # Stats
@@ -189,7 +205,7 @@ def get_timetable():
         JOIN `tabClass Group` cg ON cg.name = t.class_group
         LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
         WHERE te.teacher = %s AND t.status = 'Activo'
-        ORDER BY ts.sort_order, te.day_of_week
+        ORDER BY ts.start_time, ts.sort_order, te.day_of_week
     """, teacher.name, as_dict=True)
 
     # All relevant time slots

@@ -30,15 +30,31 @@ def _teacher_class_groups():
     """, params, as_dict=True)
     names.update(r.class_group for r in rows)
 
-    sc_params = (teacher_name, academic_year) if academic_year else (teacher_name,)
-    sc_rows = frappe.db.sql(f"""
+    # Primário (Professor Único): class-level assignment legitimately covers ALL turmas
+    # of that school class — one teacher teaches every section.
+    prim_rows = frappe.db.sql(f"""
         SELECT DISTINCT cg.name
         FROM `tabSchool Class Subject` scs
         JOIN `tabClass Group` cg ON cg.school_class = scs.parent
-        WHERE scs.teacher = %s AND cg.is_active = 1
+        JOIN `tabSchool Class` sc ON sc.name = scs.parent
+        WHERE scs.teacher = %s
+          AND cg.is_active = 1
+          AND sc.teaching_model = 'Professor Único'
         {year_sql}
-    """, sc_params, as_dict=True)
-    names.update(r.name for r in sc_rows)
+    """, (teacher_name, academic_year) if academic_year else (teacher_name,), as_dict=True)
+    names.update(r.name for r in prim_rows)
+
+    # Secundário (Professores por Disciplina): teacher must be explicitly assigned
+    # to the specific turma via Class Group.subject_teachers — not the school-class level.
+    sec_rows = frappe.db.sql(f"""
+        SELECT DISTINCT cgsl.parent AS class_group
+        FROM `tabClass Group Subject Line` cgsl
+        JOIN `tabClass Group` cg ON cg.name = cgsl.parent
+        WHERE cgsl.teacher = %s
+          AND cg.is_active = 1
+        {year_sql}
+    """, (teacher_name, academic_year) if academic_year else (teacher_name,), as_dict=True)
+    names.update(r.class_group for r in sec_rows)
 
     return list(names)
 

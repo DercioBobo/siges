@@ -551,8 +551,9 @@ async function _fill_subjects(frm) {
     for (const s of r.message) {
         if (existing.has(s.subject)) continue;
         const row = frm.add_child("subject_teachers");
-        row.subject        = s.subject;
-        row.is_specialist  = s.is_specialist;
+        row.subject       = s.subject;
+        row.is_specialist = s.is_specialist;
+        if (s.teacher)  row.teacher = s.teacher;
         added++;
     }
 

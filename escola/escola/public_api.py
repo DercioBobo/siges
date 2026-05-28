@@ -78,7 +78,7 @@ def get_turma_timetable(turma):
         "Time Slot",
         filters=ts_filters,
         fields=["name", "label", "start_time", "end_time", "slot_type", "sort_order"],
-        order_by="sort_order",
+        order_by="start_time asc, sort_order asc",
     )
 
     return {"entries": entries, "time_slots": time_slots, "turma_info": turma_info}
