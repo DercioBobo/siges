@@ -116,9 +116,13 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
         if (_val) { const o = _opts.find(x => x.value === _val); if (!o || this.value !== o.label) _val = ""; }
         _show(this.value);
     });
-    $input.on("blur",   function () { setTimeout(() => { _close(); _restore(); }, 160); });
-    $caret.on("click",  function () { $drop.is(":visible") ? $input.blur() : ($input[0].focus(), _show("")); });
-    $drop.on("click", ".fs-opt:not(.fs-none)", function () {
+    $input.on("blur",  function () { setTimeout(() => { _close(); _restore(); }, 80); });
+    $caret.on("mousedown", function (e) {
+        e.preventDefault();
+        $drop.is(":visible") ? _close() : ($input[0].focus(), _show(""));
+    });
+    $drop.on("mousedown", ".fs-opt:not(.fs-none)", function (e) {
+        e.preventDefault();  // fires before blur — eliminates the timing race
         const v = $(this).data("v");
         const o = _opts.find(x => x.value === v);
         if (!o) return;
