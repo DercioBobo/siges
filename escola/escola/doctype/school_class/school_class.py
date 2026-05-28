@@ -27,6 +27,7 @@ def get_turmas_summary(school_class):
 
 class SchoolClass(Document):
     def validate(self):
+        self._sort_subjects_by_order()
         if self.class_level is not None and self.class_level < 0:
             frappe.throw(
                 frappe._("O Nível da Classe não pode ser negativo."),
@@ -46,3 +47,10 @@ class SchoolClass(Document):
                     ),
                     title=frappe._("Professor inactivo"),
                 )
+
+    def _sort_subjects_by_order(self):
+        if not self.subjects:
+            return
+        self.subjects.sort(key=lambda r: (r.sort_order if r.sort_order is not None else 999, r.idx or 0))
+        for i, row in enumerate(self.subjects):
+            row.idx = i + 1

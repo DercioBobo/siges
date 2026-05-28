@@ -75,16 +75,14 @@ frappe.ui.form.on("Grade Entry", {
 frappe.ui.form.on("Grade Entry Row", {
     acsp_1(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
     acsp_2(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
-    acsp_3(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
     acse_1(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
     acse_2(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
-    acse_3(frm, cdt, cdn) { _recalc(frm, cdt, cdn); },
     acp(frm, cdt, cdn)    { _recalc(frm, cdt, cdn); },
 
     is_absent(frm, cdt, cdn) {
         const row = frappe.get_doc(cdt, cdn);
         if (!row.is_absent) return;
-        const clear_fields = ["acsp_1","acsp_2","acsp_3","acse_1","acse_2","acse_3","acp","macsp","macs","mt"];
+        const clear_fields = ["acsp_1","acsp_2","acse_1","acse_2","acp","macsp","macs","mt"];
         clear_fields.forEach(f => frappe.model.set_value(cdt, cdn, f, null));
     },
 });
@@ -96,7 +94,7 @@ function _num(v) {
 }
 
 function _round2(v) {
-    return Math.round(v * 100) / 100;
+    return Math.round(v);
 }
 
 function _recalc(frm, cdt, cdn) {
@@ -104,12 +102,12 @@ function _recalc(frm, cdt, cdn) {
     if (row.is_absent) return;
 
     // MACSP = mean of non-null ACSP values
-    const acsp_vals = [row.acsp_1, row.acsp_2, row.acsp_3].map(_num).filter(v => v !== null);
+    const acsp_vals = [row.acsp_1, row.acsp_2].map(_num).filter(v => v !== null);
     const macsp = acsp_vals.length ? _round2(acsp_vals.reduce((a, b) => a + b, 0) / acsp_vals.length) : null;
     frappe.model.set_value(cdt, cdn, "macsp", macsp);
 
     // MACS = mean([macsp (if exists)] + [each non-null ACSE])
-    const acse_vals = [row.acse_1, row.acse_2, row.acse_3].map(_num).filter(v => v !== null);
+    const acse_vals = [row.acse_1, row.acse_2].map(_num).filter(v => v !== null);
     const macs_inputs = (macsp !== null ? [macsp] : []).concat(acse_vals);
     const macs = macs_inputs.length ? _round2(macs_inputs.reduce((a, b) => a + b, 0) / macs_inputs.length) : null;
     frappe.model.set_value(cdt, cdn, "macs", macs);

@@ -330,7 +330,7 @@ function _ba_year_html(yr, filterTerm, viewMode) {
 }
 
 function _ba_fmt(v) {
-	return v == null ? "—" : v.toFixed(1);
+	return v == null ? "—" : String(Math.round(parseFloat(v)));
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────

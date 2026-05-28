@@ -95,7 +95,7 @@ def get_class_group_curriculum_data(class_group):
         "School Class Subject",
         filters={"parent": cg.school_class},
         fields=["subject"],
-        order_by="idx asc",
+        order_by="sort_order asc, idx asc",
     )
     if not subject_rows:
         return {"error": "no_subjects", "school_class": cg.school_class}

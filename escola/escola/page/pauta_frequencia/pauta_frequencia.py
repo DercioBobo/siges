@@ -114,7 +114,7 @@ def get_pauta_data(class_group, academic_year):
             "School Class Subject",
             filters={"parent": school_class},
             fields=["subject"],
-            order_by="idx asc",
+            order_by="sort_order asc, idx asc",
         )
         sn_list = [l.subject for l in lines if l.subject]
     if sn_list:
@@ -215,10 +215,10 @@ def get_pauta_data(class_group, academic_year):
         for subj in subjects:
             vals = [sd.get(subj["name"], {}).get(p) for p in range(1, n_terms + 1)]
             valid = [v for v in vals if v is not None]
-            annual_subj_avgs[subj["name"]] = round(sum(valid) / len(valid), 2) if valid else None
+            annual_subj_avgs[subj["name"]] = round(sum(valid) / len(valid)) if valid else None
 
         avgs = [v for v in annual_subj_avgs.values() if v is not None]
-        global_avg = round(sum(avgs) / len(avgs), 2) if avgs else None
+        global_avg = round(sum(avgs) / len(avgs)) if avgs else None
 
         ar = result_map.get(s.student)
         if ar and ar.result:

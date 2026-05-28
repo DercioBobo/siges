@@ -373,7 +373,7 @@
         bySubject[r.subject][r.academic_term] = r;
       });
 
-      const fmt2 = v => (v !== null && v !== undefined) ? parseFloat(v).toFixed(2) : '—';
+      const fmt2 = v => (v !== null && v !== undefined) ? String(Math.round(parseFloat(v))) : '—';
       const mtColor = v => v !== null && v !== undefined
         ? (parseFloat(v) >= 10 ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold')
         : 'text-slate-400';
@@ -428,7 +428,7 @@
     }
 
     function renderBoletimYear(yr) {
-      const fmt = v => v == null ? '—' : parseFloat(v).toFixed(1);
+      const fmt = v => v == null ? '—' : String(Math.round(parseFloat(v)));
 
       // Decision badge
       const decColors = {

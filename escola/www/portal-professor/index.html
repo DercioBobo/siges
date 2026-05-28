@@ -1031,22 +1031,20 @@ function closeGradeModal() {
 
 function _buildGradeTable(rows) {
   const COL_GROUPS = [
-    { label:'Avaliação Contínua Sem Peso', span:4, cls:'bg-blue-50 text-blue-700' },
-    { label:'Avaliação Contínua Sem Exame', span:4, cls:'bg-purple-50 text-purple-700' },
-    { label:'ACP', span:1, cls:'bg-orange-50 text-orange-700' },
+    { label:'Avaliação Contínua Sistemática Prática', span:3, cls:'bg-blue-50 text-blue-700' },
+    { label:'Avaliação Contínua Sistemática Escrita', span:3, cls:'bg-purple-50 text-purple-700' },
+    { label:'AT', span:1, cls:'bg-orange-50 text-orange-700' },
     { label:'MT', span:1, cls:'bg-emerald-50 text-emerald-700' },
     { label:'', span:1, cls:'' },
   ];
   const COLS = [
     { key:'acsp_1', label:'1',     calc:false },
     { key:'acsp_2', label:'2',     calc:false },
-    { key:'acsp_3', label:'3',     calc:false },
     { key:'macsp',  label:'MACSP', calc:true  },
     { key:'acse_1', label:'1',     calc:false },
     { key:'acse_2', label:'2',     calc:false },
-    { key:'acse_3', label:'3',     calc:false },
     { key:'macs',   label:'MACS',  calc:true  },
-    { key:'acp',    label:'ACP',   calc:false },
+    { key:'acp',    label:'AT',    calc:false },
     { key:'mt',     label:'MT',    calc:true  },
     { key:'_abs',   label:'Aus.',  calc:false, special:'absent' },
   ];
@@ -1069,7 +1067,7 @@ function _buildGradeTable(rows) {
         </td>`;
       }
       const val = r[c.key];
-      const disp = (val !== null && val !== undefined) ? parseFloat(val).toFixed(2) : '';
+      const disp = (val !== null && val !== undefined) ? String(Math.round(parseFloat(val))) : '';
       if (c.calc) {
         const isMt = c.key === 'mt';
         const mtStyle = (isMt && disp) ? (parseFloat(disp) >= MIN_PASS ? 'color:#166534;font-weight:700' : 'color:#991b1b;font-weight:700') : '';
@@ -1125,17 +1123,17 @@ function _recalcRow(tr) {
   const setCalc = (f, v) => {
     const el = tr.querySelector(`[data-field="${f}"]`);
     if (!el) return;
-    el.textContent = v !== null ? v.toFixed(2) : '';
+    el.textContent = v !== null ? String(Math.round(v)) : '';
     if (f === 'mt') {
       el.style.color      = v !== null ? (v >= MIN_PASS ? '#166534' : '#991b1b') : '';
       el.style.fontWeight = v !== null ? '700' : '';
     }
   };
-  const acsp = [get('acsp_1'), get('acsp_2'), get('acsp_3')].filter(v => v !== null);
+  const acsp = [get('acsp_1'), get('acsp_2')].filter(v => v !== null);
   const macsp = acsp.length ? acsp.reduce((a,b) => a+b, 0) / acsp.length : null;
   setCalc('macsp', macsp);
 
-  const acse = [get('acse_1'), get('acse_2'), get('acse_3')].filter(v => v !== null);
+  const acse = [get('acse_1'), get('acse_2')].filter(v => v !== null);
   const macsVals = (macsp !== null ? [macsp] : []).concat(acse);
   const macs = macsVals.length ? macsVals.reduce((a,b) => a+b, 0) / macsVals.length : null;
   setCalc('macs', macs);
@@ -1176,8 +1174,8 @@ async function saveGradeEntry(turma, term, subject) {
     rows.push({
       student,
       is_absent: absent,
-      acsp_1: getVal('acsp_1'), acsp_2: getVal('acsp_2'), acsp_3: getVal('acsp_3'),
-      acse_1: getVal('acse_1'), acse_2: getVal('acse_2'), acse_3: getVal('acse_3'),
+      acsp_1: getVal('acsp_1'), acsp_2: getVal('acsp_2'),
+      acse_1: getVal('acse_1'), acse_2: getVal('acse_2'),
       acp:    getVal('acp'),
     });
   });

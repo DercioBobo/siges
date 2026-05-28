@@ -38,7 +38,7 @@ def get_subjects_for_class_group(class_group):
         "School Class Subject",
         filters={"parent": school_class},
         fields=["subject"],
-        order_by="idx asc",
+        order_by="sort_order asc, idx asc",
     )
 
     result = []

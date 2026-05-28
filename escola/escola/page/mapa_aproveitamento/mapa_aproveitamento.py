@@ -69,7 +69,7 @@ def get_filter_options():
 def _subject_status(rows):
     if not rows:
         return "Vazio"
-    score_fields = ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp"]
+    score_fields = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp"]
     has_any = any(
         r.get("is_absent") or any(r.get(f) is not None for f in score_fields)
         for r in rows
@@ -83,8 +83,8 @@ def _subject_status(rows):
 def _empty_row(student):
     return {
         "student": student,
-        "acsp_1": None, "acsp_2": None, "acsp_3": None,
-        "acse_1": None, "acse_2": None, "acse_3": None,
+        "acsp_1": None, "acsp_2": None,
+        "acse_1": None, "acse_2": None,
         "acp": None, "macsp": None, "macs": None, "mt": None,
         "is_absent": 0,
     }
@@ -131,7 +131,7 @@ def get_grade_book(class_group, academic_term):
             "School Class Subject",
             filters={"parent": school_class},
             fields=["subject"],
-            order_by="idx asc",
+            order_by="sort_order asc, idx asc",
         )
         subj_names = [l.subject for l in lines if l.subject]
     if subj_names:
@@ -143,7 +143,6 @@ def get_grade_book(class_group, academic_term):
                     fields=["name", "subject_name"],
                 )
             }
-            # Batch lookup: one query for all Grade Entries in this class/term
             existing_ges = {
                 ge.subject: ge.name
                 for ge in frappe.get_all(
@@ -165,8 +164,8 @@ def get_grade_book(class_group, academic_term):
                         "Grade Entry Row",
                         filters={"parent": ge_name},
                         fields=[
-                            "student", "acsp_1", "acsp_2", "acsp_3",
-                            "acse_1", "acse_2", "acse_3", "acp",
+                            "student", "acsp_1", "acsp_2",
+                            "acse_1", "acse_2", "acp",
                             "macsp", "macs", "mt", "is_absent",
                         ],
                         order_by="idx asc",
@@ -205,19 +204,18 @@ def get_grade_book(class_group, academic_term):
 def _apply_row_data(row, data):
     row.acsp_1    = data.get("acsp_1")
     row.acsp_2    = data.get("acsp_2")
-    row.acsp_3    = data.get("acsp_3")
     row.acse_1    = data.get("acse_1")
     row.acse_2    = data.get("acse_2")
-    row.acse_3    = data.get("acse_3")
     row.acp       = data.get("acp")
-    row.is_absent = int(data.get("is_absent") or 0)
+    if "is_absent" in data:
+        row.is_absent = int(data.get("is_absent") or 0)
 
 
 @frappe.whitelist()
 def save_subject_grades(class_group, academic_term, subject, rows_json):
     rows = json.loads(rows_json) if isinstance(rows_json, str) else rows_json
 
-    score_fields = ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp"]
+    score_fields = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp"]
     has_data = any(
         r.get("is_absent") or any(r.get(f) is not None for f in score_fields)
         for r in rows
@@ -280,14 +278,13 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
         "Grade Entry Row",
         filters={"parent": doc.name},
         fields=[
-            "student", "acsp_1", "acsp_2", "acsp_3",
-            "acse_1", "acse_2", "acse_3", "acp",
+            "student", "acsp_1", "acsp_2",
+            "acse_1", "acse_2", "acp",
             "macsp", "macs", "mt", "is_absent",
         ],
         order_by="idx asc",
     )
 
-    # Compute status only from the current roster to ignore stale rows of removed students
     current_student_set = {r["student"] for r in rows}
     status_rows = [sr for sr in saved_rows if sr.student in current_student_set]
 
@@ -296,4 +293,139 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
         "grade_entry": doc.name,
         "status": _subject_status(status_rows),
         "rows": saved_rows,
+    }
+
+
+@frappe.whitelist()
+def get_annual_grade_book(class_group, academic_year):
+    cg = frappe.db.get_value(
+        "Class Group", class_group,
+        ["group_name", "school_class", "academic_year"],
+        as_dict=True,
+    )
+    if not cg:
+        frappe.throw(_("Turma não encontrada."))
+
+    terms = frappe.get_all(
+        "Academic Term",
+        filters={"academic_year": academic_year, "is_active": 1},
+        fields=["name", "term_name", "start_date"],
+        order_by="start_date asc",
+    )
+
+    students = frappe.db.sql(
+        """
+        SELECT sga.student, s.full_name AS student_name, s.student_code
+        FROM `tabStudent Group Assignment` sga
+        JOIN `tabStudent` s ON s.name = sga.student
+        WHERE sga.class_group = %s
+          AND sga.academic_year = %s
+          AND sga.status = 'Activa'
+        ORDER BY s.full_name
+        """,
+        (class_group, academic_year),
+        as_dict=True,
+    )
+    student_ids = [s.student for s in students]
+
+    school_class = cg.school_class
+    subj_names = []
+    if school_class:
+        lines = frappe.get_all(
+            "School Class Subject",
+            filters={"parent": school_class},
+            fields=["subject"],
+            order_by="sort_order asc, idx asc",
+        )
+        subj_names = [l.subject for l in lines if l.subject]
+
+    subjects_out = []
+    if subj_names:
+        subj_infos = {
+            s.name: s.subject_name
+            for s in frappe.get_all(
+                "Subject",
+                filters={"name": ("in", subj_names)},
+                fields=["name", "subject_name"],
+            )
+        }
+
+        term_names = [t.name for t in terms]
+        all_ges = frappe.get_all(
+            "Grade Entry",
+            filters={
+                "class_group": class_group,
+                "academic_term": ("in", term_names) if term_names else ["__never__"],
+                "docstatus": ("!=", 2),
+            },
+            fields=["name", "subject", "academic_term"],
+        ) if term_names else []
+
+        # subject → term → ge_name
+        ge_map = {}
+        for ge in all_ges:
+            ge_map.setdefault(ge.subject, {})[ge.academic_term] = ge.name
+
+        # Batch-fetch all rows
+        ge_names = [ge.name for ge in all_ges]
+        rows_by_ge = {}
+        if ge_names:
+            all_rows = frappe.db.sql("""
+                SELECT ger.parent, ger.student,
+                       ger.acsp_1, ger.acsp_2,
+                       ger.acse_1, ger.acse_2,
+                       ger.acp, ger.macsp, ger.macs, ger.mt, ger.is_absent
+                FROM `tabGrade Entry Row` ger
+                WHERE ger.parent IN ({})
+            """.format(",".join(["%s"] * len(ge_names))), ge_names, as_dict=True)
+            for r in all_rows:
+                rows_by_ge.setdefault(r.parent, {})[r.student] = r
+
+        for sn in subj_names:
+            if sn not in subj_infos:
+                continue
+
+            subj_rows = []
+            for sid in student_ids:
+                term_entries = []
+                for term in terms:
+                    ge_name = ge_map.get(sn, {}).get(term.name)
+                    td = (rows_by_ge.get(ge_name) or {}).get(sid) or {}
+                    term_entries.append({
+                        "acsp_1":  td.get("acsp_1"),
+                        "acsp_2":  td.get("acsp_2"),
+                        "macsp":   td.get("macsp"),
+                        "acse_1":  td.get("acse_1"),
+                        "acse_2":  td.get("acse_2"),
+                        "macs":    td.get("macs"),
+                        "acp":     td.get("acp"),
+                        "mt":      td.get("mt"),
+                        "is_absent": int(td.get("is_absent") or 0),
+                    })
+
+                mt_vals = [t["mt"] for t in term_entries if t["mt"] is not None and not t["is_absent"]]
+                mf = round(sum(mt_vals) / len(mt_vals)) if mt_vals else None
+
+                subj_rows.append({
+                    "student": sid,
+                    "terms": term_entries,
+                    "mf": mf,
+                })
+
+            subjects_out.append({
+                "subject": sn,
+                "subject_name": subj_infos[sn],
+                "rows": subj_rows,
+            })
+
+    return {
+        "class_group": class_group,
+        "class_group_name": cg.group_name,
+        "academic_year": academic_year,
+        "terms": [{"name": t.name, "term_name": t.term_name or t.name} for t in terms],
+        "students": [
+            {"student": s.student, "student_name": s.student_name}
+            for s in students
+        ],
+        "subjects": subjects_out,
     }

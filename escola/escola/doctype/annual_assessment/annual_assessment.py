@@ -314,7 +314,7 @@ def get_mapa_print_data(doc_name):
             "School Class Subject",
             filters={"parent": school_class},
             fields=["subject"],
-            order_by="idx asc",
+            order_by="sort_order asc, idx asc",
         )
         sn_list = [l.subject for l in lines if l.subject]
         subj_map = {

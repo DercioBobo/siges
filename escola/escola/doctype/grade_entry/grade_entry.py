@@ -152,8 +152,8 @@ class GradeEntry(Document):
 
     def _validate_score_ranges(self):
         score_fields = [
-            ("acsp_1", "ACSP 1"), ("acsp_2", "ACSP 2"), ("acsp_3", "ACSP 3"),
-            ("acse_1", "ACSE 1"), ("acse_2", "ACSE 2"), ("acse_3", "ACSE 3"),
+            ("acsp_1", "ACSP 1"), ("acsp_2", "ACSP 2"),
+            ("acse_1", "ACSE 1"), ("acse_2", "ACSE 2"),
             ("acp",    "AT"),
         ]
         for row in self.grade_rows:
@@ -180,7 +180,7 @@ class GradeEntry(Document):
     # ------------------------------------------------------------------
 
     def _compute_macs_mt(self):
-        absent_fields = ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp", "macsp", "macs", "mt"]
+        absent_fields = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp", "macsp", "macs", "mt"]
         for row in self.grade_rows:
             if row.is_absent:
                 for f in absent_fields:
@@ -188,19 +188,19 @@ class GradeEntry(Document):
                 continue
 
             # MACSP — practical average
-            acsp_vals = [v for v in [row.acsp_1, row.acsp_2, row.acsp_3] if v is not None]
-            macsp = round(sum(acsp_vals) / len(acsp_vals), 2) if acsp_vals else None
+            acsp_vals = [v for v in [row.acsp_1, row.acsp_2] if v is not None]
+            macsp = round(sum(acsp_vals) / len(acsp_vals)) if acsp_vals else None
             row.macsp = macsp
 
             # MACS — MACSP counts as ONE element alongside each written score
-            acse_vals = [v for v in [row.acse_1, row.acse_2, row.acse_3] if v is not None]
+            acse_vals = [v for v in [row.acse_1, row.acse_2] if v is not None]
             macs_inputs = ([macsp] if macsp is not None else []) + acse_vals
-            macs = round(sum(macs_inputs) / len(macs_inputs), 2) if macs_inputs else None
+            macs = round(sum(macs_inputs) / len(macs_inputs)) if macs_inputs else None
             row.macs = macs
 
             # MT
             if macs is not None and row.acp is not None:
-                row.mt = round((2 * macs + row.acp) / 3, 2)
+                row.mt = round((2 * macs + row.acp) / 3)
             else:
                 row.mt = None
 

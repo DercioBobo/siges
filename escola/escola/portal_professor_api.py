@@ -255,7 +255,7 @@ def get_grade_entries(turma, term):
                 "School Class Subject",
                 filters={"parent": school_class},
                 fields=["subject"],
-                order_by="idx asc",
+                order_by="sort_order asc, idx asc",
             )
             subj_names = [l.subject for l in lines if l.subject]
 
@@ -338,8 +338,8 @@ def get_grade_entry_rows(turma, term, subject):
         for r in frappe.get_all(
             "Grade Entry Row",
             filters={"parent": ge_name},
-            fields=["student", "acsp_1", "acsp_2", "acsp_3",
-                    "acse_1", "acse_2", "acse_3", "acp",
+            fields=["student", "acsp_1", "acsp_2",
+                    "acse_1", "acse_2", "acp",
                     "macsp", "macs", "mt", "is_absent"],
         ):
             existing[r.student] = r
@@ -353,10 +353,8 @@ def get_grade_entry_rows(turma, term, subject):
             "student_code": s.student_code or "",
             "acsp_1":  ex.get("acsp_1"),
             "acsp_2":  ex.get("acsp_2"),
-            "acsp_3":  ex.get("acsp_3"),
             "acse_1":  ex.get("acse_1"),
             "acse_2":  ex.get("acse_2"),
-            "acse_3":  ex.get("acse_3"),
             "acp":     ex.get("acp"),
             "macsp":   ex.get("macsp"),
             "macs":    ex.get("macs"),
@@ -386,7 +384,7 @@ def save_grade_entry(turma, term, subject, rows, notes=None):
     }
 
     def _apply(row, data):
-        for f in ["acsp_1", "acsp_2", "acsp_3", "acse_1", "acse_2", "acse_3", "acp"]:
+        for f in ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp"]:
             v = data.get(f)
             row.set(f, float(v) if v is not None and v != "" else None)
         row.is_absent = int(data.get("is_absent") or 0)
@@ -433,8 +431,8 @@ def save_grade_entry(turma, term, subject, rows, notes=None):
     saved_rows = frappe.get_all(
         "Grade Entry Row",
         filters={"parent": doc.name},
-        fields=["student", "acsp_1", "acsp_2", "acsp_3",
-                "acse_1", "acse_2", "acse_3", "acp",
+        fields=["student", "acsp_1", "acsp_2",
+                "acse_1", "acse_2", "acp",
                 "macsp", "macs", "mt", "is_absent"],
         order_by="idx asc",
     )

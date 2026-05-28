@@ -9,13 +9,11 @@
   "student_name",
   "acsp_1",
   "acsp_2",
-  "acsp_3",
+  "macsp",
   "acse_1",
   "acse_2",
-  "acse_3",
-  "acp",
-  "macsp",
   "macs",
+  "acp",
   "mt",
   "is_absent"
  ],
@@ -55,9 +53,12 @@
    "columns": 1
   },
   {
-   "fieldname": "acsp_3",
-   "fieldtype": "Int",
-   "label": "ACSP 3",
+   "fieldname": "macsp",
+   "fieldtype": "Float",
+   "label": "MACSP",
+   "read_only": 1,
+   "precision": "0",
+   "in_list_view": 1,
    "columns": 1
   },
   {
@@ -75,9 +76,12 @@
    "columns": 1
   },
   {
-   "fieldname": "acse_3",
-   "fieldtype": "Int",
-   "label": "ACSE 3",
+   "fieldname": "macs",
+   "fieldtype": "Float",
+   "label": "MACS",
+   "read_only": 1,
+   "precision": "0",
+   "in_list_view": 1,
    "columns": 1
   },
   {
@@ -88,29 +92,11 @@
    "columns": 1
   },
   {
-   "fieldname": "macsp",
-   "fieldtype": "Float",
-   "label": "MACSP",
-   "read_only": 1,
-   "precision": "2",
-   "in_list_view": 1,
-   "columns": 1
-  },
-  {
-   "fieldname": "macs",
-   "fieldtype": "Float",
-   "label": "MACS",
-   "read_only": 1,
-   "precision": "2",
-   "in_list_view": 1,
-   "columns": 1
-  },
-  {
    "fieldname": "mt",
    "fieldtype": "Float",
    "label": "MT",
    "read_only": 1,
-   "precision": "2",
+   "precision": "0",
    "in_list_view": 1,
    "columns": 1
   },
