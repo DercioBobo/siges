@@ -445,3 +445,66 @@ def sync_annual_assessment_students(doc_name):
         doc.save(ignore_permissions=True)
 
     return {"removed": removed, "kept": len(kept)}
+
+
+@frappe.whitelist()
+def create_or_get_promotion(annual_assessment_name):
+    """
+    One-click entry point from Annual Assessment to Student Promotion.
+    - If a Promotion already exists for this class/year: returns it.
+    - Otherwise: creates it, auto-generates rows from Annual Assessment, saves.
+    Returns {"name", "is_new", "status"}.
+    """
+    from escola.escola.doctype.student_promotion.student_promotion import (
+        generate_promotion,
+        get_or_suggest_next_academic_year,
+    )
+
+    aa = frappe.get_doc("Annual Assessment", annual_assessment_name)
+
+    if not aa.assessment_rows:
+        frappe.throw(
+            _("Calcule a avaliação antes de iniciar a promoção. "
+              "Use o botão <b>Calcular Avaliação</b> primeiro."),
+            title=_("Avaliação não calculada"),
+        )
+
+    # Return existing (non-cancelled) promotion if present
+    existing = frappe.db.get_value(
+        "Student Promotion",
+        {"class_group": aa.class_group, "academic_year": aa.academic_year, "docstatus": ("!=", 2)},
+        ["name", "status"],
+        as_dict=True,
+    )
+    if existing:
+        return {"name": existing.name, "is_new": False, "status": existing.status}
+
+    # Attempt to resolve next academic year automatically
+    next_year = None
+    try:
+        r = get_or_suggest_next_academic_year(aa.academic_year)
+        if r.get("found"):
+            next_year = r["name"]
+    except Exception:
+        pass
+
+    # Create Student Promotion
+    sp = frappe.get_doc({
+        "doctype":           "Student Promotion",
+        "academic_year":     aa.academic_year,
+        "school_class":      aa.school_class,
+        "class_group":       aa.class_group,
+        "next_academic_year": next_year or "",
+        "status":            "Rascunho",
+    })
+    sp.insert(ignore_permissions=True)
+
+    # Auto-generate promotion rows from Annual Assessment
+    rows = generate_promotion(sp.name)
+    if isinstance(rows, list) and rows:
+        for row_data in rows:
+            sp.append("promotion_rows", row_data)
+        sp.save(ignore_permissions=True)
+
+    frappe.db.commit()
+    return {"name": sp.name, "is_new": True, "status": "Rascunho"}

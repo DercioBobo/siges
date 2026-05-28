@@ -40,6 +40,12 @@ frappe.ui.form.on("Student Promotion", {
 					}
 				);
 				$btn.removeClass("btn-default").addClass("btn-primary");
+
+				// Auto-open when navigated from Annual Assessment "Iniciar Promoção"
+				if (frappe.flags.sp_auto_distribute) {
+					delete frappe.flags.sp_auto_distribute;
+					setTimeout(() => _show_distribution_modal(frm), 400);
+				}
 			}
 		}
 	},

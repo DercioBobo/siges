@@ -25,6 +25,15 @@ frappe.ui.form.on("Annual Assessment", {
 			frm.add_custom_button(__("Calcular Avaliação"), () => maybe_calculate(frm), null, "primary");
 			frm.add_custom_button(__("Imprimir Mapa"), () => _print_mapa(frm));
 
+			const has_results = (frm.doc.assessment_rows || []).some(r => r.result);
+			if (has_results) {
+				frm.add_custom_button(
+					__("Iniciar Promoção →"),
+					() => _launch_promotion(frm),
+					null, "primary"
+				);
+			}
+
 			_render_from_rows(frm);
 		}
 	},
@@ -532,6 +541,41 @@ function round2(v) { return Math.round(v * 100) / 100; }
 function _set_html(frm, html) {
 	const fd = frm.fields_dict["grades_detail_html"];
 	if (fd) fd.$wrapper.html(html);
+}
+
+// ---------------------------------------------------------------------------
+// Launch Student Promotion (one-click flow)
+// ---------------------------------------------------------------------------
+
+async function _launch_promotion(frm) {
+	const r = await frappe.call({
+		method: "escola.escola.doctype.annual_assessment.annual_assessment.create_or_get_promotion",
+		args:   { annual_assessment_name: frm.doc.name },
+		freeze: true,
+		freeze_message: __("A preparar promoção…"),
+	});
+	if (!r.message) return;
+
+	const { name, is_new, status } = r.message;
+
+	if (!is_new) {
+		frappe.show_alert({
+			message: __("Promoção já existe — <b>{0}</b>. A abrir…", [name]),
+			indicator: "blue",
+		}, 3);
+	} else {
+		frappe.show_alert({
+			message: __("Promoção <b>{0}</b> criada com {1} linha(s).",
+				[name, r.message.row_count || ""]),
+			indicator: "green",
+		}, 3);
+	}
+
+	// Signal to Student Promotion to auto-open the distribution modal
+	if (status !== "Finalizado" && status !== "Bloqueado") {
+		frappe.flags.sp_auto_distribute = true;
+	}
+	frappe.set_route("Form", "Student Promotion", name);
 }
 
 // ---------------------------------------------------------------------------
