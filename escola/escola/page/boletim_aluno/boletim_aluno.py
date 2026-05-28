@@ -103,6 +103,8 @@ def _build_year(student, sga):
     ann_vals = [s["annual_average"] for s in subjects if s["annual_average"] is not None]
     overall = round(sum(ann_vals) / len(ann_vals), 1) if ann_vals else None
 
+    term_attendance = _get_term_attendance(student, sga.class_group, terms)
+
     return {
         "academic_year":   year,
         "school_class":    sga.school_class,
@@ -113,10 +115,41 @@ def _build_year(student, sga):
         "subjects":        subjects,
         "term_averages":   term_averages,
         "overall_average": overall,
-        "final_decision":     _get_final_decision(student, sga),
-        "total_absences":     _get_absences(student, sga),
-        "comportamento_anual": _get_comportamento_anual(student, sga),
+        "term_attendance": term_attendance,
+        "final_decision":       _get_final_decision(student, sga),
+        "total_absences":       _get_absences(student, sga),
+        "comportamento_anual":  _get_comportamento_anual(student, sga),
     }
+
+
+def _get_term_attendance(student, class_group, terms):
+    """Return per-term attendance list aligned with the terms list."""
+    result = []
+    for term in terms:
+        ta_name = frappe.db.get_value(
+            "Term Attendance",
+            {"class_group": class_group, "academic_term": term.name, "docstatus": ("!=", 2)},
+            "name",
+        )
+        if not ta_name:
+            result.append({"total": None, "justified": None, "unjustified": None, "comportamento": None})
+            continue
+        row = frappe.db.get_value(
+            "Term Attendance Row",
+            {"parent": ta_name, "student": student},
+            ["total_absences", "justified_absences", "unjustified_absences", "comportamento"],
+            as_dict=True,
+        )
+        if row:
+            result.append({
+                "total":         row.total_absences,
+                "justified":     row.justified_absences,
+                "unjustified":   row.unjustified_absences,
+                "comportamento": row.comportamento,
+            })
+        else:
+            result.append({"total": None, "justified": None, "unjustified": None, "comportamento": None})
+    return result
 
 
 def _get_final_decision(student, sga):

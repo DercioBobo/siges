@@ -175,12 +175,19 @@ function _show_actions_modal(frm) {
 	const inRenewalPeriod = !isConcluded && frm._renewal_status && frm._renewal_status.in_period;
 	const alreadyRenewed  = inRenewalPeriod && frm._renewal_status.renewal;
 
+	const hasTurma = !!frm.doc.current_class_group;
+
 	const ver = [
-		{ id: "boletins",  ico: "📋", label: __("Boletins"),          color: "#4f46e5", bg: "#eef2ff" },
-		{ id: "facturas",  ico: "🧾", label: __("Facturas"),           color: "#059669", bg: "#d1fae5" },
-		{ id: "previsao",  ico: "📅", label: __("Previsão Financeira"),color: "#0891b2", bg: "#ecfeff" },
-		{ id: "servicos",  ico: "🔧", label: __("Serviços Extras"),    color: "#0f766e", bg: "#f0fdfa" },
-		{ id: "historial", ico: "🕐", label: __("Ver Historial"),      color: "#7c3aed", bg: "#f5f3ff" },
+		{ id: "boletins",    ico: "📋", label: __("Boletins"),           color: "#4f46e5", bg: "#eef2ff" },
+		{ id: "resultados",  ico: "📊", label: __("Resultados"),          color: "#0369a1", bg: "#e0f2fe" },
+		{ id: "facturas",    ico: "🧾", label: __("Facturas"),            color: "#059669", bg: "#d1fae5" },
+		{ id: "previsao",    ico: "📅", label: __("Previsão Financeira"), color: "#0891b2", bg: "#ecfeff" },
+		{ id: "servicos",    ico: "🔧", label: __("Serviços Extras"),     color: "#0f766e", bg: "#f0fdfa" },
+		{ id: "historial",   ico: "🕐", label: __("Ver Historial"),       color: "#7c3aed", bg: "#f5f3ff" },
+		...(hasTurma ? [
+			{ id: "ver-turma",   ico: "👥", label: __("Ver Turma"),   color: "#0f766e", bg: "#f0fdfa" },
+			{ id: "ver-horario", ico: "📆", label: __("Ver Horário"), color: "#7c3aed", bg: "#fdf4ff" },
+		] : []),
 		...(inRenewalPeriod ? [{
 			id:    alreadyRenewed ? "ver-renovacao" : "nova-renovacao",
 			ico:   alreadyRenewed ? "✓" : "🔄",
@@ -231,6 +238,14 @@ function _show_actions_modal(frm) {
 			case "boletins":
 				frappe.route_options = { student: frm.doc.name };
 				frappe.set_route("boletim-aluno");
+				break;
+			case "resultados":        _show_student_results_modal(frm); break;
+			case "ver-turma":
+				frappe.set_route("Form", "Class Group", frm.doc.current_class_group);
+				break;
+			case "ver-horario":
+				frappe.route_options = { class_group: frm.doc.current_class_group };
+				frappe.set_route("timetable-view");
 				break;
 			case "facturas":          _show_invoices_modal(frm); break;
 			case "previsao":          _show_forecast_modal(frm); break;
@@ -998,6 +1013,216 @@ function update_age(frm) {
 function update_full_name(frm) {
 	const parts = [frm.doc.first_name, frm.doc.last_name].filter(Boolean);
 	frm.set_value("full_name", parts.join(" "));
+}
+
+// ---------------------------------------------------------------------------
+// Student results modal — inline grade card
+// ---------------------------------------------------------------------------
+
+async function _show_student_results_modal(frm) {
+	const d = new frappe.ui.Dialog({
+		title: `📊 ${__("Resultados")} · ${frm.doc.full_name}`,
+		size:  "extra-large",
+	});
+	d.$body.css("padding", "16px 20px");
+	d.$body.html(`<div style="text-align:center;padding:40px;color:var(--text-muted);">
+		<i class="fa fa-spinner fa-spin fa-2x"></i>
+		<div style="margin-top:10px;">${__("A carregar resultados…")}</div>
+	</div>`);
+	d.$wrapper.find(".btn-modal-primary").hide();
+	d.set_secondary_action_label(__("Fechar"));
+	d.set_secondary_action(() => d.hide());
+	d.show();
+
+	const r = await frappe.call({
+		method: "escola.escola.page.boletim_aluno.boletim_aluno.get_student_report",
+		args:   { student: frm.doc.name },
+	});
+
+	if (r.exc || !r.message) {
+		d.$body.html(`<div style="text-align:center;padding:40px;color:var(--text-muted);">${__("Não foi possível carregar os resultados.")}</div>`);
+		return;
+	}
+
+	const data = r.message;
+	d.$body.html(_render_results_card(frm, data));
+
+	d.$body.find(".sr-goto-boletim").on("click", () => {
+		d.hide();
+		frappe.route_options = { student: frm.doc.name };
+		frappe.set_route("boletim-aluno");
+	});
+}
+
+function _render_results_card(frm, data) {
+	const esc   = (v) => frappe.utils.escape_html(v || "");
+	const fmt   = (v) => (v !== null && v !== undefined) ? String(Math.round(parseFloat(v))) : "—";
+	const initials = (frm.doc.first_name || "?")[0].toUpperCase();
+
+	const STATUS_COLOR = {
+		"Activo":              { bg: "#dcfce7", fg: "#166534" },
+		"Pendente de Turma":   { bg: "#fef9c3", fg: "#854d0e" },
+		"Pendente de Renovação": { bg: "#fef3c7", fg: "#92400e" },
+		"Transferido":         { bg: "#dbeafe", fg: "#1d4ed8" },
+		"Desistente":          { bg: "#fee2e2", fg: "#dc2626" },
+		"Concluiu":            { bg: "#f3f4f6", fg: "#374151" },
+	};
+	const sc = STATUS_COLOR[data.current_status] || STATUS_COLOR["Activo"];
+	const statusBadge = `<span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:12px;background:${sc.bg};color:${sc.fg};">${esc(__(data.current_status))}</span>`;
+
+	const turmaLine = frm.doc.current_class_group
+		? `<a href="/app/class-group/${encodeURIComponent(frm.doc.current_class_group)}" target="_blank"
+		      style="font-size:12px;color:var(--primary);">${esc(frm.doc.current_class_group)}</a>`
+		: `<span style="font-size:12px;color:var(--text-muted);">${__("Sem turma")}</span>`;
+
+	// Header
+	let html = `
+		<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border-color);">
+			<div style="width:46px;height:46px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--primary);flex-shrink:0;">
+				${esc(initials)}
+			</div>
+			<div style="flex:1;min-width:0;">
+				<div style="font-weight:700;font-size:16px;color:var(--heading-color);">${esc(data.full_name)}</div>
+				<div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
+					${data.student_code ? `<span style="font-size:12px;color:var(--text-muted);font-family:monospace;">${esc(data.student_code)}</span>` : ""}
+					${turmaLine}
+					${statusBadge}
+				</div>
+			</div>
+		</div>
+	`;
+
+	if (!data.years || !data.years.length) {
+		html += `<div style="text-align:center;padding:32px;color:var(--text-muted);">${__("Sem resultados académicos registados.")}</div>`;
+	} else {
+		const RESULT_STYLE = {
+			"Promovido":  { bg: "#dcfce7", fg: "#166534", ico: "✓" },
+			"Aprovado":   { bg: "#dcfce7", fg: "#166534", ico: "✓" },
+			"Retido":     { bg: "#fee2e2", fg: "#dc2626", ico: "✕" },
+			"Reprovado":  { bg: "#fee2e2", fg: "#dc2626", ico: "✕" },
+			"Concluído":  { bg: "#dbeafe", fg: "#1d4ed8", ico: "★" },
+		};
+
+		data.years.forEach(yr => {
+			const rs = RESULT_STYLE[yr.final_decision] || null;
+			const resultBadge = rs
+				? `<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:${rs.bg};color:${rs.fg};">${rs.ico} ${esc(__(yr.final_decision))}</span>`
+				: "";
+			const overallBadge = yr.overall_average != null
+				? `<span style="font-size:12px;font-weight:700;color:var(--primary);">${__("Média")}: ${fmt(yr.overall_average)}</span>`
+				: "";
+			const absencesBadge = yr.total_absences != null
+				? `<span style="font-size:12px;color:var(--text-muted);">${__("Faltas")}: ${yr.total_absences}</span>`
+				: "";
+
+			// Term header cells
+			const termHeaders = (yr.term_labels || []).map((tl, i) =>
+				`<th style="background:#1E293B;color:white;padding:6px 8px;font-size:11px;text-align:center;white-space:nowrap;">
+					${esc(tl)}
+				</th>`
+			).join("");
+
+			// Subject rows
+			const subjectRows = (yr.subjects || []).map(s => {
+				const termCells = (s.term_grades || []).map(g =>
+					`<td style="text-align:center;font-size:12px;padding:4px 6px;">${g !== null && g !== undefined ? Math.round(g) : "—"}</td>`
+				).join("");
+				const mf = s.annual_average;
+				const mfColor = mf !== null ? (mf >= 10 ? "#065F46" : "#991B1B") : "inherit";
+				return `
+					<tr style="border-bottom:1px solid var(--border-color);">
+						<td style="padding:5px 8px;font-size:12px;font-weight:500;">${esc(s.subject)}</td>
+						${termCells}
+						<td style="text-align:center;font-size:12px;font-weight:700;padding:4px 8px;color:${mfColor};">${fmt(mf)}</td>
+					</tr>`;
+			}).join("");
+
+			// Averages footer row
+			const avgCells = (yr.term_averages || []).map(a =>
+				`<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 6px;">${a !== null && a !== undefined ? Math.round(a) : "—"}</td>`
+			).join("");
+
+			// Comportamento abbreviation helper
+			const abbr = (v) => {
+				if (!v) return "—";
+				const m = { "Muito Bom":"MB","Bom":"B","Satisfatório":"S","Suficiente":"SF","Insatisfatório":"I","Mau":"M","Muito Mau":"MM" };
+				return m[v] || v.substring(0, 2).toUpperCase();
+			};
+
+			// Per-term faltas and comportamento rows
+			const attendance = yr.term_attendance || [];
+			const faltasCells = attendance.map(a =>
+				`<td style="text-align:center;font-size:12px;padding:4px 6px;">${a.total !== null && a.total !== undefined ? a.total : "—"}</td>`
+			).join("");
+			const totalFaltas = yr.total_absences !== null && yr.total_absences !== undefined
+				? yr.total_absences : "—";
+
+			const compCells = attendance.map(a => {
+				const short = abbr(a.comportamento);
+				const color = !a.comportamento ? "var(--text-muted)"
+					: (a.comportamento === "Muito Bom" || a.comportamento === "Bom") ? "#065F46"
+					: (a.comportamento === "Insatisfatório" || a.comportamento === "Mau" || a.comportamento === "Muito Mau") ? "#991B1B"
+					: "#374151";
+				return `<td style="text-align:center;font-size:12px;padding:4px 6px;color:${color};font-weight:600;" title="${esc(a.comportamento || "")}">${short}</td>`;
+			}).join("");
+			const annualComp = yr.comportamento_anual ? abbr(yr.comportamento_anual) : "—";
+			const annualCompColor = !yr.comportamento_anual ? "var(--text-muted)"
+				: (yr.comportamento_anual === "Muito Bom" || yr.comportamento_anual === "Bom") ? "#065F46"
+				: (yr.comportamento_anual === "Insatisfatório" || yr.comportamento_anual === "Mau" || yr.comportamento_anual === "Muito Mau") ? "#991B1B"
+				: "#374151";
+
+			html += `
+				<div style="margin-bottom:22px;">
+					<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+						<span style="font-weight:700;font-size:14px;">${esc(yr.academic_year)}</span>
+						<span style="font-size:12px;color:var(--text-muted);">${esc(yr.school_class || "")}${yr.class_group ? " · " + esc(yr.class_group) : ""}</span>
+						${resultBadge}
+						${overallBadge}
+					</div>
+					<div style="overflow-x:auto;">
+					<table style="width:100%;border-collapse:collapse;">
+						<thead>
+							<tr>
+								<th style="background:#1E293B;color:white;padding:6px 8px;font-size:11px;text-align:left;min-width:140px;">${__("Disciplina")}</th>
+								${termHeaders}
+								<th style="background:#374151;color:white;padding:6px 8px;font-size:11px;text-align:center;">${__("MF")}</th>
+							</tr>
+						</thead>
+						<tbody>
+							${subjectRows}
+							<tr style="background:#F0F4FF;">
+								<td style="padding:5px 8px;font-size:11px;font-weight:700;color:#374151;">${__("Média da Turma")}</td>
+								${avgCells}
+								<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 8px;color:#6366F1;">${fmt(yr.overall_average)}</td>
+							</tr>
+							<tr style="background:#FFF7ED;border-top:2px solid #E5E7EB;">
+								<td style="padding:4px 8px;font-size:11px;font-weight:700;color:#92400E;">${__("Faltas")}</td>
+								${faltasCells}
+								<td style="text-align:center;font-size:12px;font-weight:700;padding:4px 8px;color:#92400E;">${totalFaltas}</td>
+							</tr>
+							<tr style="background:#F0FDF4;">
+								<td style="padding:4px 8px;font-size:11px;font-weight:700;color:#166534;">${__("Comportamento")}</td>
+								${compCells}
+								<td style="text-align:center;font-size:12px;font-weight:700;padding:4px 8px;color:${annualCompColor};"
+								    title="${esc(yr.comportamento_anual || "")}">${annualComp}</td>
+							</tr>
+						</tbody>
+					</table>
+					</div>
+				</div>
+			`;
+		});
+	}
+
+	html += `
+		<div style="text-align:right;padding-top:8px;border-top:1px solid var(--border-color);margin-top:4px;">
+			<button class="btn btn-default btn-sm sr-goto-boletim">
+				${__("Ver Boletim Completo")} →
+			</button>
+		</div>
+	`;
+
+	return html;
 }
 
 // ---------------------------------------------------------------------------
