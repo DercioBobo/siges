@@ -116,13 +116,13 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
         if (_val) { const o = _opts.find(x => x.value === _val); if (!o || this.value !== o.label) _val = ""; }
         _show(this.value);
     });
-    $input.on("blur",  function () { setTimeout(() => { _close(); _restore(); }, 80); });
-    $caret.on("mousedown", function (e) {
-        e.preventDefault();
+    $input.on("blur", function () { setTimeout(() => { _close(); _restore(); }, 80); });
+    $caret.on("pointerdown", function (e) {
+        e.preventDefault();  // pointerdown fires before blur for all pointer types
         $drop.is(":visible") ? _close() : ($input[0].focus(), _show(""));
     });
-    $drop.on("mousedown", ".fs-opt:not(.fs-none)", function (e) {
-        e.preventDefault();  // fires before blur — eliminates the timing race
+    $drop.on("pointerdown", ".fs-opt:not(.fs-none)", function (e) {
+        e.preventDefault();  // pointerdown fires before blur — no race for tap, click or touch
         const v = $(this).data("v");
         const o = _opts.find(x => x.value === v);
         if (!o) return;
