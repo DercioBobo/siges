@@ -19,6 +19,7 @@
   "class_teacher",
   "teaching_model",
   "is_active",
+  "health_html",
   "section_break_subjects",
   "subject_teachers",
   "section_break_capacity",
@@ -121,6 +122,11 @@
    "label": "Turma Activa",
    "default": "1",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "health_html",
+   "fieldtype": "HTML",
+   "label": "Estado da Turma"
   },
   {
    "fieldname": "section_break_subjects",

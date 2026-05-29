@@ -116,6 +116,116 @@ def get_subjects_for_class_group(class_group):
 
 
 @frappe.whitelist()
+def get_class_group_health(class_group):
+    """Return a list of health-check items for the Class Group form badge."""
+    cg = frappe.db.get_value(
+        "Class Group", class_group,
+        ["class_teacher", "school_class", "student_count", "teaching_model", "classroom", "academic_year"],
+        as_dict=True,
+    )
+    if not cg:
+        return []
+
+    items = []
+
+    # Director de Turma — critical for all models
+    items.append({
+        "label":    _("Director de Turma"),
+        "status":   "ok" if cg.class_teacher else "err",
+        "detail":   cg.class_teacher or None,
+        "route":    None,
+    })
+
+    # Disciplinas e Professores — only meaningful for Professores por Disciplina
+    if cg.teaching_model == "Professores por Disciplina":
+        rows = frappe.db.get_all(
+            "Class Group Subject Line",
+            filters={"parent": class_group},
+            fields=["subject", "teacher"],
+        )
+        missing = [r.subject for r in rows if not r.teacher]
+        if not rows:
+            status, detail = "err", _("sem disciplinas")
+        elif missing:
+            status = "warn"
+            detail = _("{0} disciplina(s), {1} sem professor").format(len(rows), len(missing))
+        else:
+            status = "ok"
+            detail = _("{0} disciplina(s)").format(len(rows))
+        items.append({"label": _("Disciplinas"), "status": status, "detail": detail, "route": None})
+
+    # Alunos inscritos — warn if 0 (may be fine early in year)
+    count = int(cg.student_count or 0)
+    items.append({
+        "label":  _("Alunos"),
+        "status": "ok" if count > 0 else "warn",
+        "detail": _("{0} aluno(s)").format(count),
+        "route":  None,
+    })
+
+    # Sala — minor warning
+    items.append({
+        "label":  _("Sala"),
+        "status": "ok" if cg.classroom else "warn",
+        "detail": cg.classroom or _("não definida"),
+        "route":  None,
+    })
+
+    # Horário activo — critical
+    timetable = frappe.db.get_value(
+        "Timetable", {"class_group": class_group, "status": "Activo"}, "name"
+    )
+    items.append({
+        "label":  _("Horário"),
+        "status": "ok" if timetable else "err",
+        "detail": timetable or None,
+        "route":  f"/app/timetable/{timetable}" if timetable else None,
+        "action": None if timetable else {
+            "label":    _("Criar"),
+            "doctype":  "Timetable",
+            "values":   {"class_group": class_group, "academic_year": cg.academic_year},
+        },
+    })
+
+    # Billing Schedule — critical (school class level)
+    if cg.school_class:
+        billing = frappe.db.get_value(
+            "Billing Schedule",
+            {"school_class": cg.school_class, "is_active": 1},
+            "name",
+        )
+        items.append({
+            "label":  _("Cobrança"),
+            "status": "ok" if billing else "err",
+            "detail": billing or None,
+            "route":  f"/app/billing-schedule/{billing}" if billing else None,
+            "action": None if billing else {
+                "label": _("Configurar"),
+                "route": f"/app/billing-schedule/new-billing-schedule-1",
+            },
+        })
+
+        # Fee Structure — critical (school class level)
+        fee = frappe.db.get_value(
+            "Fee Structure",
+            {"school_class": cg.school_class, "is_active": 1},
+            "name",
+        )
+        items.append({
+            "label":  _("Tarifas"),
+            "status": "ok" if fee else "err",
+            "detail": fee or None,
+            "route":  f"/app/fee-structure/{fee}" if fee else None,
+            "action": None if fee else {
+                "label": _("Configurar"),
+                "route": "/app/fee-structure/new-fee-structure-1",
+            },
+        })
+
+    return items
+
+
+@frappe.whitelist()
 def search_students_for_group(class_group, query=""):
     """
     Returns students (Activo + Pendente de Turma) enriched with their active SGA

@@ -99,6 +99,10 @@ frappe.ui.form.on("Class Group", {
         }
 
         _render_capacity_badge(frm);
+
+        if (!frm.is_new()) {
+            _render_health(frm);
+        }
     },
 });
 
@@ -151,6 +155,78 @@ function _render_capacity_badge(frm) {
             count / max >= 0.9 ? "orange" : "green"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Health badge
+// ---------------------------------------------------------------------------
+
+async function _render_health(frm) {
+    const $wrap = frm.fields_dict.health_html.$wrapper;
+    $wrap.html("");
+
+    const r = await frappe.call({
+        method: "escola.escola.doctype.class_group.class_group.get_class_group_health",
+        args: { class_group: frm.doc.name },
+    });
+
+    const items = r.message || [];
+    if (!items.length) return;
+
+    const COLOR = {
+        ok:   { bg: "#dcfce7", text: "#166534", icon: "✔" },
+        warn: { bg: "#fef9c3", text: "#854d0e", icon: "⚠" },
+        err:  { bg: "#fee2e2", text: "#991b1b", icon: "✘" },
+    };
+
+    const chips = items.map(item => {
+        const c = COLOR[item.status] || COLOR.warn;
+        let inner = `${c.icon} <b>${frappe.utils.escape_html(item.label)}</b>`;
+        if (item.detail) inner += `: ${frappe.utils.escape_html(item.detail)}`;
+
+        let content;
+        if (item.route) {
+            content = `<a href="${item.route}" target="_blank"
+                          style="color:${c.text};text-decoration:none">${inner}</a>`;
+        } else {
+            content = inner;
+        }
+
+        let chip = `<span style="
+            display:inline-flex;align-items:center;gap:4px;
+            background:${c.bg};color:${c.text};
+            border-radius:20px;padding:3px 11px;font-size:12px;
+            font-weight:500;white-space:nowrap;">
+            ${content}
+        </span>`;
+
+        if (item.action) {
+            const act = item.action;
+            const link = act.doctype
+                ? `javascript:void(0)" data-doctype="${encodeURIComponent(act.doctype)}" data-values='${JSON.stringify(act.values || {})}'`
+                : `${act.route}"`;
+            chip += ` <a href="${link}"
+                style="font-size:11px;color:${c.text};opacity:.75;
+                       text-decoration:underline;font-weight:600;">
+                ${frappe.utils.escape_html(act.label)} →
+            </a>`;
+        }
+
+        return chip;
+    }).join("");
+
+    $wrap.html(`
+        <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 10px;">
+            ${chips}
+        </div>`);
+
+    // Handle "Criar" action links with new_doc
+    $wrap.find("[data-doctype]").on("click", function () {
+        const doctype = decodeURIComponent($(this).data("doctype"));
+        const values  = $(this).data("values") || {};
+        frappe.route_options = values;
+        frappe.new_doc(doctype);
+    });
 }
 
 // ---------------------------------------------------------------------------
