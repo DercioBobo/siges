@@ -33,6 +33,7 @@ class RenovacaoDeMatricula(Document):
             )
 
     def on_cancel(self):
+        self._revert_sga()
         if self.sales_invoice:
             inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
             if inv_status == 0:
@@ -47,6 +48,36 @@ class RenovacaoDeMatricula(Document):
                     title=_("Factura não cancelada"),
                     indicator="orange",
                 )
+
+    def _revert_sga(self):
+        """Close the active SGA in the target year and reset student status."""
+        if not self.student or not self.target_academic_year:
+            return
+
+        sga_name = frappe.db.get_value(
+            "Student Group Assignment",
+            {"student": self.student, "academic_year": self.target_academic_year, "status": "Activa"},
+            "name",
+        )
+        if sga_name:
+            frappe.db.set_value("Student Group Assignment", sga_name, "status", "Encerrada")
+            from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+                _roster_sync, _sync_student_current_turma,
+            )
+            sga = frappe.get_doc("Student Group Assignment", sga_name)
+            _roster_sync(sga)
+            _sync_student_current_turma(sga)
+            frappe.msgprint(
+                _("A alocação do aluno na turma do ano <b>{0}</b> foi encerrada.").format(
+                    self.target_academic_year
+                ),
+                indicator="orange",
+            )
+
+        frappe.db.set_value(
+            "Student", self.student, "current_status", "Pendente de Renovação",
+            update_modified=False,
+        )
 
     # ------------------------------------------------------------------
 
