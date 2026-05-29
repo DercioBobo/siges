@@ -163,6 +163,21 @@ def get_student_assessment_detail(doc_name, student):
 
 
 class AnnualAssessment(Document):
+    def before_delete(self):
+        promotion = frappe.db.get_value(
+            "Student Promotion",
+            {"class_group": self.class_group, "academic_year": self.academic_year},
+            "name",
+        )
+        if promotion:
+            frappe.throw(
+                _("Não é possível eliminar esta Avaliação Anual porque a Promoção de Alunos "
+                  "<a href='/app/student-promotion/{0}'><b>{0}</b></a> já foi criada com base nela.").format(
+                    promotion
+                ),
+                title=_("Avaliação referenciada"),
+            )
+
     def validate(self):
         self._validate_class_group_compatibility()
         self._validate_uniqueness()
