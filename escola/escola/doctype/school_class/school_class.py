@@ -26,6 +26,15 @@ def get_turmas_summary(school_class):
 
 
 class SchoolClass(Document):
+    def before_delete(self):
+        linked = frappe.db.count("Class Group", {"school_class": self.name})
+        if linked:
+            frappe.throw(
+                frappe._("Não é possível eliminar a Classe <b>{0}</b> porque tem <b>{1}</b> Turma(s) associada(s). "
+                         "Elimine as turmas primeiro.").format(self.name, linked),
+                title=frappe._("Classe com Turmas"),
+            )
+
     def validate(self):
         self._sort_subjects_by_order()
         self._enforce_teaching_model()

@@ -17,6 +17,50 @@ class Teacher(Document):
 
     def validate(self):
         self._validate_email()
+        self._warn_on_deactivation()
+
+    def _warn_on_deactivation(self):
+        if self.is_active:
+            return
+        before = self.get_doc_before_save()
+        if not before or not before.is_active:
+            return
+
+        messages = []
+
+        director_turmas = frappe.db.get_all(
+            "Class Group",
+            filters={"class_teacher": self.name, "is_active": 1},
+            pluck="name",
+        )
+        if director_turmas:
+            links = ", ".join(
+                f"<a href='/app/class-group/{t}'>{t}</a>" for t in director_turmas
+            )
+            messages.append(_("Director de Turma em: {0}").format(links))
+
+        subject_groups = frappe.db.get_all(
+            "Class Group Subject Line",
+            filters={"teacher": self.name},
+            fields=["parent"],
+            distinct=True,
+        )
+        if subject_groups:
+            links = ", ".join(
+                f"<a href='/app/class-group/{r.parent}'>{r.parent}</a>"
+                for r in subject_groups
+            )
+            messages.append(_("Professor de disciplina em: {0}").format(links))
+
+        if messages:
+            frappe.msgprint(
+                _("Atenção: o professor continua atribuído após a desactivação:<br><ul>{0}</ul>"
+                  "Actualize as turmas afectadas.").format(
+                    "".join(f"<li>{m}</li>" for m in messages)
+                ),
+                title=_("Professor com atribuições activas"),
+                indicator="orange",
+            )
 
     def _sync_full_name(self):
         parts = filter(None, [self.first_name, self.last_name])
