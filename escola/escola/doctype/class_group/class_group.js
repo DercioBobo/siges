@@ -385,7 +385,7 @@ function manage_students_dialog(frm) {
 
     async function _do_search(q) {
         d.$body.find("#add-results").html(`<div class="empty">${__("A carregar…")}</div>`);
-        const filters = [["current_status", "=", "Activo"]];
+        const filters = [["current_status", "in", ["Activo", "Pendente de Turma"]]];
         if (q) filters.push(["full_name", "like", `%${q}%`]);
         const r = await frappe.call({
             method: "frappe.client.get_list",

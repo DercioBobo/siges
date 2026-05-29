@@ -157,7 +157,9 @@
    "fieldname": "current_academic_year",
    "fieldtype": "Link",
    "label": "Ano Lectivo Actual",
-   "options": "Academic Year"
+   "options": "Academic Year",
+   "read_only": 1,
+   "description": "Gerido pelo processo «Abertura de Ano Lectivo». Não editar directamente."
   },
   {
    "fieldname": "column_break_academic",

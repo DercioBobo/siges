@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "field_order": [
+  "naming_series",
+  "section_break_anos",
+  "source_academic_year",
+  "column_break_1",
+  "target_academic_year",
+  "opening_date",
+  "section_break_status",
+  "status",
+  "section_break_preflight",
+  "preflight_html",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Série",
+   "options": "AAL-.YY.-.##",
+   "default": "AAL-.YY.-.##",
+   "hidden": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_break_anos",
+   "fieldtype": "Section Break",
+   "label": "Anos Lectivos"
+  },
+  {
+   "fieldname": "source_academic_year",
+   "fieldtype": "Link",
+   "label": "Ano Lectivo Actual",
+   "options": "Academic Year",
+   "reqd": 1,
+   "read_only_depends_on": "eval:!doc.__islocal",
+   "description": "Ano lectivo que está a ser encerrado. Preenchido automaticamente das Configurações da Escola."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "target_academic_year",
+   "fieldtype": "Link",
+   "label": "Novo Ano Lectivo",
+   "options": "Academic Year",
+   "reqd": 1,
+   "read_only_depends_on": "eval:!doc.__islocal",
+   "in_list_view": 1,
+   "description": "Ano lectivo que será activado após a submissão."
+  },
+  {
+   "fieldname": "opening_date",
+   "fieldtype": "Date",
+   "label": "Data de Abertura",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break",
+   "label": "Estado"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "Rascunho\nConcluída",
+   "default": "Rascunho",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_preflight",
+   "fieldtype": "Section Break",
+   "label": "Verificação Prévia"
+  },
+  {
+   "fieldname": "preflight_html",
+   "fieldtype": "HTML",
+   "label": "Resultados da Verificação"
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Observações"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Observações"
+  }
+ ],
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "Abertura de Ano Lectivo",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Diretor Escolar",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Secretaria Escolar"
+  }
+ ],
+ "sort_field": "opening_date",
+ "sort_order": "DESC",
+ "title_field": "target_academic_year"
+}

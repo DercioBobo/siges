@@ -81,6 +81,30 @@ def get_subjects_for_class_group(class_group):
     return get_subjects_for_school_class(school_class)
 
 
+def _check_enrollment_gate(student, academic_year):
+    """Block adding a student to a turma unless a submitted enrollment document exists for that year."""
+    has_inscricao = frappe.db.exists(
+        "Inscricao", {"student": student, "academic_year": academic_year, "docstatus": 1}
+    )
+    if has_inscricao:
+        return
+    has_renovacao = frappe.db.exists(
+        "Renovacao De Matricula",
+        {"student": student, "target_academic_year": academic_year, "docstatus": 1},
+    )
+    if has_renovacao:
+        return
+    student_name = frappe.db.get_value("Student", student, "full_name") or student
+    frappe.throw(
+        _("O aluno <b>{0}</b> não tem Inscrição nem Renovação de Matrícula submetida "
+          "para o Ano Lectivo <b>{1}</b>. "
+          "Submeta o documento adequado antes de atribuir uma turma.").format(
+            student_name, academic_year
+        ),
+        title=_("Matrícula em falta"),
+    )
+
+
 @frappe.whitelist()
 def add_students_to_group(class_group_name, students):
     """
@@ -107,6 +131,7 @@ def add_students_to_group(class_group_name, students):
             skipped.append(student)
             continue
         try:
+            _check_enrollment_gate(student, cg_data.academic_year)
             frappe.get_doc({
                 "doctype": "Student Group Assignment",
                 "student": student,
