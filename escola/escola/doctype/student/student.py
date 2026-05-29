@@ -234,6 +234,28 @@ def update_all_student_ages():
 
 
 class Student(Document):
+    def before_delete(self):
+        active = frappe.db.count(
+            "Student Group Assignment",
+            {"student": self.name, "status": "Activa"},
+        )
+        if active:
+            frappe.throw(
+                _("Não é possível eliminar o aluno <b>{0}</b> porque tem <b>{1}</b> alocação(ões) activa(s). "
+                  "Encerre todas as alocações antes de eliminar.").format(self.name, active),
+                title=_("Aluno com alocações activas"),
+            )
+        invoices = frappe.db.count(
+            "Sales Invoice",
+            {"escola_student": self.name, "docstatus": 1},
+        )
+        if invoices:
+            frappe.throw(
+                _("Não é possível eliminar o aluno <b>{0}</b> porque tem <b>{1}</b> factura(s) submetida(s). "
+                  "Cancele as facturas antes de eliminar.").format(self.name, invoices),
+                title=_("Aluno com facturas"),
+            )
+
     def before_insert(self):
         self._sync_full_name()
         self._generate_student_code()
