@@ -102,6 +102,32 @@ frappe.ui.form.on("Class Group", {
     },
 });
 
+frappe.ui.form.on("Class Group", {
+    async class_teacher(frm) {
+        if (!frm.doc.class_teacher || !frm.doc.academic_year) return;
+
+        const others = await frappe.db.get_list("Class Group", {
+            filters: [
+                ["class_teacher", "=", frm.doc.class_teacher],
+                ["academic_year", "=", frm.doc.academic_year],
+                ["name",          "!=", frm.doc.name || ""],
+            ],
+            fields: ["name", "group_name"],
+            limit: 1,
+        });
+
+        if (!others.length) return;
+
+        const other = others[0];
+        frappe.confirm(
+            __("Este professor já é Director de Turma de <a href='/app/class-group/{0}' target='_blank'><b>{1}</b></a> no mesmo Ano Lectivo. Quer mesmo continuar?",
+                [other.name, frappe.utils.escape_html(other.group_name)]),
+            () => { /* confirmed — keep value */ },
+            () => frm.set_value("class_teacher", null)
+        );
+    },
+});
+
 frappe.ui.form.on("Class Group Subject Line", {
     subject(frm, cdt, cdn) {
         frappe.model.set_value(cdt, cdn, "teacher", null);

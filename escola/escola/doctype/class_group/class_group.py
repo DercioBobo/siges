@@ -8,11 +8,24 @@ class ClassGroup(Document):
         if not self.is_new():
             self._validate_structural_fields()
         self._validate_class_teacher()
+        self._validate_no_duplicate_subjects()
         if self.max_students and self.max_students < 0:
             frappe.throw(
                 _("A Capacidade Máxima não pode ser negativa. Deixe em branco ou a zero para turma ilimitada."),
                 title=_("Capacidade inválida"),
             )
+
+    def _validate_no_duplicate_subjects(self):
+        seen = set()
+        for row in self.subject_teachers or []:
+            if not row.subject:
+                continue
+            if row.subject in seen:
+                frappe.throw(
+                    _("A disciplina <b>{0}</b> aparece mais do que uma vez na tabela de Disciplinas e Professores.").format(row.subject),
+                    title=_("Disciplina duplicada"),
+                )
+            seen.add(row.subject)
 
     def _validate_structural_fields(self):
         before = self.get_doc_before_save()
@@ -44,6 +57,27 @@ class ClassGroup(Document):
                 _("O professor <b>{0}</b> não está activo e não pode ser designado "
                   "como Director de Turma.").format(self.class_teacher),
                 title=_("Professor inactivo"),
+            )
+        # Warn (not block) if already Director de Turma in another Class Group this year
+        if not self.academic_year:
+            return
+        other = frappe.db.get_value(
+            "Class Group",
+            {
+                "class_teacher": self.class_teacher,
+                "academic_year": self.academic_year,
+                "name": ("!=", self.name or ""),
+            },
+            ["name", "group_name"],
+            as_dict=True,
+        )
+        if other:
+            frappe.msgprint(
+                _("Atenção: o professor já é Director de Turma de "
+                  "<a href='/app/class-group/{0}'><b>{1}</b></a> "
+                  "no mesmo Ano Lectivo.").format(other.name, other.group_name),
+                title=_("Director de Turma em múltiplas turmas"),
+                indicator="orange",
             )
 
 
