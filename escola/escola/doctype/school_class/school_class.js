@@ -20,8 +20,9 @@ frappe.ui.form.on("School Class", {
 
 function _apply_education_level(frm) {
 	const map = {
-		"Primário": "Professor Único",
-		"Secundário": "Professores por Disciplina",
+		"Pré-Primário": "Professor Único",
+		"Primário":     "Professor Único",
+		"Secundário":   "Professores por Disciplina",
 	};
 	const model = map[frm.doc.education_level] || null;
 	if (model && frm.doc.teaching_model !== model) {

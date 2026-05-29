@@ -37,7 +37,7 @@ class SchoolClass(Document):
 
     def _enforce_teaching_model(self):
         """teaching_model is strictly determined by education_level — cannot be overridden."""
-        if self.education_level == "Primário":
+        if self.education_level in ("Pré-Primário", "Primário"):
             self.teaching_model = "Professor Único"
         elif self.education_level == "Secundário":
             self.teaching_model = "Professores por Disciplina"

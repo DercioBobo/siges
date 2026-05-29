@@ -223,6 +223,7 @@ function _inject_styles() {
 .escmgr .b-enrolled { background: #fef3c7; color: #92400e; }
 .escmgr .b-add      { background: #ede9fe; color: #6d28d9; }
 .escmgr .b-picked   { background: #dcfce7; color: #166534; }
+.escmgr .b-blocked  { background: #f3f4f6; color: #6b7280; }
 
 /* ── chips ──────────────────────────────────────── */
 .escmgr .chips { display: flex; flex-wrap: wrap; gap: 7px; min-height: 32px; }
@@ -411,16 +412,9 @@ function manage_students_dialog(frm) {
 
     async function _do_search(q) {
         d.$body.find("#add-results").html(`<div class="empty">${__("A carregar…")}</div>`);
-        const filters = [["current_status", "in", ["Activo", "Pendente de Turma"]]];
-        if (q) filters.push(["full_name", "like", `%${q}%`]);
         const r = await frappe.call({
-            method: "frappe.client.get_list",
-            args: {
-                doctype: "Student",
-                filters,
-                fields: ["name", "full_name"],
-                limit_page_length: 50,
-            },
+            method: "escola.escola.doctype.class_group.class_group.search_students_for_group",
+            args: { class_group: frm.doc.name, query: q },
         });
         _render_add_results(r.message || []);
     }
@@ -433,15 +427,34 @@ function manage_students_dialog(frm) {
         }
         students.forEach(s => {
             const isEnrolled = enrolled.has(s.name);
-            const isPicked = selected.has(s.name);
-            const badge = isEnrolled
-                ? `<span class="sbadge b-enrolled">${__("Já na turma")}</span>`
-                : isPicked
-                    ? `<span class="sbadge b-picked">✓ ${__("Seleccionado")}</span>`
-                    : `<span class="sbadge b-add">+ ${__("Adicionar")}</span>`;
-            const extra = isEnrolled ? "disabled" : isPicked ? "picked" : "";
+            const isBlocked  = !isEnrolled && !!s.current_turma;
+            const isPicked   = selected.has(s.name);
+
+            let badge, extra;
+            if (isEnrolled) {
+                badge = `<span class="sbadge b-enrolled">${__("Já nesta turma")}</span>`;
+                extra = "disabled";
+            } else if (isBlocked) {
+                const link = `/app/class-group/${encodeURIComponent(s.current_turma)}`;
+                badge = `<span class="sbadge b-blocked">
+                    <a href="${link}" target="_blank" style="color:inherit;text-decoration:underline"
+                       onclick="event.stopPropagation()">
+                        ${frappe.utils.escape_html(s.current_turma_name || s.current_turma)}
+                    </a>
+                </span>`;
+                extra = "disabled";
+            } else if (isPicked) {
+                badge = `<span class="sbadge b-picked">✓ ${__("Seleccionado")}</span>`;
+                extra = "picked";
+            } else {
+                badge = `<span class="sbadge b-add">+ ${__("Adicionar")}</span>`;
+                extra = "";
+            }
+
             const $card = $(_scard_html(s, badge, extra));
-            if (!isEnrolled) $card.on("click", () => _toggle(s.name, s.full_name || s.name));
+            if (!isEnrolled && !isBlocked) {
+                $card.on("click", () => _toggle(s.name, s.full_name || s.name));
+            }
             $box.append($card);
         });
     }
@@ -525,7 +538,7 @@ function manage_students_dialog(frm) {
             return;
         }
         list.forEach(s => {
-            const $card = $(_scard_html(s, `<button class="rm-btn">${__("Remover")}</button>`));
+            const $card = $(_scard_html(s, `<button class="rm-btn">${__("Gerir")}</button>`));
             $card.find(".rm-btn").on("click", (e) => {
                 e.stopPropagation();
                 _confirm_remove(s.name, s.full_name || s.name);
@@ -535,16 +548,44 @@ function manage_students_dialog(frm) {
     }
 
     function _confirm_remove(id, name) {
+        const dlg = new frappe.ui.Dialog({
+            title: __("Gerir Aluno — {0}", [frappe.utils.escape_html(name)]),
+            fields: [{
+                fieldtype: "HTML",
+                options: `<div style="padding:2px 0 14px;color:var(--text-muted);font-size:13px;">
+                    <b>${__("Transferir")}</b>: ${__("use Troca de Turma para mover o aluno com registo.")}
+                    <br><b>${__("Encerrar")}</b>: ${__("remove da turma sem mover — use apenas em caso de desistência ou erro.")}
+                </div>`,
+            }],
+            primary_action_label: __("Troca de Turma →"),
+            primary_action() {
+                dlg.hide();
+                frappe.route_options = {
+                    student: id,
+                    from_class_group: frm.doc.name,
+                    academic_year: frm.doc.academic_year,
+                };
+                frappe.new_doc("Troca De Turma");
+            },
+            secondary_action_label: __("Encerrar Matrícula"),
+            secondary_action() {
+                dlg.hide();
+                _do_remove(id, name);
+            },
+        });
+        dlg.show();
+    }
+
+    function _do_remove(id, name) {
         frappe.confirm(
-            __("Remover <b>{0}</b> desta turma?", [name]),
+            __("Encerrar a matrícula de <b>{0}</b> nesta turma? O aluno ficará sem turma atribuída.", [name]),
             () => {
                 frappe.call({
                     method: "escola.escola.doctype.class_group.class_group.remove_student_from_group",
                     args: { class_group_name: frm.doc.name, student: id },
                     callback(r) {
                         if (r.exc) return;
-                        frappe.show_alert({ message: __("Aluno removido da turma."), indicator: "green" });
-                        // Remove from local roster and re-render
+                        frappe.show_alert({ message: __("Matrícula encerrada."), indicator: "orange" });
                         const idx = _roster.findIndex(s => s.name === id);
                         if (idx !== -1) _roster.splice(idx, 1);
                         enrolled.delete(id);

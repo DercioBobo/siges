@@ -115,6 +115,57 @@ def get_subjects_for_class_group(class_group):
     return get_subjects_for_school_class(school_class)
 
 
+@frappe.whitelist()
+def search_students_for_group(class_group, query=""):
+    """
+    Returns students (Activo + Pendente de Turma) enriched with their active SGA
+    for this class_group's academic year, so the UI can show who is already in another turma.
+    """
+    cg = frappe.db.get_value("Class Group", class_group, "academic_year")
+    if not cg:
+        return []
+
+    filters = [["current_status", "in", ["Activo", "Pendente de Turma"]]]
+    if query:
+        filters.append(["full_name", "like", f"%{query}%"])
+
+    students = frappe.db.get_all(
+        "Student",
+        filters=filters,
+        fields=["name", "full_name", "current_status"],
+        limit=60,
+        order_by="full_name asc",
+    )
+    if not students:
+        return []
+
+    student_names = [s.name for s in students]
+
+    sgas = frappe.db.get_all(
+        "Student Group Assignment",
+        filters={"student": ("in", student_names), "academic_year": cg, "status": "Activa"},
+        fields=["student", "class_group"],
+    )
+    sga_map = {s.student: s.class_group for s in sgas}
+
+    cg_needed = set(sga_map.values())
+    cg_labels = {}
+    if cg_needed:
+        for r in frappe.db.get_all("Class Group", filters={"name": ("in", list(cg_needed))}, fields=["name", "group_name"]):
+            cg_labels[r.name] = r.group_name
+
+    return [
+        {
+            "name":               s.name,
+            "full_name":          s.full_name,
+            "current_status":     s.current_status,
+            "current_turma":      sga_map.get(s.name),
+            "current_turma_name": cg_labels.get(sga_map.get(s.name)),
+        }
+        for s in students
+    ]
+
+
 def _check_enrollment_gate(student, academic_year):
     """Block adding a student to a turma unless a submitted enrollment document exists for that year."""
     has_inscricao = frappe.db.exists(
