@@ -21,10 +21,28 @@ class ClassGroup(Document):
             self._validate_structural_fields()
         self._validate_class_teacher()
         self._validate_no_duplicate_subjects()
+        self._validate_deactivation()
         if self.max_students and self.max_students < 0:
             frappe.throw(
                 _("A Capacidade Máxima não pode ser negativa. Deixe em branco ou a zero para turma ilimitada."),
                 title=_("Capacidade inválida"),
+            )
+
+    def _validate_deactivation(self):
+        if self.is_active:
+            return
+        before = self.get_doc_before_save()
+        if not before or not before.is_active:
+            return
+        active = frappe.db.count(
+            "Student Group Assignment",
+            {"class_group": self.name, "status": "Activa"},
+        )
+        if active:
+            frappe.throw(
+                _("Não é possível desactivar a Turma <b>{0}</b> enquanto tiver <b>{1}</b> aluno(s) activo(s). "
+                  "Encerre ou transfira todas as alocações primeiro.").format(self.name, active),
+                title=_("Turma com alunos activos"),
             )
 
     def _validate_no_duplicate_subjects(self):
