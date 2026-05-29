@@ -4,6 +4,18 @@ from frappe.model.document import Document
 
 
 class ClassGroup(Document):
+    def before_delete(self):
+        active = frappe.db.count(
+            "Student Group Assignment",
+            {"class_group": self.name, "status": "Activa"},
+        )
+        if active:
+            frappe.throw(
+                _("Não é possível eliminar a Turma <b>{0}</b> porque tem <b>{1}</b> aluno(s) activo(s). "
+                  "Encerre todas as alocações antes de eliminar.").format(self.name, active),
+                title=_("Turma com alunos"),
+            )
+
     def validate(self):
         if not self.is_new():
             self._validate_structural_fields()
