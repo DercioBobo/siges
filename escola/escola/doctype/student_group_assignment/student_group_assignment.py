@@ -5,9 +5,25 @@ from frappe.model.document import Document
 
 class StudentGroupAssignment(Document):
     def validate(self):
+        if not self.is_new():
+            self._validate_immutable_fields()
         self._validate_class_group_belongs()
         self._validate_duplicate_active_assignment()
         self._validate_class_group_capacity()
+
+    def _validate_immutable_fields(self):
+        before = self.get_doc_before_save()
+        if not before:
+            return
+        locked = {"student": "Aluno", "class_group": "Turma",
+                  "academic_year": "Ano Lectivo", "school_class": "Classe"}
+        for field, label in locked.items():
+            if getattr(self, field) != getattr(before, field):
+                frappe.throw(
+                    _("O campo <b>{0}</b> não pode ser alterado após a criação da alocação. "
+                      "Use o processo de Troca de Turma se necessário.").format(label),
+                    title=_("Campo bloqueado"),
+                )
 
     def after_insert(self):
         _roster_sync(self)

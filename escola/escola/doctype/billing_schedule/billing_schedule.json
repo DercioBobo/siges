@@ -63,7 +63,8 @@
    "in_list_view": 1,
    "label": "Classe",
    "options": "School Class",
-   "reqd": 1
+   "reqd": 1,
+   "read_only_depends_on": "eval:doc.last_billed_date"
   },
   {
    "fieldname": "billing_mode",
@@ -71,7 +72,8 @@
    "in_list_view": 1,
    "label": "Modo de Cobrança",
    "options": "\nMensal\nTrimestral\nAnual",
-   "reqd": 1
+   "reqd": 1,
+   "read_only_depends_on": "eval:doc.last_billed_date"
   },
   {
    "fieldname": "cb_config",
@@ -82,6 +84,7 @@
    "fieldtype": "Int",
    "label": "Mês de Referência",
    "depends_on": "eval:['Trimestral','Anual'].includes(doc.billing_mode)",
+   "read_only_depends_on": "eval:doc.last_billed_date",
    "description": "Trimestral: 1=Jan/Abr/Jul/Out · 2=Fev/Mai/Ago/Nov · 3=Mar/Jun/Set/Dez. Anual: número do mês (1–12)."
   },
   {

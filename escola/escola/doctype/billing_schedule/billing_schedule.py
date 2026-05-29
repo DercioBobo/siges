@@ -8,6 +8,8 @@ from frappe.model.document import Document
 
 class BillingSchedule(Document):
     def validate(self):
+        if not self.is_new() and self.last_billed_date:
+            self._validate_immutable_fields()
         if self.billing_mode in ("Trimestral", "Anual") and not self.billing_month:
             frappe.throw(_("Defina o Mês de Referência para o modo {0}.").format(self.billing_mode))
         if self.billing_mode == "Trimestral" and not (1 <= int(self.billing_month or 0) <= 3):
@@ -25,6 +27,23 @@ class BillingSchedule(Document):
                     _("Já existe um Agendamento de Cobrança activo para a Classe <b>{0}</b>: "
                       "<b>{1}</b>.").format(self.school_class, existing),
                     title=_("Classe duplicada"),
+                )
+
+    def _validate_immutable_fields(self):
+        before = self.get_doc_before_save()
+        if not before:
+            return
+        locked = {
+            "school_class": "Classe",
+            "billing_mode": "Modo de Cobrança",
+            "billing_month": "Mês de Referência",
+        }
+        for field, label in locked.items():
+            if getattr(self, field) != getattr(before, field):
+                frappe.throw(
+                    _("O campo <b>{0}</b> não pode ser alterado depois de o agendamento "
+                      "já ter emitido facturas. Crie um novo agendamento se necessário.").format(label),
+                    title=_("Campo bloqueado"),
                 )
 
 

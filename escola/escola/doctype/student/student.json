@@ -162,6 +162,7 @@
    "label": "Estado Actual",
    "options": "\nPendente de Turma\nActivo\nPendente de Renovação\nTransferido\nDesistente\nConcluiu",
    "default": "Activo",
+   "read_only": 1,
    "in_list_view": 1
   },
   {

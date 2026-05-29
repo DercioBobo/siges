@@ -15,6 +15,11 @@ frappe.ui.form.on("Class Group", {
     },
 
     refresh(frm) {
+        if (!frm.is_new() && frm.doc.student_count > 0) {
+            frm.set_df_property("school_class", "read_only", 1);
+            frm.set_df_property("academic_year", "read_only", 1);
+        }
+
         frm.set_query("class_teacher", () => ({ filters: { is_active: 1 } }));
         frm.set_query("teacher", "subject_teachers", (doc, cdt, cdn) => {
             const row = frappe.get_doc(cdt, cdn);

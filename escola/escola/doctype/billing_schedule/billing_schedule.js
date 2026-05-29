@@ -7,6 +7,13 @@ frappe.ui.form.on("Billing Schedule", {
 	},
 
 	refresh(frm) {
+		if (!frm.is_new() && frm.doc.last_billed_date) {
+			frm.dashboard.set_headline_alert(
+				__("Classe, Modo de Cobrança e Mês de Referência estão bloqueados — este agendamento já emitiu facturas."),
+				"orange"
+			);
+		}
+
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Executar Agora"), () => {
 				frappe.confirm(

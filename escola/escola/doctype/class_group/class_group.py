@@ -5,11 +5,34 @@ from frappe.model.document import Document
 
 class ClassGroup(Document):
     def validate(self):
+        if not self.is_new():
+            self._validate_structural_fields()
         self._validate_class_teacher()
         if self.max_students and self.max_students < 0:
             frappe.throw(
                 _("A Capacidade Máxima não pode ser negativa. Deixe em branco ou a zero para turma ilimitada."),
                 title=_("Capacidade inválida"),
+            )
+
+    def _validate_structural_fields(self):
+        before = self.get_doc_before_save()
+        if not before:
+            return
+        changed = (
+            before.school_class != self.school_class
+            or before.academic_year != self.academic_year
+        )
+        if not changed:
+            return
+        has_assignments = frappe.db.exists(
+            "Student Group Assignment", {"class_group": self.name}
+        )
+        if has_assignments:
+            frappe.throw(
+                _("Não é possível alterar a <b>Classe</b> ou o <b>Ano Lectivo</b> "
+                  "de uma turma que já tem alunos alocados. "
+                  "Encerre todas as alocações antes de fazer esta alteração."),
+                title=_("Turma com alocações"),
             )
 
     def _validate_class_teacher(self):
@@ -116,10 +139,15 @@ def remove_student_from_group(class_group_name, student):
             _("Não foi encontrada uma alocação activa para este aluno nesta turma."),
             title=_("Alocação não encontrada"),
         )
-    sga = frappe.get_doc("Student Group Assignment", sga_name)
-    sga.status = "Encerrada"
-    sga.save()
+    frappe.db.set_value("Student Group Assignment", sga_name, "status", "Encerrada")
     frappe.db.commit()
+    # Trigger roster sync manually since we bypassed save()
+    from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+        _roster_sync, _sync_student_current_turma,
+    )
+    sga = frappe.get_doc("Student Group Assignment", sga_name)
+    _roster_sync(sga)
+    _sync_student_current_turma(sga)
     return sga_name
 
 
