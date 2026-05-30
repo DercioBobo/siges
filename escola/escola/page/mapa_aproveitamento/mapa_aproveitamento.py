@@ -160,7 +160,7 @@ def get_grade_book(class_group, academic_term):
                 )
             }
             existing_ges = {
-                ge.subject: ge.name
+                ge.subject: {"name": ge.name, "docstatus": ge.docstatus}
                 for ge in frappe.get_all(
                     "Grade Entry",
                     filters={
@@ -168,13 +168,15 @@ def get_grade_book(class_group, academic_term):
                         "academic_term": academic_term,
                         "docstatus": ("!=", 2),
                     },
-                    fields=["name", "subject"],
+                    fields=["name", "subject", "docstatus"],
                 )
             }
             for sn in subj_names:
                 if sn not in subj_infos:
                     continue
-                ge_name = existing_ges.get(sn)
+                ge_info      = existing_ges.get(sn) or {}
+                ge_name      = ge_info.get("name")
+                ge_docstatus = ge_info.get("docstatus", 0)
                 if ge_name:
                     db_rows = frappe.get_all(
                         "Grade Entry Row",
@@ -195,11 +197,12 @@ def get_grade_book(class_group, academic_term):
                     rows = [_empty_row(sid) for sid in student_ids]
 
                 subjects_out.append({
-                    "subject": sn,
+                    "subject":      sn,
                     "subject_name": subj_infos[sn],
-                    "grade_entry": ge_name,
-                    "status": _subject_status(rows) if ge_name else "Vazio",
-                    "rows": rows,
+                    "grade_entry":  ge_name,
+                    "ge_docstatus": ge_docstatus,
+                    "status":       _subject_status(rows) if ge_name else "Vazio",
+                    "rows":         rows,
                 })
 
     # Term Attendance — fetched once for the whole class/term
@@ -279,6 +282,12 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
     )
 
     if ge_name:
+        if frappe.db.get_value("Grade Entry", ge_name, "docstatus") == 1:
+            frappe.throw(
+                _("A pauta já foi finalizada e não pode ser editada. "
+                  "O Director Escolar pode cancelar a pauta para permitir alterações."),
+                title=_("Pauta finalizada"),
+            )
         doc = frappe.get_doc("Grade Entry", ge_name)
         existing = {r.student: r for r in doc.grade_rows}
         for r in rows:
@@ -324,11 +333,40 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
     status_rows = [sr for sr in saved_rows if sr.student in current_student_set]
 
     return {
-        "saved": True,
-        "grade_entry": doc.name,
-        "status": _subject_status(status_rows),
+        "saved":        True,
+        "grade_entry":  doc.name,
+        "ge_docstatus": doc.docstatus,
+        "status":       _subject_status(status_rows),
         "rows": saved_rows,
     }
+
+
+@frappe.whitelist()
+def get_finalizar_warnings(grade_entry):
+    """Return students missing any score field (excluding is_absent rows)."""
+    rows = frappe.get_all(
+        "Grade Entry Row",
+        filters={"parent": grade_entry},
+        fields=["student", "student_name", "acsp_1", "acsp_2", "acse_1", "acse_2", "acp", "is_absent"],
+        order_by="idx asc",
+    )
+    score_fields = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp"]
+    missing = [
+        r.student_name or r.student
+        for r in rows
+        if not r.is_absent and any(r.get(f) is None for f in score_fields)
+    ]
+    return missing
+
+
+@frappe.whitelist()
+def submit_grade_entry(grade_entry):
+    """Submit a Grade Entry, locking it from further edits via the Mapa."""
+    doc = frappe.get_doc("Grade Entry", grade_entry)
+    if doc.docstatus != 0:
+        frappe.throw(_("Esta pauta não está em estado de rascunho."))
+    doc.submit()
+    return {"docstatus": doc.docstatus}
 
 
 @frappe.whitelist()

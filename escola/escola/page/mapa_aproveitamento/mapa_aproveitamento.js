@@ -361,12 +361,29 @@ class MapaAproveitamento {
         const subj = d.subjects[idx];
         if (!subj) return;
 
+        const locked = subj.ge_docstatus === 1;
+
         const ge_link = subj.grade_entry
             ? `<a href="/app/grade-entry/${encodeURIComponent(subj.grade_entry)}" target="_blank"
                   style="font-size:11px;color:#6366F1;margin-left:10px;">
                    <i class="fa fa-external-link"></i> ${subj.grade_entry}
                </a>`
             : "";
+
+        const actions = locked
+            ? `<span style="background:#dcfce7;color:#166534;border-radius:20px;
+                            padding:4px 14px;font-size:12px;font-weight:700;">
+                   <i class="fa fa-lock"></i>&nbsp;${__("Finalizada")}
+               </span>`
+            : `<div style="display:flex;gap:8px;">
+                   <button class="btn btn-default btn-sm ma-save-btn" data-idx="${idx}">
+                       <i class="fa fa-floppy-o"></i>&nbsp;${__("Guardar")}
+                   </button>
+                   <button class="btn btn-primary btn-sm ma-finalizar-btn" data-idx="${idx}"
+                           ${subj.grade_entry ? "" : "disabled title='Guarde primeiro'"}>
+                       <i class="fa fa-check-circle"></i>&nbsp;${__("Finalizar")}
+                   </button>
+               </div>`;
 
         const toolbar = `
             <div class="ma-toolbar" style="display:flex;align-items:center;
@@ -381,14 +398,19 @@ class MapaAproveitamento {
                     </span>
                     ${ge_link}
                 </div>
-                <button class="btn btn-primary btn-sm ma-save-btn" data-idx="${idx}">
-                    <i class="fa fa-check"></i>&nbsp;Guardar Notas
-                </button>
+                ${actions}
             </div>
         `;
 
         this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students, d.attendance));
-        this.$grid_area.find(".ma-save-btn").on("click", () => this._save(idx));
+
+        if (locked) {
+            this.$grid_area.find("input").prop("disabled", true).css("background", "var(--control-bg)");
+        } else {
+            this.$grid_area.find(".ma-save-btn").on("click", () => this._save(idx));
+            this.$grid_area.find(".ma-finalizar-btn").on("click", () => this._finalizar(idx));
+        }
+
         this._setup_grid_events(idx);
         this._update_footer(idx);
     }
@@ -588,8 +610,11 @@ class MapaAproveitamento {
                     return;
                 }
 
-                subj.grade_entry = resp.grade_entry;
-                subj.status      = resp.status;
+                subj.grade_entry  = resp.grade_entry;
+                subj.ge_docstatus = resp.ge_docstatus ?? 0;
+                subj.status       = resp.status;
+                // Enable Finalizar now that a grade_entry exists
+                this.$grid_area.find(".ma-finalizar-btn").prop("disabled", false).removeAttr("title");
 
                 const by_student = {};
                 (resp.rows || []).forEach(sr => { by_student[sr.student] = sr; });
@@ -619,6 +644,52 @@ class MapaAproveitamento {
                 this._update_footer(idx);
                 frappe.show_alert({ message: __("Notas guardadas com sucesso."), indicator: "green" });
             },
+        });
+    }
+
+    async _finalizar(idx) {
+        const d    = this.data;
+        const subj = d.subjects[idx];
+
+        if (!subj.grade_entry) {
+            frappe.show_alert({ message: __("Guarde as notas antes de finalizar."), indicator: "orange" });
+            return;
+        }
+
+        // Fetch students with missing grades
+        const wr = await frappe.call({
+            method: "escola.escola.page.mapa_aproveitamento.mapa_aproveitamento.get_finalizar_warnings",
+            args: { grade_entry: subj.grade_entry },
+        });
+        const missing = wr.message || [];
+
+        let msg = __("Confirma a finalização da pauta de <b>{0}</b> para <b>{1}</b>?<br>"
+            + "Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.",
+            [frappe.utils.escape_html(subj.subject_name), frappe.utils.escape_html(d.term_name)]);
+
+        if (missing.length) {
+            const names = missing.map(n => `<li>${frappe.utils.escape_html(n)}</li>`).join("");
+            msg += `<br><br><span style="color:#b45309;font-weight:600;">
+                        <i class="fa fa-warning"></i>&nbsp;
+                        ${__("{0} aluno(s) sem notas completas (ACSP1, ACSP2, ACSE1, ACSE2, AT):", [missing.length])}
+                    </span>
+                    <ul style="margin:6px 0 0 16px;color:#92400e;">${names}</ul>`;
+        }
+
+        frappe.confirm(msg, () => {
+            frappe.call({
+                method: "escola.escola.page.mapa_aproveitamento.mapa_aproveitamento.submit_grade_entry",
+                args: { grade_entry: subj.grade_entry },
+                freeze: true,
+                freeze_message: __("A finalizar pauta…"),
+                callback: (r) => {
+                    if (r.exc) return;
+                    subj.ge_docstatus = 1;
+                    this._show_subject(idx);
+                    this._update_tab_status(idx, subj.status);
+                    frappe.show_alert({ message: __("Pauta finalizada."), indicator: "green" });
+                },
+            });
         });
     }
 
