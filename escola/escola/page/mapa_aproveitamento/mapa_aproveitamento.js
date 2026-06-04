@@ -25,6 +25,8 @@ class MapaAproveitamento {
         this._view     = "trimestral";   // "trimestral" | "annual"
         this._idx      = 0;
         this._dirty    = new Set();
+        this._att_active = false;         // is the Faltas & Comportamento tab showing?
+        this._att_dirty  = false;         // unsaved changes in the attendance tab
         this._preselect = frappe.route_options || null;
         if (this._preselect) frappe.route_options = null;
 
@@ -57,6 +59,11 @@ class MapaAproveitamento {
                         border:1px solid #E5E7EB;border-radius:4px;font-size:13px; }
             .ma-score:focus { outline:none;border-color:#6366F1;box-shadow:0 0 0 2px #6366F11A; }
             .ma-score:disabled { background:#F3F4F6;color:#D1D5DB; }
+            .ma-att-comp { padding:3px 4px;border:1px solid #E5E7EB;border-radius:4px;
+                           font-size:12px;max-width:150px;background:white;color:#374151; }
+            .ma-att-comp:focus { outline:none;border-color:#6366F1;box-shadow:0 0 0 2px #6366F11A; }
+            .ma-att-comp:disabled { background:#F3F4F6;color:#9CA3AF; }
+            .ma-risk-badge { color:#DC2626;font-size:14px;font-weight:700; }
             .ma-grid { width:100%;border-collapse:collapse; }
             .ma-grid th { background:#1E293B;color:white;padding:8px 6px;font-size:11px;
                           font-weight:700;text-align:center;white-space:nowrap; }
@@ -159,6 +166,8 @@ class MapaAproveitamento {
         this.$filters.find(".ma-term-area").toggle(view === "trimestral");
         this._idx = 0;
         this._dirty.clear();
+        this._att_dirty  = false;
+        this._att_active = false;
         this.$tabs.empty();
         this.$grid_area.empty();
         this._maybe_load();
@@ -199,9 +208,9 @@ class MapaAproveitamento {
         const cg   = this._cg_ctrl.get_value();
         const term = this._term_ctrl.get_value();
         if (!cg || !term) return;
-        if (this._dirty.size > 0) {
+        if (this._dirty.size > 0 || this._att_dirty) {
             frappe.confirm(
-                __("Há notas não guardadas. Carregar nova seleção sem guardar?"),
+                __("Há alterações não guardadas. Carregar nova seleção sem guardar?"),
                 () => this._do_load(cg, term)
             );
         } else {
@@ -211,6 +220,8 @@ class MapaAproveitamento {
 
     _do_load(cg, term) {
         this._dirty.clear();
+        this._att_dirty  = false;
+        this._att_active = false;
         this._idx = 0;
         this.$tabs.empty();
         this.$grid_area.html(`
@@ -244,6 +255,7 @@ class MapaAproveitamento {
 
     _do_load_annual(cg, year) {
         this._idx = 0;
+        this._att_active = false;
         this.$tabs.empty();
         this.$grid_area.html(`
             <div style="text-align:center;padding:60px;color:#9CA3AF;">
@@ -315,7 +327,7 @@ class MapaAproveitamento {
         const d = this.data;
         let html = `<div style="display:flex;flex-wrap:wrap;">`;
         d.subjects.forEach((s, i) => {
-            const active = i === this._idx ? " active" : "";
+            const active = (!this._att_active && i === this._idx) ? " active" : "";
             const dirty  = this._dirty.has(i) ? " dirty" : "";
             html += `
                 <button class="ma-tab-btn${active}${dirty}" data-idx="${i}">
@@ -323,21 +335,32 @@ class MapaAproveitamento {
                     ${frappe.utils.escape_html(s.subject_name)}
                 </button>`;
         });
+        // Class-level Faltas & Comportamento tab (independent of subject)
+        const attActive = this._att_active ? " active" : "";
+        const attDirty  = this._att_dirty ? " dirty" : "";
+        html += `
+            <button class="ma-tab-btn ma-att-tab${attActive}${attDirty}"
+                    style="margin-left:10px;border-style:dashed;border-color:#CBD5E1;">
+                <i class="fa fa-calendar-times-o"></i>&nbsp;${__("Faltas & Comportamento")}
+            </button>`;
         html += `</div>`;
         this.$tabs.html(html);
-        this.$tabs.find(".ma-tab-btn").on("click", (e) => {
+        this.$tabs.find(".ma-tab-btn[data-idx]").on("click", (e) => {
             const idx = parseInt($(e.currentTarget).data("idx"));
             this._switch_subject(idx);
         });
+        this.$tabs.find(".ma-att-tab").on("click", () => this._switch_to_att());
     }
 
     _switch_subject(idx) {
-        if (idx === this._idx) return;
-        if (this._dirty.has(this._idx)) {
+        if (!this._att_active && idx === this._idx) return;
+        const leaving_dirty = this._att_active ? this._att_dirty : this._dirty.has(this._idx);
+        if (leaving_dirty) {
             frappe.confirm(
-                __("Há notas não guardadas nesta disciplina. Mudar sem guardar?"),
+                __("Há alterações não guardadas. Mudar sem guardar?"),
                 () => {
-                    this._dirty.delete(this._idx);
+                    if (this._att_active) this._att_dirty = false;
+                    else this._dirty.delete(this._idx);
                     this._do_switch(idx);
                 }
             );
@@ -347,9 +370,31 @@ class MapaAproveitamento {
     }
 
     _do_switch(idx) {
+        this._att_active = false;
         this._idx = idx;
         this._render_tabs();
         this._show_subject(idx);
+    }
+
+    _switch_to_att() {
+        if (this._att_active) return;
+        if (this._dirty.has(this._idx)) {
+            frappe.confirm(
+                __("Há notas não guardadas nesta disciplina. Mudar sem guardar?"),
+                () => {
+                    this._dirty.delete(this._idx);
+                    this._do_switch_att();
+                }
+            );
+        } else {
+            this._do_switch_att();
+        }
+    }
+
+    _do_switch_att() {
+        this._att_active = true;
+        this._render_tabs();
+        this._show_attendance();
     }
 
     // -----------------------------------------------------------------------
@@ -402,7 +447,7 @@ class MapaAproveitamento {
             </div>
         `;
 
-        this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students, d.attendance));
+        this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students));
 
         if (locked) {
             this.$grid_area.find("input").prop("disabled", true).css("background", "var(--control-bg)");
@@ -415,39 +460,21 @@ class MapaAproveitamento {
         this._update_footer(idx);
     }
 
-    _build_grid_html(subj, students, attendance) {
+    _build_grid_html(subj, students) {
         const row_map = {};
         (subj.rows || []).forEach(r => { row_map[r.student] = r; });
 
         const _v    = (v) => (v !== null && v !== undefined) ? v : "";
         const _f2   = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
-        const _abbr = (v) => {
-            if (!v) return "";
-            const m = {"Muito Bom":"MB","Bom":"B","Satisfatório":"S","Suficiente":"SF","Insatisfatório":"I","Mau":"M","Muito Mau":"MM"};
-            return m[v] || v.substring(0,2).toUpperCase();
-        };
-        const _comp_st = (v) => {
-            if (!v) return "color:#9CA3AF;";
-            if (v === "Muito Bom" || v === "Bom") return "color:#065F46;font-weight:700;";
-            if (v === "Insatisfatório" || v === "Mau" || v === "Muito Mau") return "color:#991B1B;font-weight:700;";
-            return "color:#374151;font-weight:600;";
-        };
 
         const rows_html = students.map((s, i) => {
             const r   = row_map[s.student] || {};
             const abs = r.is_absent ? 1 : 0;
             const dis = abs ? " disabled" : "";
-            const att = (attendance || {})[s.student] || {};
 
             const inp = (f) =>
                 `<input type="number" class="ma-score" data-field="${f}"
                         min="0" max="20" step="1" value="${_v(r[f])}"${dis}>`;
-
-            const faltasN  = att.total_absences != null ? att.total_absences : "";
-            const faltasSt = (faltasN !== "" && faltasN > 0) ? "color:#92400E;font-weight:700;" : "color:#6B7280;";
-            const compV    = att.comportamento || "";
-            const compSh   = _abbr(compV);
-            const compSt   = _comp_st(compV);
 
             return `
                 <tr data-student="${frappe.utils.escape_html(s.student)}">
@@ -463,9 +490,6 @@ class MapaAproveitamento {
                     <td class="computed" data-field="macs">${_f2(r.macs)}</td>
                     <td>${inp("acp")}</td>
                     <td class="computed mt-cell" data-field="mt">${_f2(r.mt)}</td>
-                    <td style="font-size:12px;text-align:center;${faltasSt}">${faltasN}</td>
-                    <td style="font-size:12px;text-align:center;${compSt}"
-                        title="${frappe.utils.escape_html(compV)}">${compSh}</td>
                 </tr>`;
         }).join("");
 
@@ -484,8 +508,6 @@ class MapaAproveitamento {
                         <th title="Média das ACS">MACS</th>
                         <th title="Avaliação de Término Parcial">AT</th>
                         <th title="Média do Trimestre">MT</th>
-                        <th title="Faltas no período">Falt.</th>
-                        <th title="Comportamento no período">Comp.</th>
                     </tr>
                 </thead>
                 <tbody>${rows_html}</tbody>
@@ -696,6 +718,204 @@ class MapaAproveitamento {
     _update_tab_status(idx, status) {
         const color = this._dot_color(status);
         this.$tabs.find(`.ma-tab-btn[data-idx="${idx}"] .ma-dot`).css("background", color);
+    }
+
+    // -----------------------------------------------------------------------
+    // Faltas & Comportamento — class-level, per term (Term Attendance)
+    // -----------------------------------------------------------------------
+
+    _show_attendance() {
+        const d        = this.data;
+        const can_edit = !!d.can_edit_attendance;
+
+        const actions = can_edit
+            ? `<button class="btn btn-default btn-sm ma-att-save-btn">
+                   <i class="fa fa-floppy-o"></i>&nbsp;${__("Guardar")}
+               </button>`
+            : `<span style="background:#FEF3C7;color:#92400E;border-radius:20px;
+                            padding:4px 14px;font-size:12px;font-weight:600;">
+                   <i class="fa fa-lock"></i>&nbsp;${__("Só o Director de Turma pode editar")}
+               </span>`;
+
+        const toolbar = `
+            <div class="ma-toolbar" style="display:flex;align-items:center;
+                                           justify-content:space-between;margin-bottom:10px;
+                                           flex-wrap:wrap;gap:8px;">
+                <div>
+                    <span style="font-size:16px;font-weight:700;color:#1E293B;">
+                        ${__("Faltas & Comportamento")}
+                    </span>
+                    <span style="font-size:12px;color:#9CA3AF;margin-left:8px;">
+                        ${frappe.utils.escape_html(d.term_name)} — ${frappe.utils.escape_html(d.class_group_name)}
+                    </span>
+                </div>
+                ${actions}
+            </div>`;
+
+        this.$grid_area.html(toolbar + this._build_attendance_html(d, can_edit));
+
+        if (can_edit) {
+            this._setup_attendance_events();
+            this.$grid_area.find(".ma-att-save-btn").on("click", () => this._save_attendance());
+        }
+        this._update_att_footer();
+    }
+
+    _build_attendance_html(d, can_edit) {
+        const att  = d.attendance || {};
+        const opts = d.behaviour_options || [];
+        const dis  = can_edit ? "" : " disabled";
+        const _v   = (v) => (v !== null && v !== undefined) ? v : "";
+
+        const rows_html = d.students.map((s, i) => {
+            const a       = att[s.student] || {};
+            const total   = (parseInt(a.justified_absences) || 0) + (parseInt(a.unjustified_absences) || 0);
+            const totalSt = total > 0 ? "color:#92400E;font-weight:700;" : "color:#6B7280;";
+            const risk    = a.at_risk
+                ? `<span class="ma-risk-badge" title="${__("Faltas acima do limite")}">⚠</span>` : "";
+
+            const num = (f) =>
+                `<input type="number" class="ma-score ma-att-inp" data-field="${f}"
+                        min="0" step="1" value="${_v(a[f])}"${dis}>`;
+
+            const cur = a.comportamento || "";
+            const options_html = [`<option value="">—</option>`].concat(
+                opts.map(o =>
+                    `<option value="${frappe.utils.escape_html(o)}"${o === cur ? " selected" : ""}>${frappe.utils.escape_html(o)}</option>`)
+            ).join("");
+
+            return `
+                <tr data-student="${frappe.utils.escape_html(s.student)}">
+                    <td style="color:#9CA3AF;font-size:11px;width:26px;">${i + 1}</td>
+                    <td class="left" title="${frappe.utils.escape_html(s.student_name)}">
+                        ${frappe.utils.escape_html(s.student_name)}
+                    </td>
+                    <td>${num("justified_absences")}</td>
+                    <td>${num("unjustified_absences")}</td>
+                    <td class="computed" data-field="total_absences" style="${totalSt}">${total || ""}</td>
+                    <td data-field="risk">${risk}</td>
+                    <td><select class="ma-att-comp" data-field="comportamento"${dis}>${options_html}</select></td>
+                </tr>`;
+        }).join("");
+
+        return `
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="ma-grid">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="left" style="min-width:150px;">Nome</th>
+                        <th title="Faltas justificadas">F. Justif.</th>
+                        <th title="Faltas injustificadas">F. Injust.</th>
+                        <th title="Total de faltas">Total</th>
+                        <th title="Em risco por excesso de faltas">Risco</th>
+                        <th title="Comportamento no período" style="min-width:140px;">Comportamento</th>
+                    </tr>
+                </thead>
+                <tbody>${rows_html}</tbody>
+            </table>
+            </div>
+            <div class="ma-stats" style="display:flex;gap:20px;padding:10px 4px;
+                                         flex-wrap:wrap;margin-top:6px;"></div>
+        `;
+    }
+
+    _setup_attendance_events() {
+        const $area = this.$grid_area;
+        $area.find(".ma-att-inp").on("input", (e) => {
+            const $tr   = $(e.target).closest("tr");
+            const j     = parseInt($tr.find('[data-field="justified_absences"]').val()) || 0;
+            const u     = parseInt($tr.find('[data-field="unjustified_absences"]').val()) || 0;
+            const total = j + u;
+            $tr.find('[data-field="total_absences"]')
+               .text(total || "")
+               .css({ color: total > 0 ? "#92400E" : "#6B7280", "font-weight": total > 0 ? 700 : 400 });
+            this._mark_att_dirty();
+        });
+        $area.find(".ma-att-comp").on("change", () => this._mark_att_dirty());
+    }
+
+    _mark_att_dirty() {
+        if (!this._att_dirty) {
+            this._att_dirty = true;
+            this.$tabs.find(".ma-att-tab").addClass("dirty");
+        }
+    }
+
+    _collect_attendance() {
+        const rows = [];
+        this.$grid_area.find(".ma-grid tbody tr").each((i, tr) => {
+            const $tr     = $(tr);
+            const student = $tr.data("student");
+            if (!student) return;
+            const _iv = (f) => { const n = parseInt($tr.find(`[data-field="${f}"]`).val()); return isNaN(n) ? 0 : n; };
+            rows.push({
+                student,
+                justified_absences:   _iv("justified_absences"),
+                unjustified_absences: _iv("unjustified_absences"),
+                comportamento:        $tr.find('[data-field="comportamento"]').val() || null,
+            });
+        });
+        return rows;
+    }
+
+    _save_attendance() {
+        const d    = this.data;
+        const rows = this._collect_attendance();
+
+        frappe.call({
+            method: "escola.escola.page.mapa_aproveitamento.mapa_aproveitamento.save_attendance",
+            args: {
+                class_group:   d.class_group,
+                academic_term: d.academic_term,
+                rows_json:     JSON.stringify(rows),
+            },
+            freeze: true,
+            freeze_message: __("A guardar faltas…"),
+            callback: (r) => {
+                if (r.exc || !r.message || !r.message.saved) return;
+                d.attendance = r.message.attendance || {};
+                this.$grid_area.find(".ma-grid tbody tr").each((i, tr) => {
+                    const $tr = $(tr);
+                    const a   = d.attendance[$tr.data("student")];
+                    if (!a) return;
+                    const total = a.total_absences || 0;
+                    $tr.find('[data-field="total_absences"]')
+                       .text(total || "")
+                       .css({ color: total > 0 ? "#92400E" : "#6B7280", "font-weight": total > 0 ? 700 : 400 });
+                    $tr.find('[data-field="risk"]').html(
+                        a.at_risk ? `<span class="ma-risk-badge" title="${__("Faltas acima do limite")}">⚠</span>` : ""
+                    );
+                });
+                this._att_dirty = false;
+                this.$tabs.find(".ma-att-tab").removeClass("dirty");
+                this._update_att_footer();
+                frappe.show_alert({ message: __("Faltas e comportamento guardados."), indicator: "green" });
+            },
+        });
+    }
+
+    _update_att_footer() {
+        const $stats = this.$grid_area.find(".ma-stats");
+        if (!$stats.length) return;
+        const d   = this.data;
+        const att = d.attendance || {};
+        let at_risk = 0, with_comp = 0;
+        (d.students || []).forEach(s => {
+            const a = att[s.student] || {};
+            if (a.at_risk) at_risk++;
+            if (a.comportamento) with_comp++;
+        });
+        const total = (d.students || []).length;
+        $stats.html(`
+            <span style="font-size:13px;color:#EF4444;font-weight:700;">
+                <i class="fa fa-exclamation-triangle"></i>&nbsp;${__("Em risco")}: ${at_risk}
+            </span>
+            <span style="font-size:13px;color:#10B981;font-weight:700;">
+                <i class="fa fa-check-circle"></i>&nbsp;${__("Com comportamento")}: ${with_comp}
+            </span>
+            <span style="font-size:13px;color:#6B7280;">${__("Total")}: ${total}</span>
+        `);
     }
 
     // -----------------------------------------------------------------------

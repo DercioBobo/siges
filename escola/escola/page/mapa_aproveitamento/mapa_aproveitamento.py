@@ -106,6 +106,26 @@ def _empty_row(student):
     }
 
 
+def _can_edit_attendance(class_teacher):
+    """Only the turma's Director de Turma (class_teacher) may write faltas/comportamento.
+    System Managers are allowed as an administrative override."""
+    if "System Manager" in frappe.get_roles():
+        return True
+    if not class_teacher:
+        return False
+    teacher = frappe.db.get_value("Teacher", {"user_id": frappe.session.user}, "name")
+    return bool(teacher and teacher == class_teacher)
+
+
+def _active_behaviour_options():
+    return frappe.get_all(
+        "Behaviour Option",
+        filters={"is_active": 1},
+        pluck="name",
+        order_by="weight asc",
+    )
+
+
 @frappe.whitelist()
 def get_grade_book(class_group, academic_term):
     cg = frappe.db.get_value(
@@ -216,11 +236,17 @@ def get_grade_book(class_group, academic_term):
         for r in frappe.get_all(
             "Term Attendance Row",
             filters={"parent": ta_name},
-            fields=["student", "total_absences", "comportamento"],
+            fields=[
+                "student", "justified_absences", "unjustified_absences",
+                "total_absences", "at_risk", "comportamento",
+            ],
         ):
             attendance[r.student] = {
-                "total_absences": r.total_absences,
-                "comportamento":  r.comportamento,
+                "justified_absences":   r.justified_absences,
+                "unjustified_absences": r.unjustified_absences,
+                "total_absences":       r.total_absences,
+                "at_risk":              r.at_risk,
+                "comportamento":        r.comportamento,
             }
 
     return {
@@ -231,6 +257,8 @@ def get_grade_book(class_group, academic_term):
         "academic_term": academic_term,
         "term_name": term.term_name,
         "attendance": attendance,
+        "can_edit_attendance": _can_edit_attendance(cg.class_teacher),
+        "behaviour_options": _active_behaviour_options(),
         "students": [
             {"student": s.student, "student_name": s.student_name, "student_code": s.student_code}
             for s in students
@@ -339,6 +367,73 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
         "status":       _subject_status(status_rows),
         "rows": saved_rows,
     }
+
+
+def _apply_attendance_row(row, data):
+    row.justified_absences   = int(data.get("justified_absences") or 0)
+    row.unjustified_absences = int(data.get("unjustified_absences") or 0)
+    row.comportamento        = data.get("comportamento") or None
+
+
+@frappe.whitelist()
+def save_attendance(class_group, academic_term, rows_json):
+    """Create or update the Term Attendance (faltas + comportamento) for a class/term.
+    Restricted to the turma's Director de Turma — see _can_edit_attendance."""
+    rows = json.loads(rows_json) if isinstance(rows_json, str) else rows_json
+
+    cg = frappe.db.get_value(
+        "Class Group", class_group,
+        ["academic_year", "school_class", "class_teacher"], as_dict=True,
+    )
+    if not cg:
+        frappe.throw(_("Turma não encontrada."))
+
+    if not _can_edit_attendance(cg.class_teacher):
+        frappe.throw(
+            _("Apenas o Director de Turma pode registar faltas e comportamento."),
+            frappe.PermissionError,
+            title=_("Sem permissão"),
+        )
+
+    if not rows:
+        return {"saved": False}
+
+    ta_name = frappe.db.get_value(
+        "Term Attendance",
+        {"class_group": class_group, "academic_term": academic_term, "docstatus": ("!=", 2)},
+        "name",
+    )
+
+    if ta_name:
+        doc = frappe.get_doc("Term Attendance", ta_name)
+        existing = {r.student: r for r in doc.attendance_rows}
+        for r in rows:
+            if r["student"] in existing:
+                _apply_attendance_row(existing[r["student"]], r)
+            else:
+                _apply_attendance_row(doc.append("attendance_rows", {"student": r["student"]}), r)
+    else:
+        doc = frappe.new_doc("Term Attendance")
+        doc.class_group   = class_group
+        doc.academic_term = academic_term
+        doc.academic_year = cg.academic_year or ""
+        doc.school_class  = cg.school_class or ""
+        for r in rows:
+            _apply_attendance_row(doc.append("attendance_rows", {"student": r["student"]}), r)
+
+    doc.save(ignore_permissions=True)
+
+    attendance = {
+        r.student: {
+            "justified_absences":   r.justified_absences,
+            "unjustified_absences": r.unjustified_absences,
+            "total_absences":       r.total_absences,
+            "at_risk":              r.at_risk,
+            "comportamento":        r.comportamento,
+        }
+        for r in doc.attendance_rows
+    }
+    return {"saved": True, "term_attendance": doc.name, "attendance": attendance}
 
 
 @frappe.whitelist()
