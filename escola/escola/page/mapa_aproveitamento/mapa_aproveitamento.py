@@ -126,6 +126,53 @@ def _active_behaviour_options():
     )
 
 
+def _curriculum_subjects(school_class):
+    if not school_class:
+        return []
+    lines = frappe.get_all(
+        "School Class Subject",
+        filters={"parent": school_class},
+        fields=["subject"],
+        order_by="sort_order asc, idx asc",
+    )
+    return [l.subject for l in lines if l.subject]
+
+
+def _sequential_enforced():
+    return bool(frappe.db.get_single_value("School Settings", "enforce_sequential_terms"))
+
+
+def _previous_term(academic_year, academic_term):
+    """Immediately preceding active term in the same academic year (by start_date), or None."""
+    cur = frappe.db.get_value("Academic Term", academic_term, "start_date")
+    if not cur:
+        return None
+    prev = frappe.get_all(
+        "Academic Term",
+        filters={
+            "academic_year": academic_year,
+            "is_active": 1,
+            "start_date": ("<", cur),
+        },
+        fields=["name", "term_name"],
+        order_by="start_date desc",
+        limit=1,
+    )
+    return prev[0] if prev else None
+
+
+def _finalized_prev_subjects(class_group, prev_term_name):
+    """Subjects whose previous-term Grade Entry is finalized (submitted)."""
+    return {
+        ge.subject
+        for ge in frappe.get_all(
+            "Grade Entry",
+            filters={"class_group": class_group, "academic_term": prev_term_name, "docstatus": 1},
+            fields=["subject"],
+        )
+    }
+
+
 @frappe.whitelist()
 def get_grade_book(class_group, academic_term):
     cg = frappe.db.get_value(
@@ -170,6 +217,11 @@ def get_grade_book(class_group, academic_term):
             order_by="sort_order asc, idx asc",
         )
         subj_names = [l.subject for l in lines if l.subject]
+
+    enforce        = _sequential_enforced()
+    prev_term      = _previous_term(cg.academic_year, academic_term) if enforce else None
+    finalized_prev = _finalized_prev_subjects(class_group, prev_term.name) if prev_term else set()
+
     if subj_names:
             subj_infos = {
                 s.name: s.subject_name
@@ -222,6 +274,7 @@ def get_grade_book(class_group, academic_term):
                     "grade_entry":  ge_name,
                     "ge_docstatus": ge_docstatus,
                     "status":       _subject_status(rows) if ge_name else "Vazio",
+                    "prev_locked":  bool(prev_term) and sn not in finalized_prev,
                     "rows":         rows,
                 })
 
@@ -259,6 +312,8 @@ def get_grade_book(class_group, academic_term):
         "attendance": attendance,
         "can_edit_attendance": _can_edit_attendance(cg.class_teacher),
         "behaviour_options": _active_behaviour_options(),
+        "prev_term_name": prev_term.term_name if prev_term else None,
+        "attendance_prev_locked": bool(prev_term) and not (set(subj_names) <= finalized_prev),
         "students": [
             {"student": s.student, "student_name": s.student_name, "student_code": s.student_code}
             for s in students
@@ -288,6 +343,16 @@ def save_subject_grades(class_group, academic_term, subject, rows_json):
     )
     if not has_data:
         return {"saved": False}
+
+    if _sequential_enforced():
+        cg_year = frappe.db.get_value("Class Group", class_group, "academic_year")
+        prev_term = _previous_term(cg_year, academic_term)
+        if prev_term and subject not in _finalized_prev_subjects(class_group, prev_term.name):
+            frappe.throw(
+                _("Finalize a pauta desta disciplina no período anterior (<b>{0}</b>) "
+                  "antes de lançar notas neste período.").format(prev_term.term_name),
+                title=_("Período anterior por finalizar"),
+            )
 
     student_names = {
         s.name: s.full_name
@@ -397,6 +462,17 @@ def save_attendance(class_group, academic_term, rows_json):
 
     if not rows:
         return {"saved": False}
+
+    if _sequential_enforced():
+        prev_term = _previous_term(cg.academic_year, academic_term)
+        if prev_term:
+            subj_names = _curriculum_subjects(cg.school_class)
+            if not (set(subj_names) <= _finalized_prev_subjects(class_group, prev_term.name)):
+                frappe.throw(
+                    _("Finalize todas as pautas do período anterior (<b>{0}</b>) "
+                      "antes de registar faltas neste período.").format(prev_term.term_name),
+                    title=_("Período anterior por finalizar"),
+                )
 
     ta_name = frappe.db.get_value(
         "Term Attendance",

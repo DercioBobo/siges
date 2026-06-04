@@ -86,6 +86,8 @@
   "sibling_discount_applies_to_addons",
   "section_comportamento",
   "comportamento_obrigatorio",
+  "section_avaliacao",
+  "enforce_sequential_terms",
   "section_portal",
   "guardian_portal_enabled"
  ],
@@ -596,6 +598,18 @@
    "label": "Comportamento Obrigatório nas Faltas",
    "default": "0",
    "description": "Se activo, o campo Comportamento é obrigatório ao guardar um Resumo de Faltas por Período."
+  },
+  {
+   "fieldname": "section_avaliacao",
+   "fieldtype": "Section Break",
+   "label": "Avaliação"
+  },
+  {
+   "fieldname": "enforce_sequential_terms",
+   "fieldtype": "Check",
+   "label": "Bloquear Períodos em Sequência",
+   "default": "0",
+   "description": "Se activo, só é possível lançar/editar notas de um período depois de finalizada a pauta da mesma disciplina no período anterior. As faltas de um período exigem que TODAS as pautas do período anterior estejam finalizadas."
   },
   {
    "fieldname": "section_portal",

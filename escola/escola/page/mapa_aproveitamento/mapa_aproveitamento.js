@@ -329,10 +329,12 @@ class MapaAproveitamento {
         d.subjects.forEach((s, i) => {
             const active = (!this._att_active && i === this._idx) ? " active" : "";
             const dirty  = this._dirty.has(i) ? " dirty" : "";
+            const lock   = (s.prev_locked && s.ge_docstatus !== 1)
+                ? `<i class="fa fa-lock" style="color:#92400E;font-size:10px;"></i>` : "";
             html += `
                 <button class="ma-tab-btn${active}${dirty}" data-idx="${i}">
                     <span class="ma-dot" style="background:${this._dot_color(s.status)};"></span>
-                    ${frappe.utils.escape_html(s.subject_name)}
+                    ${lock}${frappe.utils.escape_html(s.subject_name)}
                 </button>`;
         });
         // Class-level Faltas & Comportamento tab (independent of subject)
@@ -406,7 +408,9 @@ class MapaAproveitamento {
         const subj = d.subjects[idx];
         if (!subj) return;
 
-        const locked = subj.ge_docstatus === 1;
+        const locked      = subj.ge_docstatus === 1;
+        const prev_locked = !!subj.prev_locked && !locked;
+        const read_only   = locked || prev_locked;
 
         const ge_link = subj.grade_entry
             ? `<a href="/app/grade-entry/${encodeURIComponent(subj.grade_entry)}" target="_blank"
@@ -415,12 +419,20 @@ class MapaAproveitamento {
                </a>`
             : "";
 
-        const actions = locked
-            ? `<span style="background:#dcfce7;color:#166534;border-radius:20px;
+        let actions;
+        if (locked) {
+            actions = `<span style="background:#dcfce7;color:#166534;border-radius:20px;
                             padding:4px 14px;font-size:12px;font-weight:700;">
                    <i class="fa fa-lock"></i>&nbsp;${__("Finalizada")}
-               </span>`
-            : `<div style="display:flex;gap:8px;">
+               </span>`;
+        } else if (prev_locked) {
+            actions = `<span style="background:#FEF3C7;color:#92400E;border-radius:20px;
+                            padding:4px 14px;font-size:12px;font-weight:600;">
+                   <i class="fa fa-lock"></i>&nbsp;${__("Finalize a pauta do período anterior ({0}) primeiro",
+                        [frappe.utils.escape_html(d.prev_term_name || "")])}
+               </span>`;
+        } else {
+            actions = `<div style="display:flex;gap:8px;">
                    <button class="btn btn-default btn-sm ma-save-btn" data-idx="${idx}">
                        <i class="fa fa-floppy-o"></i>&nbsp;${__("Guardar")}
                    </button>
@@ -429,6 +441,7 @@ class MapaAproveitamento {
                        <i class="fa fa-check-circle"></i>&nbsp;${__("Finalizar")}
                    </button>
                </div>`;
+        }
 
         const toolbar = `
             <div class="ma-toolbar" style="display:flex;align-items:center;
@@ -449,7 +462,7 @@ class MapaAproveitamento {
 
         this.$grid_area.html(toolbar + this._build_grid_html(subj, d.students));
 
-        if (locked) {
+        if (read_only) {
             this.$grid_area.find("input").prop("disabled", true).css("background", "var(--control-bg)");
         } else {
             this.$grid_area.find(".ma-save-btn").on("click", () => this._save(idx));
@@ -725,17 +738,27 @@ class MapaAproveitamento {
     // -----------------------------------------------------------------------
 
     _show_attendance() {
-        const d        = this.data;
-        const can_edit = !!d.can_edit_attendance;
+        const d           = this.data;
+        const prev_locked = !!d.attendance_prev_locked;
+        const can_edit    = !!d.can_edit_attendance && !prev_locked;
 
-        const actions = can_edit
-            ? `<button class="btn btn-default btn-sm ma-att-save-btn">
-                   <i class="fa fa-floppy-o"></i>&nbsp;${__("Guardar")}
-               </button>`
-            : `<span style="background:#FEF3C7;color:#92400E;border-radius:20px;
+        let actions;
+        if (prev_locked) {
+            actions = `<span style="background:#FEF3C7;color:#92400E;border-radius:20px;
+                            padding:4px 14px;font-size:12px;font-weight:600;">
+                   <i class="fa fa-lock"></i>&nbsp;${__("Finalize as pautas do período anterior ({0}) primeiro",
+                        [frappe.utils.escape_html(d.prev_term_name || "")])}
+               </span>`;
+        } else if (!d.can_edit_attendance) {
+            actions = `<span style="background:#FEF3C7;color:#92400E;border-radius:20px;
                             padding:4px 14px;font-size:12px;font-weight:600;">
                    <i class="fa fa-lock"></i>&nbsp;${__("Só o Director de Turma pode editar")}
                </span>`;
+        } else {
+            actions = `<button class="btn btn-default btn-sm ma-att-save-btn">
+                   <i class="fa fa-floppy-o"></i>&nbsp;${__("Guardar")}
+               </button>`;
+        }
 
         const toolbar = `
             <div class="ma-toolbar" style="display:flex;align-items:center;
