@@ -3,7 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 
 
-class AberturaDeAnoLectivo(Document):
+class AberturadeAnoLectivo(Document):
     def validate(self):
         if self.source_academic_year == self.target_academic_year:
             frappe.throw(
@@ -12,7 +12,7 @@ class AberturaDeAnoLectivo(Document):
             )
         # Block if another submitted opening already targets this year
         existing = frappe.db.get_value(
-            "Abertura De Ano Lectivo",
+            "Abertura de Ano Lectivo",
             {"target_academic_year": self.target_academic_year, "docstatus": 1, "name": ("!=", self.name)},
             "name",
         )
