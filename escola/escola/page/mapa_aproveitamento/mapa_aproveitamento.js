@@ -145,7 +145,7 @@ class MapaAproveitamento {
 
         this._cg_ctrl.on_change(cg => {
             this._populate_terms(cg);
-            this._maybe_load();
+            this._autoselect_term(cg);
         });
         this._term_ctrl.on_change(() => this._maybe_load());
 
@@ -180,8 +180,27 @@ class MapaAproveitamento {
         if (!class_group) return;
         this._cg_ctrl.set_value(class_group);
         this._populate_terms(class_group);
-        if (academic_term) this._term_ctrl.set_value(academic_term);
-        this._maybe_load();
+        if (academic_term) {
+            this._term_ctrl.set_value(academic_term);
+            this._maybe_load();
+        } else {
+            this._autoselect_term(class_group);
+        }
+    }
+
+    /** Default PERÍODO to the current active term for the turma's year, then load. */
+    _autoselect_term(cg) {
+        if (this._view === "annual") { this._maybe_load(); return; }
+        const year = this._cg_year_map && this._cg_year_map[cg];
+        if (!year || this._term_ctrl.get_value()) { this._maybe_load(); return; }
+        frappe.call({
+            method: "escola.escola.doctype.grade_entry.grade_entry.get_current_academic_term",
+            args: { academic_year: year },
+            callback: (r) => {
+                if (r.message) this._term_ctrl.set_value(r.message);
+                this._maybe_load();
+            },
+        });
     }
 
     _populate_terms(cg) {

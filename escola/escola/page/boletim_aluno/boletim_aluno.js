@@ -87,6 +87,18 @@ frappe.pages["boletim-aluno"].on_page_load = function (wrapper) {
 		cache: {},
 		_sup: false,   // suppression flag prevents change-event cascades
 	};
+
+	// Default the year filter to the current academic year (suppressed: no student
+	// is selected yet, so this never triggers a premature load).
+	frappe.call({
+		method: "escola.escola.doctype.grade_entry.grade_entry.get_current_academic_year",
+		callback(r) {
+			if (!r.message || fYear.get_value()) return;
+			wrapper._ba._sup = true;
+			fYear.set_value(r.message);
+			wrapper._ba._sup = false;
+		},
+	});
 };
 
 frappe.pages["boletim-aluno"].on_page_show = function (wrapper) {

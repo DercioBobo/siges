@@ -32,31 +32,54 @@ escola.utils._inject_filter_styles = function () {
 .fs-lbl  { font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
            letter-spacing:.6px;margin-bottom:5px;display:block; }
 .fs-field { position:relative; display:flex; align-items:center; }
-.fs-input { width:100%;padding:7px 28px 7px 10px;border:1.5px solid var(--border-color);
-            border-radius:6px;font-size:13px;background:var(--control-bg,white);
-            color:var(--text-color);outline:none;transition:border-color .15s,box-shadow .15s;
-            box-sizing:border-box;font-family:var(--font-stack); }
+.fs-input { width:100%;padding:7px 46px 7px 11px;border:1.5px solid var(--border-color);
+            border-radius:7px;font-size:13px;background:var(--control-bg,white);
+            color:var(--text-color);outline:none;
+            transition:border-color .15s,box-shadow .15s,background .15s;
+            box-sizing:border-box;font-family:var(--font-stack);text-overflow:ellipsis; }
+.fs-input:hover { border-color:var(--gray-400,#9ca3af); }
 .fs-input:focus { border-color:var(--primary);
-                  box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent); }
-.fs-input::placeholder { color:var(--text-light); }
-.fs-caret { position:absolute;right:9px;color:var(--text-muted);font-size:10px;
-            cursor:pointer;user-select:none;pointer-events:all; }
-.fs-drop  { position:absolute;top:calc(100% + 4px);left:0;right:0;
-            background:var(--fg-color,white);border:1.5px solid var(--primary);
-            border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);
-            z-index:1050;max-height:220px;overflow-y:auto; }
-.fs-opt   { padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text-color);
-            transition:background .1s; }
-.fs-opt:hover:not(.fs-none) { background:var(--subtle-fg,#f3f4f6); }
-.fs-opt.fs-sel { background:color-mix(in srgb,var(--primary) 10%,transparent);
-                 color:var(--primary);font-weight:600; }
-.fs-none  { color:var(--text-muted);cursor:default;font-size:12px;font-style:italic; }
+                  box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 14%,transparent); }
+.fs-input.fs-has-val { font-weight:600; }
+.fs-input::placeholder { color:var(--text-light);font-weight:400; }
+/* trailing controls */
+.fs-caret { position:absolute;right:10px;color:var(--text-muted);font-size:9px;
+            cursor:pointer;user-select:none;pointer-events:all;
+            transition:transform .18s ease,color .15s; }
+.fs-field:focus-within .fs-caret { color:var(--primary); }
+.fs-caret.fs-open { transform:rotate(180deg); }
+.fs-clear { position:absolute;right:28px;width:17px;height:17px;display:none;
+            align-items:center;justify-content:center;border-radius:50%;
+            color:var(--text-muted);font-size:13px;line-height:1;cursor:pointer;
+            user-select:none;pointer-events:all;transition:background .12s,color .12s; }
+.fs-clear:hover { background:var(--subtle-fg,#f1f3f5);color:var(--text-color); }
+.fs-clear.fs-show { display:flex; }
+.fs-drop  { position:absolute;top:calc(100% + 5px);left:0;right:0;
+            background:var(--fg-color,white);border:1px solid var(--border-color);
+            border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.16),0 2px 6px rgba(0,0,0,.06);
+            z-index:1050;max-height:248px;overflow-y:auto;padding:4px;
+            animation:fs-pop .13s ease; }
+@keyframes fs-pop { from { opacity:0;transform:translateY(-4px); } to { opacity:1;transform:none; } }
+.fs-opt   { display:flex;align-items:center;justify-content:space-between;gap:8px;
+            padding:8px 11px;font-size:13px;cursor:pointer;color:var(--text-color);
+            border-radius:5px;transition:background .08s; }
+.fs-opt.fs-active:not(.fs-none) { background:var(--subtle-fg,#f3f4f6); }
+.fs-opt.fs-sel { color:var(--primary);font-weight:600; }
+.fs-opt.fs-sel.fs-active { background:color-mix(in srgb,var(--primary) 11%,transparent); }
+.fs-check { color:var(--primary);font-size:11px;flex-shrink:0; }
+.fs-opt-lbl { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.fs-none  { color:var(--text-muted);cursor:default;font-size:12px;font-style:italic;
+            justify-content:flex-start; }
     `;
     document.head.appendChild(s);
 };
 
 /**
  * Create a searchable, pre-loaded filter select inside `parent_el`.
+ *
+ * Selection is index-based (never reads option values out of the DOM) so numeric
+ * values such as the Academic Year "2026" can't be coerced by jQuery and silently
+ * dropped. Supports full keyboard navigation (↑/↓/Enter/Esc) and an inline clear.
  *
  * @param {HTMLElement} parent_el
  * @param {Object} cfg
@@ -73,8 +96,10 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
         <div class="fs-wrap">
             ${label ? `<span class="fs-lbl">${label}</span>` : ""}
             <div class="fs-field">
-                <input class="fs-input" type="text" autocomplete="off"
+                <input class="fs-input" type="text" autocomplete="off" role="combobox"
+                       aria-expanded="false"
                        placeholder="${placeholder || __("Selecionar…")}">
+                <span class="fs-clear" title="${__("Limpar")}">×</span>
                 <span class="fs-caret">▾</span>
             </div>
             <div class="fs-drop" style="display:none;"></div>
@@ -83,61 +108,143 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
     const $input = $w.find(".fs-input");
     const $drop  = $w.find(".fs-drop");
     const $caret = $w.find(".fs-caret");
+    const $clear = $w.find(".fs-clear");
 
-    let _val  = "";
-    let _opts = options ? [...options] : [];
-    let _cb   = null;
+    let _val     = "";
+    let _opts    = options ? [...options] : [];
+    let _cb      = null;
+    let _visible = [];   // currently shown options (after filtering)
+    let _active  = -1;   // highlighted index into _visible
 
-    function _show(filter) {
-        const q = (filter || "").toLowerCase();
-        const visible = q ? _opts.filter(o => o.label.toLowerCase().includes(q)) : _opts;
-        $drop.html(
-            visible.length
-                ? visible.map(o =>
-                    `<div class="fs-opt${o.value === _val ? " fs-sel" : ""}"
-                          data-v="${frappe.utils.escape_html(o.value)}">
-                        ${frappe.utils.escape_html(o.label)}
-                     </div>`).join("")
-                : `<div class="fs-opt fs-none">${__("Sem resultados")}</div>`
-        ).show();
+    function _is_open() { return $drop.is(":visible"); }
+
+    function _sync_input_state() {
+        const has = !!_val;
+        $input.toggleClass("fs-has-val", has);
+        $clear.toggleClass("fs-show", has);
     }
 
-    function _close()  { $drop.hide(); }
+    function _render_drop() {
+        if (!_visible.length) {
+            $drop.html(`<div class="fs-opt fs-none">${__("Sem resultados")}</div>`);
+            return;
+        }
+        $drop.html(_visible.map((o, i) => `
+            <div class="fs-opt${o.value === _val ? " fs-sel" : ""}${i === _active ? " fs-active" : ""}"
+                 data-i="${i}">
+                <span class="fs-opt-lbl">${frappe.utils.escape_html(o.label)}</span>
+                ${o.value === _val ? `<span class="fs-check">✓</span>` : ""}
+            </div>`).join(""));
+        _scroll_active();
+    }
+
+    function _scroll_active() {
+        const el = $drop.find(".fs-opt.fs-active")[0];
+        if (el) el.scrollIntoView({ block: "nearest" });
+    }
+
+    function _open(filter) {
+        const q = (filter || "").toLowerCase();
+        _visible = q ? _opts.filter(o => o.label.toLowerCase().includes(q)) : _opts.slice();
+        _active  = _visible.findIndex(o => o.value === _val);
+        if (_active < 0 && _visible.length) _active = 0;
+        _render_drop();
+        $drop.show();
+        $caret.addClass("fs-open");
+        $input.attr("aria-expanded", "true");
+    }
+
+    function _close() {
+        $drop.hide();
+        $caret.removeClass("fs-open");
+        $input.attr("aria-expanded", "false");
+    }
+
     function _restore() {
         const o = _opts.find(x => x.value === _val);
         $input.val(o ? o.label : "");
     }
 
+    function _select(o) {
+        _val = o.value;
+        $input.val(o.label);
+        _sync_input_state();
+        _close();
+        if (_cb) _cb(o.value);
+    }
+
+    function _do_clear(fire) {
+        _val = "";
+        $input.val("");
+        _sync_input_state();
+        if (fire && _cb) _cb("");
+    }
+
+    function _move(delta) {
+        if (!_is_open()) { _open(""); return; }
+        if (!_visible.length) return;
+        _active = Math.max(0, Math.min(_visible.length - 1, _active + delta));
+        _render_drop();
+    }
+
     $input.on("focus", function () {
         const o = _opts.find(x => x.value === _val);
-        _show(o && this.value === o.label ? "" : this.value);
+        _open(o && this.value === o.label ? "" : this.value);
     });
-    $input.on("input",  function () {
-        if (_val) { const o = _opts.find(x => x.value === _val); if (!o || this.value !== o.label) _val = ""; }
-        _show(this.value);
+    $input.on("input", function () {
+        if (_val) {
+            const o = _opts.find(x => x.value === _val);
+            if (!o || this.value !== o.label) { _val = ""; _sync_input_state(); }
+        }
+        _open(this.value);
     });
-    $input.on("blur", function () { setTimeout(() => { _close(); _restore(); }, 80); });
+    $input.on("keydown", function (e) {
+        switch (e.key) {
+            case "ArrowDown": e.preventDefault(); _move(1); break;
+            case "ArrowUp":   e.preventDefault(); _move(-1); break;
+            case "Enter":
+                if (_is_open() && _active >= 0 && _visible[_active]) {
+                    e.preventDefault();
+                    _select(_visible[_active]);
+                }
+                break;
+            case "Escape":
+                if (_is_open()) { e.preventDefault(); _close(); _restore(); }
+                break;
+        }
+    });
+    $input.on("blur", function () { setTimeout(() => { _close(); _restore(); }, 90); });
+
     $caret.on("pointerdown", function (e) {
-        e.preventDefault();  // pointerdown fires before blur for all pointer types
-        $drop.is(":visible") ? _close() : ($input[0].focus(), _show(""));
+        e.preventDefault();  // fires before blur for mouse, touch and pen
+        _is_open() ? _close() : ($input[0].focus(), _open(""));
     });
+    $clear.on("pointerdown", function (e) {
+        e.preventDefault();
+        _do_clear(true);
+        $input[0].focus();
+        _open("");
+    });
+
+    // Hover keeps the keyboard highlight in sync with the pointer
+    $drop.on("mouseenter", ".fs-opt:not(.fs-none)", function () {
+        _active = parseInt($(this).attr("data-i"), 10);
+        $drop.find(".fs-opt").removeClass("fs-active");
+        $(this).addClass("fs-active");
+    });
+    // Index-based selection — no value coercion, so clicks never silently fail
     $drop.on("pointerdown", ".fs-opt:not(.fs-none)", function (e) {
-        e.preventDefault();  // pointerdown fires before blur — no race for tap, click or touch
-        const v = $(this).data("v");
-        const o = _opts.find(x => x.value === v);
-        if (!o) return;
-        _val = v;
-        $input.val(o.label);
-        _close();
-        if (_cb) _cb(v);
+        e.preventDefault();
+        const o = _visible[parseInt($(this).attr("data-i"), 10)];
+        if (o) _select(o);
     });
 
     return {
         get_value:   ()     => _val,
-        set_value:   (v)    => { _val = v || ""; _restore(); },
-        set_options: (opts) => { _opts = opts ? [...opts] : []; _val = ""; $input.val(""); },
+        set_value:   (v)    => { _val = v || ""; _restore(); _sync_input_state(); },
+        set_options: (opts) => { _opts = opts ? [...opts] : []; _do_clear(false); },
         on_change:   (fn)   => { _cb = fn; },
-        clear:       ()     => { _val = ""; $input.val(""); },
+        clear:       ()     => { _do_clear(false); },
     };
 };
 

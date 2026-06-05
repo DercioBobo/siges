@@ -34,6 +34,10 @@ frappe.ui.form.on("Timetable", {
 
 		if (!frm.is_new()) {
 			frm.add_custom_button(__("Ver Horário"), () => {
+				frappe.route_options = {
+					class_group:   frm.doc.class_group,
+					academic_year: frm.doc.academic_year,
+				};
 				frappe.set_route("timetable-view");
 			}, __("Acções"));
 		}

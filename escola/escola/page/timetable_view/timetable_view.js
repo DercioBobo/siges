@@ -40,6 +40,11 @@ class TimetablePage {
 		this._palette_idx = 0;
 		this._color_cache = {};
 
+		// Deep-link context (e.g. arriving from a Turma/Student) — capture before
+		// anything else consumes it, then clear so it doesn't leak to the next route.
+		this._preselect = frappe.route_options || null;
+		if (this._preselect) frappe.route_options = null;
+
 		this._build_skeleton();
 		this._add_page_actions();
 		this._load_filter_options();
@@ -124,10 +129,27 @@ class TimetablePage {
 		this._year_ctrl.on_change(() => this._maybe_load());
 		this._cg_ctrl.on_change(()   => this._maybe_load());
 
-		// Auto-select current academic year
-		frappe.db.get_single_value("School Settings", "current_academic_year").then(val => {
+		// Pre-select from deep-link, then default the year and auto-load.
+		const pre = this._preselect || {};
+		if (pre.class_group) this._cg_ctrl.set_value(pre.class_group);
+
+		const apply_year = (val) => {
 			if (val) this._year_ctrl.set_value(val);
-		});
+			this._maybe_load();
+		};
+
+		if (pre.academic_year) {
+			apply_year(pre.academic_year);
+		} else if (pre.class_group) {
+			// Use the turma's own academic year so the deep-link lands on real data
+			frappe.db.get_value("Class Group", pre.class_group, "academic_year").then(r => {
+				const y = r && r.message && r.message.academic_year;
+				if (y) return apply_year(y);
+				frappe.db.get_single_value("School Settings", "current_academic_year").then(apply_year);
+			});
+		} else {
+			frappe.db.get_single_value("School Settings", "current_academic_year").then(apply_year);
+		}
 	}
 
 	_maybe_load() {
