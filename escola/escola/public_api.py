@@ -69,7 +69,7 @@ def get_turma_timetable(turma):
     entries = frappe.db.get_all(
         "Timetable Entry",
         filters={"parent": timetable_name},
-        fields=["day_of_week", "time_slot", "subject", "teacher", "is_double"],
+        fields=["day_of_week", "time_slot", "subject", "teacher", "entry_type"],
     )
 
     shift = turma_info.get("shift") or ""

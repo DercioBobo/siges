@@ -161,7 +161,7 @@ def get_student_timetable(student):
     entries = frappe.db.get_all(
         "Timetable Entry",
         filters={"parent": timetable_name},
-        fields=["day_of_week", "time_slot", "subject", "teacher", "classroom"],
+        fields=["day_of_week", "time_slot", "subject", "teacher", "entry_type"],
     )
 
     cg_info = frappe.db.get_value(

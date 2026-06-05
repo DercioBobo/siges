@@ -131,16 +131,18 @@ def get_dashboard():
     today_lessons = []
     if today_pt:
         today_lessons = frappe.db.sql("""
-            SELECT te.subject, te.time_slot,
+            SELECT te.subject, te.time_slot, te.entry_type,
                    t.class_group, cg.school_class, cg.section_name, cg.shift,
                    ts.label
             FROM `tabTimetable Entry` te
             JOIN `tabTimetable` t ON t.name = te.parent
             JOIN `tabClass Group` cg ON cg.name = t.class_group
             LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
-            WHERE te.teacher = %s AND te.day_of_week = %s AND t.status = 'Activo'
+            WHERE t.status = 'Activo' AND te.day_of_week = %s
+              AND ( te.teacher = %s
+                    OR (te.entry_type = 'Reunião Turma' AND cg.class_teacher = %s) )
             ORDER BY ts.label
-        """, (teacher.name, today_pt), as_dict=True)
+        """, (today_pt, teacher.name, teacher.name), as_dict=True)
 
     # Stats
     total_students = sum(t.get("student_count") or 0 for t in turmas)
@@ -196,17 +198,21 @@ def get_dashboard():
 def get_timetable():
     teacher = _get_teacher()
 
+    # Lessons the teacher gives, plus the Reunião de Turma of any turma they direct
+    # (RT has no teacher, so it's matched via the turma's class_teacher).
     entries = frappe.db.sql("""
-        SELECT te.day_of_week, te.time_slot, te.subject,
+        SELECT te.day_of_week, te.time_slot, te.subject, te.entry_type,
                t.class_group, cg.school_class, cg.section_name, cg.shift,
                ts.label, ts.slot_type
         FROM `tabTimetable Entry` te
         JOIN `tabTimetable` t ON t.name = te.parent
         JOIN `tabClass Group` cg ON cg.name = t.class_group
         LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
-        WHERE te.teacher = %s AND t.status = 'Activo'
+        WHERE t.status = 'Activo'
+          AND ( te.teacher = %s
+                OR (te.entry_type = 'Reunião Turma' AND cg.class_teacher = %s) )
         ORDER BY ts.label, te.day_of_week
-    """, teacher.name, as_dict=True)
+    """, (teacher.name, teacher.name), as_dict=True)
 
     # All relevant time slots
     time_slots = frappe.db.sql("""
@@ -215,10 +221,13 @@ def get_timetable():
         WHERE ts.name IN (
             SELECT te.time_slot FROM `tabTimetable Entry` te
             JOIN `tabTimetable` t ON t.name = te.parent
-            WHERE te.teacher = %s AND t.status = 'Activo'
+            JOIN `tabClass Group` cg ON cg.name = t.class_group
+            WHERE t.status = 'Activo'
+              AND ( te.teacher = %s
+                    OR (te.entry_type = 'Reunião Turma' AND cg.class_teacher = %s) )
         )
         ORDER BY ts.label
-    """, teacher.name, as_dict=True)
+    """, (teacher.name, teacher.name), as_dict=True)
 
     return {"entries": entries, "time_slots": time_slots}
 

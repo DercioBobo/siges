@@ -962,7 +962,13 @@
           </td>`;
         daysPresent.forEach(day => {
           const entry = (entryMap[day] || {})[slot.name];
-          if (entry && entry.subject) {
+          if (entry && entry.entry_type === 'Reunião Turma') {
+            html += `<td class="p-1.5 align-top">
+              <div class="border rounded-lg p-2 bg-slate-100 text-slate-600 border-slate-300">
+                <div class="text-xs font-semibold leading-tight">RT</div>
+                <div class="text-xs opacity-60 mt-0.5">Reunião de Turma</div>
+              </div></td>`;
+          } else if (entry && entry.subject) {
             const cls = subjectColors[entry.subject] || 'bg-slate-50 text-slate-600 border-slate-200';
             html += `<td class="p-1.5 align-top">
               <div class="border rounded-lg p-2 ${cls}" title="${escHtml(entry.teacher || '')}">

@@ -594,7 +594,7 @@ function loadHome() {
           ${l.start_time ? l.start_time.substring(0,5) : l.label || '—'}
         </div>
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-slate-800 truncate">${esc(l.subject||'—')}</div>
+          <div class="text-sm font-semibold text-slate-800 truncate">${l.entry_type === 'Reunião Turma' ? 'RT — Reunião de Turma' : esc(l.subject||'—')}</div>
           <div class="text-xs text-slate-400">${esc(l.school_class||'')}${l.section_name?' · Turma '+l.section_name:''}</div>
         </div>
         ${l.shift?`<span class="text-xs px-2 py-0.5 rounded-full ${shiftCfg(l.shift).badge} shrink-0">${shiftCfg(l.shift).icon} ${esc(l.shift)}</span>`:''}
@@ -879,7 +879,13 @@ async function loadHorario() {
         </td>`;
       daysPresent.forEach(day => {
         const entry = (entryMap[day]||{})[slot.name];
-        if (entry) {
+        if (entry && entry.entry_type === 'Reunião Turma') {
+          html += `<td class="p-1.5 align-top">
+            <div class="border rounded-lg p-2 bg-slate-100 text-slate-600 border-slate-300">
+              <div class="text-xs font-semibold leading-tight">RT</div>
+              <div class="text-xs opacity-60 mt-0.5 truncate">${esc(entry.school_class||entry.class_group||'')}</div>
+            </div></td>`;
+        } else if (entry) {
           const cls = subjectColors[`${entry.class_group}|${entry.subject}`] || COLORS[0];
           html += `<td class="p-1.5 align-top">
             <div class="border rounded-lg p-2 ${cls}">
