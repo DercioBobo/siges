@@ -62,6 +62,14 @@ frappe.ui.form.on("Timetable", {
 });
 
 frappe.ui.form.on("Timetable Entry", {
+	entry_type(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (row.entry_type === "Reunião Turma") {
+			// RT carries no subject/teacher (like Borla, but per-turma)
+			frappe.model.set_value(cdt, cdn, "subject", null);
+			frappe.model.set_value(cdt, cdn, "teacher", null);
+		}
+	},
 	subject(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (!row.subject || !frm.doc.class_group) return;
@@ -81,6 +89,7 @@ frappe.ui.form.on("Timetable Entry", {
 async function _open_grid_dialog(frm) {
 	const DAYS = ["Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira"];
 	const DAY_SHORT = ["Seg", "Ter", "Qua", "Qui", "Sex"];
+	const RT_VALUE = "__RT__";   // sentinel for a Reunião de Turma cell (no subject)
 
 	// 1. Load time slots for the current shift
 	const slotFilters = { is_active: 1 };
@@ -125,11 +134,13 @@ async function _open_grid_dialog(frm) {
 	// 3. Pre-populate from existing entries
 	const existing = {};
 	(frm.doc.timetable_entries || []).forEach(e => {
-		existing[`${e.day_of_week}||${e.time_slot}`] = e.subject || "";
+		existing[`${e.day_of_week}||${e.time_slot}`] =
+			e.entry_type === "Reunião Turma" ? RT_VALUE : (e.subject || "");
 	});
 
-	// 4. Build grid HTML
+	// 4. Build grid HTML — RT pinned at the top, then the turma's subjects
 	const opts = ['<option value=""></option>',
+		`<option value="${RT_VALUE}">— Reunião de Turma (RT) —</option>`,
 		...subjects.map(s => `<option value="${frappe.utils.escape_html(s)}">${frappe.utils.escape_html(s)}</option>`)
 	].join("");
 
@@ -182,12 +193,12 @@ async function _open_grid_dialog(frm) {
 			// Collect filled cells
 			const entries = [];
 			d.$wrapper.find(".tg-cell").each(function () {
-				const subject = $(this).val();
-				if (!subject) return;
+				const val = $(this).val();
+				if (!val) return;
 				entries.push({
 					day_of_week: $(this).data("day"),
 					time_slot: $(this).data("slot"),
-					subject,
+					value: val,
 				});
 			});
 
@@ -197,14 +208,21 @@ async function _open_grid_dialog(frm) {
 				const row = frm.add_child("timetable_entries");
 				row.day_of_week = e.day_of_week;
 				row.time_slot = e.time_slot;
-				row.subject = e.subject;
+				if (e.value === RT_VALUE) {
+					row.entry_type = "Reunião Turma";   // no subject/teacher
+				} else {
+					row.entry_type = "Aula";
+					row.subject = e.value;
+				}
 			}
 			frm.refresh_field("timetable_entries");
 			d.hide();
 
-			// Auto-fill teachers from curriculum (batch)
+			// Auto-fill teachers from curriculum (batch) — only for subject rows
 			if (frm.doc.class_group) {
-				const filling = frm.doc.timetable_entries.map(row =>
+				const filling = frm.doc.timetable_entries
+					.filter(row => row.subject && row.entry_type !== "Reunião Turma")
+					.map(row =>
 					frappe.call({
 						method: "escola.escola.doctype.timetable.timetable.get_curriculum_teacher",
 						args: { class_group: frm.doc.class_group, subject: row.subject },

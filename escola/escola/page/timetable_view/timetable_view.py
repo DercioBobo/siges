@@ -84,7 +84,7 @@ def get_timetable_data(class_group, academic_year):
     entries = frappe.get_all(
         "Timetable Entry",
         filters={"parent": timetable.name},
-        fields=["day_of_week", "time_slot", "subject", "teacher", "notes"],
+        fields=["day_of_week", "time_slot", "subject", "teacher", "notes", "entry_type"],
     )
 
     # Resolve subject info (name, code, color)
@@ -114,6 +114,7 @@ def get_timetable_data(class_group, academic_year):
     for e in entries:
         sub = subject_map.get(e.subject) if e.subject else None
         grid[e.day_of_week][e.time_slot] = {
+            "is_rt":        1 if e.entry_type == "Reunião Turma" else 0,
             "subject":      sub.subject_name if sub else "",
             "subject_code": sub.subject_code if sub else "",
             "color":        (sub.color or "") if sub else "",

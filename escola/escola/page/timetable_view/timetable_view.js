@@ -344,6 +344,9 @@ class TimetablePage {
 
 		const day_cells = days.map(day => {
 			const cell = (grid[day] || {})[slot.name];
+			if (cell && cell.is_rt) {
+				return this._html_rt_cell();
+			}
 			if (!cell || !cell.subject_code) {
 				return `<td style="background:#F9FAFB;border-radius:6px;min-height:56px;"></td>`;
 			}
@@ -351,6 +354,23 @@ class TimetablePage {
 		}).join("");
 
 		return `<tr>${time_cell}${day_cells}</tr>`;
+	}
+
+	_html_rt_cell() {
+		const color = "#475569";
+		return `
+			<td style="background:white;border-radius:6px;padding:5px 3px;vertical-align:middle;">
+				<div style="background:${color}1A;border-left:3px solid ${color};
+				            border-radius:4px;padding:6px 8px;min-height:54px;
+				            display:flex;flex-direction:column;justify-content:center;">
+					<div style="font-size:13px;font-weight:800;color:${color};
+					            letter-spacing:.5px;">RT</div>
+					<div style="font-size:10px;color:#6B7280;margin-top:2px;line-height:1.3;">
+						Reunião de Turma
+					</div>
+				</div>
+			</td>
+		`;
 	}
 
 	_html_cell(cell) {
