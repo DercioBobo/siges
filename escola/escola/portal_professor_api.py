@@ -133,13 +133,13 @@ def get_dashboard():
         today_lessons = frappe.db.sql("""
             SELECT te.subject, te.time_slot,
                    t.class_group, cg.school_class, cg.section_name, cg.shift,
-                   ts.start_time, ts.label
+                   ts.label
             FROM `tabTimetable Entry` te
             JOIN `tabTimetable` t ON t.name = te.parent
             JOIN `tabClass Group` cg ON cg.name = t.class_group
             LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
             WHERE te.teacher = %s AND te.day_of_week = %s AND t.status = 'Activo'
-            ORDER BY ts.start_time, ts.sort_order
+            ORDER BY ts.label
         """, (teacher.name, today_pt), as_dict=True)
 
     # Stats
@@ -199,25 +199,25 @@ def get_timetable():
     entries = frappe.db.sql("""
         SELECT te.day_of_week, te.time_slot, te.subject,
                t.class_group, cg.school_class, cg.section_name, cg.shift,
-               ts.start_time, ts.end_time, ts.label, ts.sort_order, ts.slot_type
+               ts.label, ts.slot_type
         FROM `tabTimetable Entry` te
         JOIN `tabTimetable` t ON t.name = te.parent
         JOIN `tabClass Group` cg ON cg.name = t.class_group
         LEFT JOIN `tabTime Slot` ts ON ts.name = te.time_slot
         WHERE te.teacher = %s AND t.status = 'Activo'
-        ORDER BY ts.start_time, ts.sort_order, te.day_of_week
+        ORDER BY ts.label, te.day_of_week
     """, teacher.name, as_dict=True)
 
     # All relevant time slots
     time_slots = frappe.db.sql("""
-        SELECT DISTINCT ts.name, ts.label, ts.start_time, ts.end_time, ts.slot_type, ts.sort_order
+        SELECT DISTINCT ts.name, ts.label, ts.slot_type
         FROM `tabTime Slot` ts
         WHERE ts.name IN (
             SELECT te.time_slot FROM `tabTimetable Entry` te
             JOIN `tabTimetable` t ON t.name = te.parent
             WHERE te.teacher = %s AND t.status = 'Activo'
         )
-        ORDER BY ts.sort_order
+        ORDER BY ts.label
     """, teacher.name, as_dict=True)
 
     return {"entries": entries, "time_slots": time_slots}

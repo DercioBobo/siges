@@ -108,6 +108,9 @@ frappe.ui.form.on("Class Group", {
 
 frappe.ui.form.on("Class Group", {
     async class_teacher(frm) {
+        // Keep non-specialist subjects pointing at the (new) Director de Turma.
+        _apply_homeroom_override(frm);
+
         if (!frm.doc.class_teacher || !frm.doc.academic_year) return;
 
         const others = await frappe.db.get_list("Class Group", {
@@ -707,6 +710,27 @@ async function _prefill_subjects(frm) {
         if (s.teacher) row.teacher = s.teacher;
     }
     frm.refresh_field("subject_teachers");
+    _apply_homeroom_override(frm);
+}
+
+// ---------------------------------------------------------------------------
+// In "Professor Único" turmas the Director de Turma teaches every non-specialist
+// subject. Re-apply class_teacher to those rows in the live form (covers unsaved
+// docs, where the backend cannot yet read class_teacher). Specialists are untouched.
+// ---------------------------------------------------------------------------
+
+function _apply_homeroom_override(frm) {
+    if (frm.doc.teaching_model !== "Professor Único") return;
+    const homeroom = frm.doc.class_teacher;
+    if (!homeroom) return;
+    let changed = false;
+    for (const row of frm.doc.subject_teachers || []) {
+        if (!row.is_specialist && row.teacher !== homeroom) {
+            row.teacher = homeroom;
+            changed = true;
+        }
+    }
+    if (changed) frm.refresh_field("subject_teachers");
 }
 
 // ---------------------------------------------------------------------------
@@ -729,22 +753,35 @@ async function _fill_subjects(frm) {
         return;
     }
 
-    const existing = new Set((frm.doc.subject_teachers || []).map(r => r.subject));
+    const bySubject = new Map((frm.doc.subject_teachers || []).map(row => [row.subject, row]));
     let added = 0;
+    let updated = 0;
 
     for (const s of r.message) {
-        if (existing.has(s.subject)) continue;
-        const row = frm.add_child("subject_teachers");
-        row.subject       = s.subject;
-        row.is_specialist = s.is_specialist;
-        if (s.teacher)  row.teacher = s.teacher;
+        const row = bySubject.get(s.subject);
+        if (row) {
+            // Re-apply the resolved teacher to non-specialist rows (Director de Turma
+            // in "Professor Único"). Specialist rows keep their own teacher.
+            if (!s.is_specialist && s.teacher && row.teacher !== s.teacher) {
+                frappe.model.set_value(row.doctype, row.name, "teacher", s.teacher);
+                updated++;
+            }
+            continue;
+        }
+        const newRow = frm.add_child("subject_teachers");
+        newRow.subject       = s.subject;
+        newRow.is_specialist = s.is_specialist;
+        if (s.teacher)  newRow.teacher = s.teacher;
         added++;
     }
 
     frm.refresh_field("subject_teachers");
 
-    if (added > 0) {
-        frappe.show_alert({ message: __("{0} disciplina(s) adicionada(s).", [added]), indicator: "green" });
+    if (added || updated) {
+        frappe.show_alert({
+            message: __("{0} disciplina(s) adicionada(s), {1} professor(es) actualizado(s).", [added, updated]),
+            indicator: "green",
+        });
     } else {
         frappe.show_alert({ message: __("Todas as disciplinas já estão na lista."), indicator: "blue" });
     }

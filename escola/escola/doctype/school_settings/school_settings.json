@@ -325,7 +325,6 @@
    "fieldtype": "Link",
    "label": "Perfil POS para Renovações",
    "options": "POS Profile",
-   "default": "Escola",
    "depends_on": "eval:doc.renewal_is_pos",
    "description": "Perfil POS utilizado nas facturas de renovação de matrícula."
   },

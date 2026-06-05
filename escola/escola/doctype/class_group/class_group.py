@@ -138,11 +138,27 @@ def get_subjects_for_school_class(school_class):
 
 @frappe.whitelist()
 def get_subjects_for_class_group(class_group):
-    """Used by the 'Preencher Disciplinas' button on saved Class Group forms."""
-    school_class = frappe.db.get_value("Class Group", class_group, "school_class")
-    if not school_class:
+    """Used by the 'Preencher Disciplinas' button on saved Class Group forms.
+
+    Resolves the teacher per subject according to the turma's teaching model:
+    - "Professor Único" (Primário/Pré-Primário): the Director de Turma teaches every
+      non-specialist subject; specialist subjects keep their own teacher.
+    - "Professores por Disciplina" (Secundário): teacher comes from the School Class
+      subject table (unchanged behaviour).
+    """
+    cg = frappe.db.get_value(
+        "Class Group", class_group,
+        ["school_class", "teaching_model", "class_teacher"],
+        as_dict=True,
+    )
+    if not cg or not cg.school_class:
         return []
-    return get_subjects_for_school_class(school_class)
+    subjects = get_subjects_for_school_class(cg.school_class)
+    if cg.teaching_model == "Professor Único" and cg.class_teacher:
+        for s in subjects:
+            if not s["is_specialist"]:
+                s["teacher"] = cg.class_teacher
+    return subjects
 
 
 @frappe.whitelist()

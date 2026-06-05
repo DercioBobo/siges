@@ -84,7 +84,7 @@ async function _open_grid_dialog(frm) {
 	const slots = await frappe.db.get_list("Time Slot", {
 		filters: slotFilters,
 		fields: ["name", "label", "slot_type"],
-		order_by: "start_time asc, sort_order asc",
+		order_by: "label asc",
 		limit: 100,
 	});
 

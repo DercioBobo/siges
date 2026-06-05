@@ -152,7 +152,8 @@ def _create_renewal_invoice(doc):
     auto_submit = int(settings.get("auto_submit_renewal_invoice") or 0)
     fee_amount  = float(settings.get("renewal_fee_amount") or 0)
     is_pos      = int(settings.get("renewal_is_pos") or 0)
-    pos_profile = settings.get("renewal_pos_profile") or "Escola"
+    pos_profile = settings.get("renewal_pos_profile") or ""
+    use_pos     = bool(is_pos and pos_profile)
     description = _("Renovação de Matrícula {0}").format(doc.target_academic_year)
 
     si = frappe.new_doc("Sales Invoice")
@@ -162,7 +163,7 @@ def _create_renewal_invoice(doc):
     si.due_date      = due_date
     si.remarks       = description
 
-    if is_pos:
+    if use_pos:
         si.is_pos      = 1
         si.pos_profile = pos_profile
 
@@ -180,7 +181,7 @@ def _create_renewal_invoice(doc):
     })
 
     # Copy payment methods from the Renovação doc (only relevant when POS)
-    if is_pos:
+    if use_pos:
         for p in (doc.payments or []):
             account = _get_payment_account(p.mode_of_payment, company)
             si.append("payments", {

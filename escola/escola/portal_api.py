@@ -172,8 +172,8 @@ def get_student_timetable(student):
     time_slots = frappe.db.get_all(
         "Time Slot",
         filters=ts_filters,
-        fields=["name", "label", "start_time", "end_time", "slot_type", "sort_order"],
-        order_by="start_time asc, sort_order asc",
+        fields=["name", "label", "slot_type"],
+        order_by="label asc",
     )
 
     return {
