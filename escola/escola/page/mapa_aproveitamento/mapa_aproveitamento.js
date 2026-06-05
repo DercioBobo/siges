@@ -73,9 +73,21 @@ class MapaAproveitamento {
             .ma-grid td.left { text-align:left;font-size:12px;max-width:170px;
                                overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
             .ma-grid td.computed { font-size:12px;font-weight:700;background:#F9FAFB;color:#374151; }
-            .ma-grid td.mt-cell { color:#6366F1; }
+            .ma-grid td.mt-cell { color:#6366F1;font-weight:800; }
+            .ma-grid td.mt-cell.pos { color:#047857;background:#ECFDF5; }
+            .ma-grid td.mt-cell.neg { color:#DC2626;background:#FEF2F2; }
             .ma-grid tr:hover td { background:#F0F4FF; }
             .ma-grid tr:hover td.computed { background:#E8EDFF; }
+            .ma-grid tr:hover td.mt-cell.pos { background:#D1FAE5; }
+            .ma-grid tr:hover td.mt-cell.neg { background:#FEE2E2; }
+            .ma-kpi { display:flex;align-items:center;gap:10px;background:white;
+                      border:1px solid #E5E7EB;border-radius:10px;padding:9px 15px;
+                      box-shadow:0 1px 2px rgba(16,24,40,.04); }
+            .ma-kpi-ic { width:30px;height:30px;border-radius:8px;display:flex;
+                         align-items:center;justify-content:center;font-size:14px;flex-shrink:0; }
+            .ma-kpi-val { font-size:18px;font-weight:800;line-height:1.05;color:#111827; }
+            .ma-kpi-lbl { font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;
+                          letter-spacing:.4px;margin-top:3px; }
             .ma-annual-term-sep { border-left:2px solid #E5E7EB !important; }
             @media print {
                 .ma-filters,.ma-tabs,.ma-toolbar,.navbar,.page-head,.page-actions,
@@ -585,7 +597,9 @@ class MapaAproveitamento {
 
         const acp = _n("acp");
         const mt  = (macs !== null && acp !== null) ? _ri((2*macs + acp)/3) : null;
-        $tr.find("[data-field='mt']").text(mt !== null ? mt : "");
+        const $mt = $tr.find("[data-field='mt']");
+        $mt.text(mt !== null ? mt : "").removeClass("pos neg");
+        if (mt !== null) $mt.addClass(mt >= 10 ? "pos" : "neg");
     }
 
     _mark_dirty(idx) {
@@ -598,24 +612,42 @@ class MapaAproveitamento {
     _update_footer(idx) {
         const $stats = this.$grid_area.find(".ma-stats");
         if (!$stats.length) return;
-        let approved = 0, failed = 0, no_data = 0;
+        let approved = 0, failed = 0, no_data = 0, sum = 0, cnt = 0;
+        // Single pass: recolour the MT cells and gather the class KPIs.
         this.$grid_area.find(".ma-grid tbody tr").each((_, tr) => {
-            const mt = parseFloat($(tr).find("[data-field='mt']").text());
-            if (!isNaN(mt)) { mt >= 10 ? approved++ : failed++; } else { no_data++; }
+            const $mt = $(tr).find("[data-field='mt']");
+            const mt  = parseFloat($mt.text());
+            $mt.removeClass("pos neg");
+            if (!isNaN(mt)) {
+                $mt.addClass(mt >= 10 ? "pos" : "neg");
+                mt >= 10 ? approved++ : failed++;
+                sum += mt; cnt++;
+            } else {
+                no_data++;
+            }
         });
         const total = (this.data && this.data.students) ? this.data.students.length : 0;
-        $stats.html(`
-            <span style="font-size:13px;color:#10B981;font-weight:700;">
-                <i class="fa fa-check-circle"></i>&nbsp;Aprovados: ${approved}
-            </span>
-            <span style="font-size:13px;color:#EF4444;font-weight:700;">
-                <i class="fa fa-times-circle"></i>&nbsp;Reprovados: ${failed}
-            </span>
-            <span style="font-size:13px;color:#9CA3AF;font-weight:700;">
-                <i class="fa fa-minus-circle"></i>&nbsp;S/Média: ${no_data}
-            </span>
-            <span style="font-size:13px;color:#6B7280;">Total: ${total}</span>
-        `);
+        const avg   = cnt ? (sum / cnt).toFixed(1) : "—";
+        const avg_color = !cnt ? "#9CA3AF" : (sum / cnt >= 10 ? "#047857" : "#DC2626");
+
+        const kpi = (ic, ic_bg, ic_color, val, val_color, lbl) => `
+            <div class="ma-kpi">
+                <div class="ma-kpi-ic" style="background:${ic_bg};color:${ic_color};">
+                    <i class="fa ${ic}"></i>
+                </div>
+                <div>
+                    <div class="ma-kpi-val" style="color:${val_color};">${val}</div>
+                    <div class="ma-kpi-lbl">${lbl}</div>
+                </div>
+            </div>`;
+
+        $stats.html(
+            kpi("fa-line-chart", "#EEF2FF", "#6366F1", avg, avg_color, __("Média da Turma")) +
+            kpi("fa-check-circle", "#ECFDF5", "#10B981", approved, "#047857", __("Aprovados")) +
+            kpi("fa-times-circle", "#FEF2F2", "#EF4444", failed, "#DC2626", __("Reprovados")) +
+            kpi("fa-minus-circle", "#F3F4F6", "#9CA3AF", no_data, "#6B7280", __("S/Média")) +
+            kpi("fa-users", "#F1F5F9", "#475569", total, "#111827", __("Total"))
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -682,6 +714,7 @@ class MapaAproveitamento {
                     $tr.find("[data-field='macs']").text(_ri(sr.macs));
                     $tr.find("[data-field='mt']").text(_ri(sr.mt));
                 });
+                this._update_footer(idx);   // refresh KPIs + MT colours from saved values
 
                 if (resp.grade_entry && !this.$grid_area.find(".ma-toolbar a").length) {
                     this.$grid_area.find(".ma-toolbar > div:first-child").append(

@@ -62,6 +62,15 @@ class PautaFrequencia {
             .pf-table tr:nth-child(even) td { background:#F8FAFC; }
             .pf-table tr:nth-child(even) td.avg-cell { background:#DBEAFE; }
             .pf-table tr:nth-child(even) td.global-avg { background:#BFDBFE; }
+            /* Frozen first columns (#, Nome, G) so the wide matrix stays readable */
+            .pf-table .pf-fz { position:sticky;z-index:2; }
+            .pf-table thead th.pf-fz { z-index:5;background:#1E293B; }
+            .pf-table .pf-fz1 { left:0;width:28px;min-width:28px;max-width:28px; }
+            .pf-table .pf-fz2 { left:28px;width:140px;min-width:140px;max-width:140px; }
+            .pf-table .pf-fz3 { left:168px;width:22px;min-width:22px;max-width:22px;
+                                box-shadow:2px 0 0 0 #94A3B8; }
+            .pf-table td.pf-fz { background:#fff; }
+            .pf-table tr:nth-child(even) td.pf-fz { background:#F1F5F9; }
             .pf-stats { margin-top:24px; }
             .pf-stats-table { border-collapse:collapse;font-size:10px;width:100%; }
             .pf-stats-table th, .pf-stats-table td { border:1px solid #CBD5E1;padding:3px 6px;text-align:center; }
@@ -218,9 +227,9 @@ class PautaFrequencia {
         const n        = terms.length;
 
         // ---- header row 1: group labels ----
-        let th1 = `<th rowspan="3">#</th>
-                   <th rowspan="3" style="min-width:120px;">Nome</th>
-                   <th rowspan="3">G</th>`;
+        let th1 = `<th rowspan="3" class="pf-fz pf-fz1">#</th>
+                   <th rowspan="3" class="pf-fz pf-fz2">Nome</th>
+                   <th rowspan="3" class="pf-fz pf-fz3">G</th>`;
 
         subjects.forEach(s => {
             th1 += `<th colspan="${n + n + n}" class="subj-header">
@@ -266,11 +275,11 @@ class PautaFrequencia {
 
         const rows_html = d.students.map(s => {
             let cells = `
-                <td style="color:#9CA3AF;font-size:9px;">${s.idx}</td>
-                <td class="name-cell" title="${frappe.utils.escape_html(s.student_name)}">
+                <td class="pf-fz pf-fz1" style="color:#9CA3AF;font-size:9px;">${s.idx}</td>
+                <td class="pf-fz pf-fz2 name-cell" title="${frappe.utils.escape_html(s.student_name)}">
                     ${frappe.utils.escape_html(s.student_name)}
                 </td>
-                <td>${frappe.utils.escape_html(s.gender ? s.gender[0] : "")}</td>
+                <td class="pf-fz pf-fz3">${frappe.utils.escape_html(s.gender ? s.gender[0] : "")}</td>
             `;
 
             subjects.forEach(subj => {
