@@ -374,6 +374,7 @@ const API      = 'escola.escola.portal_professor_api.';
 let _turmas = [];
 let _terms  = [];
 let _currentTerm = null;
+let _academicYear = null;
 let _dashData = null;
 
 const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
@@ -511,6 +512,7 @@ async function init() {
     _turmas      = dash.turmas || [];
     _terms       = termData.terms || [];
     _currentTerm = termData.current_term || (_terms[0]?.name || null);
+    _academicYear = termData.academic_year || null;
 
     if (dash.teacher) {
       const first = (dash.teacher.full_name||'').charAt(0).toUpperCase() || '?';
@@ -924,7 +926,17 @@ function initPautas() {
     tt.appendChild(o);
   });
   if (_currentTerm) tt.value = _currentTerm;
+  if (!_terms.length) {
+    document.getElementById('pautas-list').innerHTML = emptyHtml(noTermsMsg());
+    return;
+  }
   loadPautas();
+}
+
+function noTermsMsg() {
+  return _academicYear
+    ? `Não existem períodos académicos definidos para o ano lectivo ${esc(_academicYear)}. Contacte a secretaria.`
+    : 'O ano lectivo actual não está configurado. Contacte a secretaria.';
 }
 
 async function loadPautas() {
@@ -1217,6 +1229,9 @@ function initPresencas() {
     tt.appendChild(o);
   });
   if (_currentTerm) tt.value = _currentTerm;
+  if (!_terms.length) {
+    document.getElementById('att-content').innerHTML = emptyHtml(noTermsMsg());
+  }
 }
 
 async function loadAttendanceView() {

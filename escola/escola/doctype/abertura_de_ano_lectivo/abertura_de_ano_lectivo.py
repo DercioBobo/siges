@@ -26,6 +26,7 @@ class AberturadeAnoLectivo(Document):
 
     def on_submit(self):
         self._check_target_has_class_groups()
+        self._check_target_has_terms()
         self._set_school_settings()
         self._flag_pending_students()
         self.db_set("status", "Concluída")
@@ -46,9 +47,33 @@ class AberturadeAnoLectivo(Document):
                 title=_("Turmas em falta"),
             )
 
+    def _check_target_has_terms(self):
+        count = frappe.db.count(
+            "Academic Term", {"academic_year": self.target_academic_year}
+        )
+        if not count:
+            frappe.throw(
+                _("Não existem Períodos Académicos para o Ano Lectivo <b>{0}</b>. "
+                  "Crie os períodos (trimestres) do novo ano antes de abrir o ano lectivo.").format(
+                    self.target_academic_year
+                ),
+                title=_("Períodos em falta"),
+            )
+
     def _set_school_settings(self):
         frappe.db.set_single_value(
             "School Settings", "current_academic_year", self.target_academic_year
+        )
+        # current_academic_term would otherwise keep pointing at a term of the
+        # old year — a state School Settings.validate rejects on the next save.
+        first_term = frappe.db.get_value(
+            "Academic Term",
+            {"academic_year": self.target_academic_year},
+            "name",
+            order_by="start_date asc",
+        )
+        frappe.db.set_single_value(
+            "School Settings", "current_academic_term", first_term
         )
 
     def _flag_pending_students(self):

@@ -5,7 +5,10 @@ Shared utilities for provisioning Frappe portal users for Guardians and Teachers
 Called from guardian.py and teacher.py after_insert hooks.
 """
 
+import re
 import secrets
+import unicodedata
+
 import frappe
 from frappe import _
 from frappe.utils.password import update_password
@@ -17,13 +20,20 @@ def _generate_temp_password():
     return "Escola@" + digits
 
 
+def _ascii_slug(text):
+    """Transliterate to plain ASCII (Dércio -> dercio) and keep only [a-z0-9]."""
+    normalized = unicodedata.normalize("NFKD", text)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]", "", ascii_text.lower())
+
+
 def _portal_email(doc):
     """Return the email to use as Frappe username. Falls back to a synthetic address."""
     email = (getattr(doc, "email", "") or "").strip()
     if email:
         return email
     # Synthetic internal address — not a real mailbox
-    code = doc.name.lower().replace("-", "").replace(" ", "")
+    code = _ascii_slug(doc.name) or frappe.generate_hash(length=8).lower()
     return f"{code}@portal.escola"
 
 
