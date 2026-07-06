@@ -71,6 +71,10 @@ role_home_page = {
     "Professor": "/portal-professor",
 }
 
+# role_home_page only covers Website Users; teachers are System Users,
+# so their post-login destination is overridden here instead.
+on_session_creation = "escola.escola.auth.on_session_creation"
+
 # -----------------------------------------------------------------
 # Scheduled tasks
 # -----------------------------------------------------------------

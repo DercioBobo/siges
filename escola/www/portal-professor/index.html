@@ -177,6 +177,15 @@
       </svg>
       <span>Perfil</span>
     </button>
+    {% if can_access_desk %}
+    <a href="/app" class="nav-btn">
+      <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      <span>Ir para o Sistema</span>
+    </a>
+    {% endif %}
     <a href="/portal-logout" class="nav-btn nav-logout">
       <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -213,15 +222,15 @@
   <main class="flex-1 px-4 md:px-6 lg:px-8 py-6">
 
     <!-- HOME -->
-    <div id="view-home" class="view active">
+    <div id="view-home" class="view active max-w-5xl mx-auto">
       <div id="home-loading" class="flex justify-center py-24">
         <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
       </div>
-      <div id="home-content" class="hidden space-y-5 max-w-5xl"></div>
+      <div id="home-content" class="hidden space-y-5"></div>
     </div>
 
     <!-- TURMAS -->
-    <div id="view-turmas" class="view">
+    <div id="view-turmas" class="view max-w-5xl mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">As Minhas Turmas</h2>
         <p class="text-sm text-slate-500 mt-0.5">Clique numa turma para ver alunos, criar pautas ou registar presenças.</p>
@@ -229,11 +238,11 @@
       <div id="turmas-loading" class="flex justify-center py-16">
         <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
       </div>
-      <div id="turmas-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl"></div>
+      <div id="turmas-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
     </div>
 
     <!-- HORÁRIO -->
-    <div id="view-horario" class="view">
+    <div id="view-horario" class="view max-w-5xl mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">O Meu Horário</h2>
         <p class="text-sm text-slate-500 mt-0.5">Horário semanal baseado nas turmas activas onde está atribuído.</p>
@@ -241,16 +250,16 @@
       <div id="horario-loading" class="flex justify-center py-16">
         <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
       </div>
-      <div id="horario-content" class="hidden max-w-5xl"></div>
+      <div id="horario-content" class="hidden"></div>
     </div>
 
     <!-- PAUTAS -->
-    <div id="view-pautas" class="view">
+    <div id="view-pautas" class="view max-w-2xl mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">Pautas de Notas</h2>
         <p class="text-sm text-slate-500 mt-0.5">Registe as notas por disciplina e período lectivo.</p>
       </div>
-      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm max-w-2xl">
+      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
         <select id="pautas-turma" onchange="loadPautas()" class="field flex-1 min-w-[150px]">
           <option value="">Todas as turmas</option>
         </select>
@@ -261,16 +270,16 @@
       <div id="pautas-loading" class="hidden justify-center py-10">
         <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
       </div>
-      <div id="pautas-list" class="space-y-2.5 max-w-2xl"></div>
+      <div id="pautas-list" class="space-y-2.5"></div>
     </div>
 
     <!-- PRESENÇAS -->
-    <div id="view-presencas" class="view">
+    <div id="view-presencas" class="view max-w-2xl mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">Registo de Presenças</h2>
         <p class="text-sm text-slate-500 mt-0.5">Faltas justificadas e injustificadas por turma e período.</p>
       </div>
-      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm max-w-2xl">
+      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
         <select id="att-turma" onchange="loadAttendanceView()" class="field flex-1 min-w-[150px]">
           <option value="">Seleccione a turma</option>
         </select>
@@ -278,11 +287,11 @@
           <option value="">Seleccione o período</option>
         </select>
       </div>
-      <div id="att-content" class="max-w-2xl"></div>
+      <div id="att-content"></div>
     </div>
 
     <!-- PERFIL -->
-    <div id="view-perfil" class="view max-w-md">
+    <div id="view-perfil" class="view max-w-md mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">Perfil</h2>
         <p class="text-sm text-slate-500 mt-0.5">As suas informações e configurações de acesso.</p>
@@ -396,14 +405,31 @@ const SHIFT_CFG = {
 function shiftCfg(s) { return SHIFT_CFG[s] || { badge:'bg-slate-100 text-slate-600', bar:'bg-slate-400', icon:'' }; }
 
 // ── API ────────────────────────────────────────────────────────
+const API_TIMEOUT_MS = 20000;
+
 async function api(method, args) {
-  const r = await fetch('/api/method/' + API + method, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', 'X-Frappe-CSRF-Token':CSRF, 'Accept':'application/json' },
-    body: JSON.stringify(args || {}),
-  });
-  const d = await r.json();
-  if (!r.ok || d.exc) {
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+  let r;
+  try {
+    r = await fetch('/api/method/' + API + method, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Frappe-CSRF-Token':CSRF, 'Accept':'application/json' },
+      body: JSON.stringify(args || {}),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    throw new Error('Sem ligação ao servidor. Verifique a sua internet e tente novamente.');
+  } finally {
+    clearTimeout(timer);
+  }
+  if (r.status === 401) {
+    window.location.href = '/login?redirect-to=/portal-professor';
+    throw new Error('Sessão expirada. A redireccionar para o login…');
+  }
+  let d = null;
+  try { d = await r.json(); } catch (e) {}
+  if (!r.ok || !d || d.exc) {
     let msg = 'Erro no servidor';
     try { msg = JSON.parse(d._server_messages||'[]').map(m=>JSON.parse(m).message).join(' ')||msg; } catch(e){}
     throw new Error(msg);
@@ -751,13 +777,13 @@ function renderTurmas() {
   grid.classList.remove('hidden');
 }
 
-function openPautasForTurma(turma) {
-  showView('pautas');
+async function openPautasForTurma(turma) {
+  await showView('pautas');
   document.getElementById('pautas-turma').value = turma;
   loadPautas();
 }
-function openAttForTurma(turma) {
-  showView('presencas');
+async function openAttForTurma(turma) {
+  await showView('presencas');
   document.getElementById('att-turma').value = turma;
   loadAttendanceView();
 }
@@ -1009,7 +1035,99 @@ async function loadPautas() {
 }
 
 // ── GRADE MODAL ────────────────────────────────────────────────
+let _gradeDirty = false;
+let _gradeCtx   = null;   // { turma, term, subject } of the open modal
+let _draftTimer = null;
+
+function _draftKey(ctx) { return `ge-draft:${ctx.turma}|${ctx.term}|${ctx.subject}`; }
+
+function _collectGradeRows() {
+  const rows = [];
+  document.querySelectorAll('#ge-table [data-student]').forEach(tr => {
+    const absent = tr.querySelector('.absent-cb')?.checked ? 1 : 0;
+    const raw = f => {
+      const v = tr.querySelector(`[data-field="${f}"]`)?.value;
+      return (v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v))) ? parseFloat(v) : null;
+    };
+    rows.push({
+      student: tr.dataset.student,
+      is_absent: absent,
+      acsp_1: raw('acsp_1'), acsp_2: raw('acsp_2'),
+      acse_1: raw('acse_1'), acse_2: raw('acse_2'),
+      acp:    raw('acp'),
+    });
+  });
+  return rows;
+}
+
+function _onGradeEdited() {
+  _gradeDirty = true;
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => {
+    if (!_gradeCtx) return;
+    try {
+      localStorage.setItem(_draftKey(_gradeCtx),
+        JSON.stringify({ ts: Date.now(), rows: _collectGradeRows() }));
+    } catch(e) {}
+  }, 500);
+}
+
+function _clearDraft() {
+  if (!_gradeCtx) return;
+  clearTimeout(_draftTimer);
+  try { localStorage.removeItem(_draftKey(_gradeCtx)); } catch(e) {}
+}
+
+function _getDraft() {
+  if (!_gradeCtx) return null;
+  try {
+    const d = JSON.parse(localStorage.getItem(_draftKey(_gradeCtx)) || 'null');
+    return (d && Array.isArray(d.rows)) ? d : null;
+  } catch(e) { return null; }
+}
+
+function restoreDraft() {
+  const d = _getDraft();
+  if (!d) return;
+  d.rows.forEach(row => {
+    const tr = document.querySelector(`#ge-table [data-student="${CSS.escape(row.student)}"]`);
+    if (!tr) return;
+    ['acsp_1','acsp_2','acse_1','acse_2','acp'].forEach(f => {
+      const inp = tr.querySelector(`[data-field="${f}"]`);
+      if (inp) inp.value = row[f] !== null && row[f] !== undefined ? row[f] : '';
+    });
+    const cb = tr.querySelector('.absent-cb');
+    if (cb && !!cb.checked !== !!row.is_absent) { cb.checked = !!row.is_absent; toggleAbsent(cb); }
+    if (!row.is_absent) _recalcRow(tr);
+  });
+  _gradeDirty = true;
+  dismissDraftBanner();
+  showToast('Rascunho restaurado.');
+}
+
+function dismissDraftBanner(discard) {
+  if (discard) _clearDraft();
+  document.getElementById('ge-draft-banner')?.remove();
+}
+
+function _draftBannerHtml(d) {
+  const when = new Date(d.ts).toLocaleString('pt-PT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  return `
+    <div id="ge-draft-banner" class="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+      <svg class="h-4 w-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="text-xs text-amber-800 flex-1 min-w-[140px]">Existe um rascunho não guardado de ${when}.</span>
+      <button onclick="restoreDraft()"
+              class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors">Restaurar</button>
+      <button onclick="dismissDraftBanner(true)"
+              class="text-xs font-medium px-2.5 py-1 rounded-lg text-amber-700 hover:bg-amber-100 transition-colors">Descartar</button>
+    </div>`;
+}
+
 async function openGradeEntry(turma, term, subject) {
+  _gradeDirty = false;
+  _gradeCtx   = { turma, term, subject };
   document.getElementById('grade-modal-title').textContent = subject;
   document.getElementById('grade-modal-subtitle').textContent = '';
   document.getElementById('grade-modal-body').innerHTML = spinnerHtml();
@@ -1026,11 +1144,16 @@ async function openGradeEntry(turma, term, subject) {
     document.getElementById('grade-modal-subtitle').textContent =
       `${turmaLabel?.school_class||turma} · ${termLabel?.term_name||term} · ${rows.length} aluno${rows.length!==1?'s':''}`;
 
-    document.getElementById('grade-modal-body').innerHTML = `
+    const draft = _getDraft();
+    const body = document.getElementById('grade-modal-body');
+    body.innerHTML = `
+      ${draft ? _draftBannerHtml(draft) : ''}
       ${_buildGradeTable(rows)}
       <p class="text-[11px] text-slate-400 mt-3 px-1">
         MACSP = média ACSP &nbsp;·&nbsp; MACS = média(MACSP + ACSE) &nbsp;·&nbsp; MT = (2×MACS + ACP) ÷ 3
       </p>`;
+    body.oninput  = _onGradeEdited;
+    body.onchange = _onGradeEdited;
 
     document.getElementById('grade-modal-footer').innerHTML = `
       <div class="flex gap-3">
@@ -1048,11 +1171,23 @@ async function openGradeEntry(turma, term, subject) {
     document.querySelectorAll('#ge-table [data-student]').forEach(tr => _recalcRow(tr));
   } catch(err) {
     document.getElementById('grade-modal-body').innerHTML = errorHtml(err.message,
-      `openGradeEntry('${esc(turma)}','${esc(term)}','${esc(subject)}')`);
+      `openGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')`);
   }
 }
 
-function closeGradeModal() {
+function closeGradeModal(force) {
+  if (_gradeDirty && !force) {
+    // Flush the pending debounce so the draft is current before asking.
+    clearTimeout(_draftTimer);
+    if (_gradeCtx) {
+      try {
+        localStorage.setItem(_draftKey(_gradeCtx),
+          JSON.stringify({ ts: Date.now(), rows: _collectGradeRows() }));
+      } catch(e) {}
+    }
+    if (!confirm('Tem alterações não guardadas. Sair sem guardar?\n(Um rascunho fica guardado neste dispositivo.)')) return;
+  }
+  _gradeDirty = false;
   document.getElementById('grade-modal')?.classList.remove('open');
   document.body.style.overflow = '';
 }
@@ -1173,48 +1308,40 @@ function _recalcRow(tr) {
 function toggleAbsent(cb) {
   const tr = cb.closest('[data-student]');
   if (!tr) return;
+  // Keep the typed grades — save_grade_entry already sends null for absent
+  // rows, so disabling (not clearing) means a mis-click loses nothing.
   tr.style.opacity = cb.checked ? '.5' : '';
   tr.querySelectorAll('input[type="number"]').forEach(inp => {
     inp.disabled = cb.checked;
     inp.style.opacity = cb.checked ? '.35' : '';
     inp.style.pointerEvents = cb.checked ? 'none' : '';
-    if (cb.checked) inp.value = '';
   });
   if (cb.checked) {
     ['macsp','macs','mt'].forEach(f => {
       const el = tr.querySelector(`[data-field="${f}"]`);
       if (el) { el.textContent = ''; el.style.color = ''; el.style.fontWeight = ''; }
     });
+  } else {
+    _recalcRow(tr);
   }
 }
 
 async function saveGradeEntry(turma, term, subject) {
-  const rows = [];
-  document.querySelectorAll('#ge-table [data-student]').forEach(tr => {
-    const student = tr.dataset.student;
-    const absent  = tr.querySelector('.absent-cb')?.checked ? 1 : 0;
-    const getVal  = f => {
-      if (absent) return null;
-      const el = tr.querySelector(`[data-field="${f}"]`);
-      const v = el?.value;
-      return (v !== '' && v !== null && !isNaN(parseFloat(v))) ? parseFloat(v) : null;
-    };
-    rows.push({
-      student,
-      is_absent: absent,
-      acsp_1: getVal('acsp_1'), acsp_2: getVal('acsp_2'),
-      acse_1: getVal('acse_1'), acse_2: getVal('acse_2'),
-      acp:    getVal('acp'),
-    });
-  });
+  // Inputs keep their values while a student is marked absent (see
+  // toggleAbsent); the server contract is null grades for absent rows.
+  const rows = _collectGradeRows().map(r => r.is_absent
+    ? { student: r.student, is_absent: 1, acsp_1: null, acsp_2: null, acse_1: null, acse_2: null, acp: null }
+    : r);
 
   const btn = document.getElementById('grade-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'A guardar…'; }
 
   try {
     await api('save_grade_entry', { turma, term, subject, rows: JSON.stringify(rows) });
+    _gradeDirty = false;
+    _clearDraft();
     showToast('Pautas guardadas com sucesso!');
-    closeGradeModal();
+    closeGradeModal(true);
     if (document.getElementById('view-pautas')?.classList.contains('active')) loadPautas();
   } catch(e) {
     showToast(e.message, false);
@@ -1269,8 +1396,8 @@ async function loadAttendanceView() {
             ${esc(turmaLabel?.school_class||turma)} · ${esc(termLabel?.term_name||term)}
           </span>
           ${data.exists
-            ? `<span class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">Registado</span>`
-            : `<span class="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Novo</span>`}
+            ? `<span id="att-status-badge" class="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">Registado</span>`
+            : `<span id="att-status-badge" class="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Novo</span>`}
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -1308,8 +1435,8 @@ async function loadAttendanceView() {
           </table>
         </div>
         <div class="px-4 py-4 border-t border-slate-100">
-          <button onclick="saveAttendance()"
-                  class="w-full py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
+          <button id="att-save-btn" onclick="saveAttendance()"
+                  class="w-full py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
             Guardar Presenças
           </button>
         </div>
@@ -1342,12 +1469,21 @@ async function saveAttendance() {
       unjustified_absences:  parseInt(inputs[1]?.value||0),
     });
   });
+  const btn = document.getElementById('att-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'A guardar…'; }
   try {
     await api('save_attendance', { turma, term, rows });
     showToast('Presenças guardadas com sucesso!');
-    loadAttendanceView();
+    // Update in place instead of re-rendering — keeps the scroll position.
+    const badge = document.getElementById('att-status-badge');
+    if (badge) {
+      badge.textContent = 'Registado';
+      badge.className = 'text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full';
+    }
   } catch(e) {
     showToast(e.message, false);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar Presenças'; }
   }
 }
 
@@ -1405,6 +1541,10 @@ function closeDrawer() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeGradeModal(); closeDrawer(); closeSidebar(); }
+});
+
+window.addEventListener('beforeunload', e => {
+  if (_gradeDirty) { e.preventDefault(); e.returnValue = ''; }
 });
 
 document.addEventListener('DOMContentLoaded', () => { _ready = init(); });

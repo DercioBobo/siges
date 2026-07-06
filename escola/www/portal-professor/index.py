@@ -21,6 +21,9 @@ def get_context(context):
         return
 
     settings = frappe.get_single("School Settings")
+    context.can_access_desk   = (
+        frappe.db.get_value("User", frappe.session.user, "user_type") == "System User"
+    )
     context.school_name       = settings.school_name or "Portal do Professor"
     context.school_logo       = settings.school_logo or ""
     context.teacher_full_name = teacher.full_name or ""
