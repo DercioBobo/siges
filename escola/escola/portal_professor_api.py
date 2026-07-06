@@ -580,12 +580,13 @@ def save_attendance(turma, term, rows):
 @frappe.whitelist()
 def get_terms():
     academic_year = frappe.db.get_single_value("School Settings", "current_academic_year")
-    if not academic_year:
-        return {"terms": [], "academic_year": None}
 
+    # Fall back to all terms when the current year isn't configured yet, instead
+    # of leaving the portal with nothing to show (mirrors _get_teacher_turmas()).
+    filters = {"academic_year": academic_year} if academic_year else {}
     terms = frappe.db.get_all(
         "Academic Term",
-        filters={"academic_year": academic_year},
+        filters=filters,
         fields=["name", "term_name", "start_date", "end_date"],
         order_by="start_date",
     )

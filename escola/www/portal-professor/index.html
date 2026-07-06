@@ -416,6 +416,13 @@ function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// For values interpolated as a '...'-quoted JS string literal inside an onclick="" attribute.
+// Escapes backslash/quote for the JS layer first, then HTML-escapes the result for the attribute layer.
+function escJs(str) {
+  if (!str) return '';
+  return esc(String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+}
+
 function showToast(msg, ok=true) {
   document.querySelectorAll('.toast').forEach(x => x.remove());
   const icon = ok
@@ -631,7 +638,7 @@ function loadHome() {
   if (d.recent_entries && d.recent_entries.length) {
     const items = d.recent_entries.map(e => `
       <div class="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 -mx-4 px-4 transition-colors"
-           onclick="openGradeEntry('${esc(e.class_group)}','${esc(e.academic_term)}','${esc(e.subject)}')">
+           onclick="openGradeEntry('${escJs(e.class_group)}','${escJs(e.academic_term)}','${escJs(e.subject)}')">
         <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
           <svg class="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -661,7 +668,7 @@ function loadHome() {
     const cfg = shiftCfg(t.shift);
     return `
       <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-           onclick="openTurmaDrawer('${esc(t.name)}')">
+           onclick="openTurmaDrawer('${escJs(t.name)}')">
         <div class="h-1.5 ${cfg.bar}"></div>
         <div class="p-3">
           <div class="font-semibold text-slate-800 text-sm truncate group-hover:text-brand transition-colors">${esc(t.school_class||t.name)}</div>
@@ -724,16 +731,16 @@ function renderTurmas() {
               <span class="text-xs text-slate-400">${t.student_count||0} alunos</span>
             </div>
             <div class="mt-3 grid grid-cols-2 gap-2">
-              <button onclick="openPautasForTurma('${esc(t.name)}')"
+              <button onclick="openPautasForTurma('${escJs(t.name)}')"
                       class="text-xs font-semibold py-2 rounded-xl bg-blue-50 text-brand hover:bg-brand hover:text-white transition-all">
                 📋 Pautas
               </button>
-              <button onclick="openAttForTurma('${esc(t.name)}')"
+              <button onclick="openAttForTurma('${escJs(t.name)}')"
                       class="text-xs font-semibold py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
                 ✓ Presenças
               </button>
             </div>
-            <button onclick="openTurmaDrawer('${esc(t.name)}')"
+            <button onclick="openTurmaDrawer('${escJs(t.name)}')"
                     class="mt-2 w-full text-xs font-medium py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
               Ver Alunos
             </button>
@@ -808,11 +815,11 @@ async function openTurmaDrawer(turma) {
 
     document.getElementById('drawer-footer').innerHTML = `
       <div class="flex gap-2">
-        <button onclick="openPautasForTurma('${esc(turma)}');closeDrawer()"
+        <button onclick="openPautasForTurma('${escJs(turma)}');closeDrawer()"
                 class="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-dark transition-colors">
           📋 Pautas
         </button>
-        <button onclick="openAttForTurma('${esc(turma)}');closeDrawer()"
+        <button onclick="openAttForTurma('${escJs(turma)}');closeDrawer()"
                 class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition-colors">
           ✓ Presenças
         </button>
@@ -978,7 +985,7 @@ async function loadPautas() {
       const pct = cnt.total ? Math.round((cnt.complete||0) / cnt.total * 100) : 0;
       return `
       <div class="bg-white rounded-xl border ${cfg.border} p-4 hover:shadow-md transition-all cursor-pointer group"
-           onclick="openGradeEntry('${esc(turma)}','${esc(term)}','${esc(e.subject)}')">
+           onclick="openGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(e.subject)}')">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}"></div>
@@ -1032,7 +1039,7 @@ async function openGradeEntry(turma, term, subject) {
           Cancelar
         </button>
         <button id="grade-save-btn"
-                onclick="saveGradeEntry('${esc(turma)}','${esc(term)}','${esc(subject)}')"
+                onclick="saveGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')"
                 class="flex-1 py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
           Guardar Pautas
         </button>
