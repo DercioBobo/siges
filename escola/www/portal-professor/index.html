@@ -376,6 +376,7 @@ let _terms  = [];
 let _currentTerm = null;
 let _academicYear = null;
 let _dashData = null;
+let _ready = null;
 
 const DAYS = ['Segunda-Feira','Terça-Feira','Quarta-Feira','Quinta-Feira','Sexta-Feira'];
 const SHORT_DAYS = ['Seg','Ter','Qua','Qui','Sex'];
@@ -465,7 +466,7 @@ function spinnerHtml() {
 // ── Navigation ─────────────────────────────────────────────────
 let _loadedViews = new Set();
 
-function showView(name) {
+async function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+name)?.classList.add('active');
 
@@ -478,15 +479,17 @@ function showView(name) {
 
   closeSidebar();
 
-  if (!_loadedViews.has(name)) {
-    _loadedViews.add(name);
-    if (name === 'home')      loadHome();
-    if (name === 'turmas')    renderTurmas();
-    if (name === 'horario')   loadHorario();
-    if (name === 'pautas')    initPautas();
-    if (name === 'presencas') initPresencas();
-    if (name === 'perfil')    renderPerfil();
-  }
+  if (_loadedViews.has(name)) return;
+  _loadedViews.add(name);
+
+  if (_ready) await _ready;
+
+  if (name === 'home')      loadHome();
+  if (name === 'turmas')    renderTurmas();
+  if (name === 'horario')   loadHorario();
+  if (name === 'pautas')    initPautas();
+  if (name === 'presencas') initPresencas();
+  if (name === 'perfil')    renderPerfil();
 }
 
 // ── Sidebar ────────────────────────────────────────────────────
@@ -1397,7 +1400,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeGradeModal(); closeDrawer(); closeSidebar(); }
 });
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => { _ready = init(); });
 </script>
 </body>
 </html>
