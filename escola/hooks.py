@@ -66,14 +66,14 @@ app_include_js = ["/assets/escola/js/escola_utils.js"]
 
 # Redirect portal-only users to their respective portals after login
 # instead of the desk (which they have no access to).
+# NOTE: this only applies to Website Users (e.g. guardians). Teachers are
+# System Users — Frappe v15 hardcodes their post-login destination to /app
+# (LoginManager.set_user_info runs after every login hook), so teacher
+# redirection is handled desk-side in public/js/escola_utils.js instead.
 role_home_page = {
     "Encarregado de Educação": "/portal",
     "Professor": "/portal-professor",
 }
-
-# role_home_page only covers Website Users; teachers are System Users,
-# so their post-login destination is overridden here instead.
-on_session_creation = "escola.escola.auth.on_session_creation"
 
 # -----------------------------------------------------------------
 # Scheduled tasks

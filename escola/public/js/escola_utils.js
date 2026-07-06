@@ -1,6 +1,27 @@
 window.escola = window.escola || {};
 escola.utils = escola.utils || {};
 
+// ---------------------------------------------------------------------------
+// Portal-first teachers — bounce desk visits to /portal-professor.
+// Frappe v15 overwrites any home_page set in on_session_creation for System
+// Users (LoginManager.set_user_info runs after the hook fires), so the
+// redirect has to happen desk-side. The portal's "Ir para o Sistema" link
+// sets a session flag that allows the desk for that browser tab.
+// ---------------------------------------------------------------------------
+$(function () {
+    try {
+        if (!window.location.pathname.startsWith("/app")) return;
+        if (sessionStorage.getItem("escola_desk_ok")) return;
+        const roles = (frappe.boot && frappe.boot.user && frappe.boot.user.roles) || [];
+        const desk_first = ["System Manager", "Diretor Escolar", "Secretaria Escolar"];
+        if (roles.includes("Professor") && !desk_first.some((r) => roles.includes(r))) {
+            window.location.replace("/portal-professor");
+        }
+    } catch (e) {
+        // never block desk boot over this
+    }
+});
+
 /**
  * Fetch the current Academic Year from the server and set it on frm.
  * Only runs on new (unsaved) documents where the field is still empty.
