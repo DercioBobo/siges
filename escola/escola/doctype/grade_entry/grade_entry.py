@@ -63,6 +63,9 @@ def get_grade_entry_students(class_group, academic_year):
     return rows
 
 
+SCORE_FIELDS = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp", "macsp", "macs", "mt"]
+
+
 class GradeEntry(Document):
     def validate(self):
         self._validate_term_belongs_to_year()
@@ -73,6 +76,19 @@ class GradeEntry(Document):
         self._validate_score_ranges()
         self._compute_macs_mt()
         self._calculate_class_summary()
+
+    def on_update(self):
+        self._restore_null_scores()
+
+    def _restore_null_scores(self):
+        """Frappe coerces None numeric values to 0 on DB write (get_valid_dict
+        runs cint/flt), so 'sem nota' would become a real grade of 0 — corrupting
+        averages on the next recalculation and making every pauta look Completa.
+        Rewrite the empty fields as NULL after each save."""
+        for row in self.grade_rows:
+            empty = {f: None for f in SCORE_FIELDS if row.get(f) is None}
+            if empty and row.name:
+                frappe.db.set_value("Grade Entry Row", row.name, empty, update_modified=False)
 
     # ------------------------------------------------------------------
     # Header validations
@@ -210,6 +226,32 @@ class GradeEntry(Document):
             1 for r in self.grade_rows
             if r.mt is not None and r.mt < 10 and not r.is_absent
         )
+
+
+def repair_coerced_zero_rows():
+    """One-off repair for rows written before the NULL-restore fix: a row where
+    every score field is 0 and the student isn't absent was almost certainly an
+    untouched student coerced by Frappe's numeric handling (empty → 0), not a
+    student who genuinely scored 0 on all five assessments. Reset those to NULL.
+
+    Run with:
+    bench --site <site> execute escola.escola.doctype.grade_entry.grade_entry.repair_coerced_zero_rows
+    """
+    zero_conditions = " AND ".join(f"COALESCE({f}, 0) = 0" for f in SCORE_FIELDS)
+    rows = frappe.db.sql(
+        f"""
+        SELECT name FROM `tabGrade Entry Row`
+        WHERE {zero_conditions} AND COALESCE(is_absent, 0) = 0
+          AND ({" OR ".join(f"{f} IS NOT NULL" for f in SCORE_FIELDS)})
+        """,
+        pluck="name",
+    )
+    for name in rows:
+        frappe.db.set_value(
+            "Grade Entry Row", name, {f: None for f in SCORE_FIELDS}, update_modified=False
+        )
+    frappe.db.commit()
+    return {"repaired": len(rows)}
 
 
 @frappe.whitelist()

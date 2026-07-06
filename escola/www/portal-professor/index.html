@@ -254,13 +254,13 @@
     </div>
 
     <!-- PAUTAS -->
-    <div id="view-pautas" class="view max-w-2xl mx-auto">
+    <div id="view-pautas" class="view max-w-5xl mx-auto">
       <div class="mb-5">
         <h2 class="text-lg font-bold text-slate-800">Pautas de Notas</h2>
         <p class="text-sm text-slate-500 mt-0.5">Registe as notas por disciplina e período lectivo.</p>
       </div>
       <div id="pautas-year-warn"></div>
-      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
+      <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm max-w-2xl">
         <select id="pautas-turma" onchange="loadPautas()" class="field flex-1 min-w-[150px]">
           <option value="">Todas as turmas</option>
         </select>
@@ -271,7 +271,7 @@
       <div id="pautas-loading" class="hidden justify-center py-10">
         <div class="animate-spin h-8 w-8 border-[3px] border-brand border-t-transparent rounded-full"></div>
       </div>
-      <div id="pautas-list" class="space-y-2.5"></div>
+      <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
     </div>
 
     <!-- PRESENÇAS -->
@@ -968,10 +968,14 @@ function initPautas() {
   if (_currentTerm) tt.value = _currentTerm;
   if (_yearEnded) document.getElementById('pautas-year-warn').innerHTML = yearWarnHtml();
   if (!_terms.length) {
-    document.getElementById('pautas-list').innerHTML = emptyHtml(noTermsMsg());
+    document.getElementById('pautas-list').innerHTML = spanFull(emptyHtml(noTermsMsg()));
     return;
   }
   loadPautas();
+}
+
+function spanFull(html) {
+  return `<div class="col-span-full">${html}</div>`;
 }
 
 function noTermsMsg() {
@@ -1001,7 +1005,7 @@ async function loadPautas() {
   const loading = document.getElementById('pautas-loading');
 
   if (!turma || !term) {
-    list.innerHTML = emptyHtml('Seleccione a turma e o período para ver as pautas.');
+    list.innerHTML = spanFull(emptyHtml('Seleccione a turma e o período para ver as pautas.'));
     return;
   }
 
@@ -1014,7 +1018,7 @@ async function loadPautas() {
     const entries = data.entries || [];
 
     if (!entries.length) {
-      list.innerHTML = emptyHtml('Nenhuma disciplina encontrada para esta turma e período.');
+      list.innerHTML = spanFull(emptyHtml('Nenhuma disciplina encontrada para esta turma e período.'));
       return;
     }
 
@@ -1049,7 +1053,7 @@ async function loadPautas() {
     }).join('');
   } catch(e) {
     loading.classList.add('hidden');
-    list.innerHTML = errorHtml(e.message, 'loadPautas()');
+    list.innerHTML = spanFull(errorHtml(e.message, 'loadPautas()'));
   }
 }
 
