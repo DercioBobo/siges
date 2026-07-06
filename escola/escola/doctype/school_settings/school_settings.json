@@ -19,6 +19,8 @@
   "current_academic_year",
   "column_break_academic",
   "current_academic_term",
+  "rollover_reminder_days",
+  "billing_year_end_grace_days",
   "section_grading",
   "minimum_passing_grade",
   "grading_scale_max",
@@ -172,6 +174,20 @@
    "fieldtype": "Link",
    "label": "Período Actual",
    "options": "Academic Term"
+  },
+  {
+   "fieldname": "rollover_reminder_days",
+   "fieldtype": "Int",
+   "label": "Lembrete de Fim de Ano (dias)",
+   "default": "60",
+   "description": "Quantos dias antes do fim do ano lectivo o sistema começa a lembrar a direcção e a secretaria de preparar o novo ano."
+  },
+  {
+   "fieldname": "billing_year_end_grace_days",
+   "fieldtype": "Int",
+   "label": "Tolerância de Facturação após Fim do Ano (dias)",
+   "default": "31",
+   "description": "Após este número de dias depois do fim do ano lectivo, a facturação automática é suspensa até à Abertura do novo ano. Execuções manuais continuam possíveis (com aviso)."
   },
   {
    "fieldname": "section_grading",

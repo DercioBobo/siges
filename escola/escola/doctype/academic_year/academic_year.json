@@ -74,8 +74,14 @@
    "label": "Observações"
   }
  ],
- "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "links": [
+  {
+   "group": "Períodos",
+   "link_doctype": "Academic Term",
+   "link_fieldname": "academic_year"
+  }
+ ],
+ "modified": "2026-07-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Academic Year",

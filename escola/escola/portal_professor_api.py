@@ -597,7 +597,18 @@ def get_terms():
             if getdate(t.start_date) <= today_d <= getdate(t.end_date):
                 current = t.name
                 break
-    return {"terms": terms, "academic_year": academic_year, "current_term": current}
+
+    year_ended = False
+    if academic_year:
+        year_end = frappe.db.get_value("Academic Year", academic_year, "end_date")
+        year_ended = bool(year_end and getdate(year_end) < today_d)
+
+    return {
+        "terms": terms,
+        "academic_year": academic_year,
+        "current_term": current,
+        "year_ended": year_ended,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ frappe.ui.form.on("Grade Entry", {
     refresh(frm) {
         _set_queries(frm);
         _setup_grid(frm);
+        _warn_if_year_ended(frm);
 
         frm.add_custom_button(__("Carregar Alunos"), () => _load_grade_rows(frm));
 
@@ -159,6 +160,23 @@ function _sync_students(frm) {
             });
         }
     );
+}
+
+// ---------------------------------------------------------------------------
+// Ended-year warning
+// ---------------------------------------------------------------------------
+
+async function _warn_if_year_ended(frm) {
+    if (!frm.doc.academic_year) return;
+    const r = await frappe.db.get_value("Academic Year", frm.doc.academic_year, "end_date");
+    const end = r && r.message && r.message.end_date;
+    if (end && frappe.datetime.get_diff(frappe.datetime.get_today(), end) > 0) {
+        frm.dashboard.set_headline_alert(
+            __("Atenção: o ano lectivo {0} terminou a {1}. Está a lançar notas num ano terminado.",
+                [frm.doc.academic_year, frappe.datetime.str_to_user(end)]),
+            "orange"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

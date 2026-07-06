@@ -22,6 +22,85 @@ $(function () {
     }
 });
 
+// ---------------------------------------------------------------------------
+// Year-end rollover reminder — dismissible checklist card for management.
+// Backed by escola.escola.year_rollover.get_rollover_status; the daily
+// scheduler sends the matching bell notification.
+// ---------------------------------------------------------------------------
+$(function () {
+    try {
+        if (!window.location.pathname.startsWith("/app")) return;
+        const roles = (frappe.boot && frappe.boot.user && frappe.boot.user.roles) || [];
+        if (!["System Manager", "Diretor Escolar", "Secretaria Escolar"].some((r) => roles.includes(r))) return;
+
+        const SNOOZE_KEY = "escola_rollover_snooze";
+        const snoozed_until = localStorage.getItem(SNOOZE_KEY);
+        if (snoozed_until && new Date(snoozed_until) > new Date()) return;
+
+        frappe.call({
+            method: "escola.escola.year_rollover.get_rollover_status",
+            callback(r) {
+                const s = r.message;
+                if (!s || !s.needs_action) return;
+                render_rollover_banner(s);
+            },
+        });
+    } catch (e) {
+        // never block desk boot over this
+    }
+
+    function render_rollover_banner(s) {
+        const esc = frappe.utils.escape_html;
+        const headline = s.days_left >= 0
+            ? __("O ano lectivo {0} termina em {1} dia(s).", [esc(s.current_year), s.days_left])
+            : __("O ano lectivo {0} já terminou há {1} dia(s).", [esc(s.current_year), -s.days_left]);
+
+        const items = s.steps.map((st) => `
+            <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px;
+                        color:${st.done ? "var(--text-muted)" : "var(--text-color)"};">
+                <span style="width:16px;text-align:center;color:${st.done ? "var(--green-500,#22c55e)" : "var(--orange-500,#f97316)"};">
+                    ${st.done ? "✓" : "○"}
+                </span>
+                <span style="${st.done ? "text-decoration:line-through;" : ""}">${esc(st.label)}</span>
+            </div>`).join("");
+
+        const $card = $(`
+            <div style="position:fixed;bottom:20px;right:20px;z-index:1030;width:320px;
+                        background:var(--fg-color,#fff);border:1px solid var(--border-color,#e2e8f0);
+                        border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:14px 16px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                    <div style="font-weight:700;font-size:13px;">📅 ${__("Preparar o novo ano lectivo")}</div>
+                    <span class="rollover-close" style="cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;">×</span>
+                </div>
+                <div style="font-size:12.5px;color:var(--text-muted);margin:4px 0 8px;">${headline}</div>
+                ${items}
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button class="btn btn-primary btn-xs rollover-next" style="flex:1;">${__("Próximo passo")}</button>
+                    <button class="btn btn-default btn-xs rollover-snooze">${__("Lembrar em 3 dias")}</button>
+                </div>
+            </div>`);
+
+        $card.find(".rollover-close, .rollover-snooze").on("click", () => {
+            const until = new Date();
+            until.setDate(until.getDate() + 3);
+            localStorage.setItem("escola_rollover_snooze", until.toISOString());
+            $card.remove();
+        });
+
+        $card.find(".rollover-next").on("click", () => {
+            const next = (s.steps || []).find((st) => !st.done);
+            if (!next) return;
+            if (next.key === "year") frappe.new_doc("Academic Year");
+            else if (next.key === "terms") frappe.set_route("Form", "Academic Year", s.next_year);
+            else if (next.key === "turmas") frappe.set_route("List", "Student Promotion");
+            else if (next.key === "abertura") frappe.new_doc("Abertura de Ano Lectivo");
+            $card.remove();
+        });
+
+        $("body").append($card);
+    }
+});
+
 /**
  * Fetch the current Academic Year from the server and set it on frm.
  * Only runs on new (unsaved) documents where the field is still empty.

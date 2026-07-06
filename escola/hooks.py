@@ -88,6 +88,7 @@ scheduler_events = {
         "escola.escola.doctype.billing_schedule.billing_schedule.run_due_schedules",
         "escola.escola.doctype.report_card.report_card.refresh_all_report_cards",
         "escola.escola.renewal_hold.apply_renewal_hold",
+        "escola.escola.year_rollover.daily_reminder",
     ],
 }
 

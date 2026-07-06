@@ -4,6 +4,10 @@ from datetime import date, timedelta
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import add_days, cint, getdate
+
+DEFAULT_YEAR_END_GRACE_DAYS = 31
+BILLING_PAUSED_SUBJECT = "Facturação automática suspensa"
 
 
 class BillingSchedule(Document):
@@ -51,9 +55,44 @@ class BillingSchedule(Document):
 # Scheduler entry point  (called daily via hooks.py)
 # ---------------------------------------------------------------------------
 
+def _year_end_billing_guard(today_date):
+    """Return a block-reason message when the current Academic Year ended more
+    than the configured grace period ago; None while billing may proceed."""
+    year = frappe.db.get_single_value("School Settings", "current_academic_year")
+    if not year:
+        return None  # _execute_schedule already raises a clear error for this
+    end_date = frappe.db.get_value("Academic Year", year, "end_date")
+    if not end_date:
+        return None
+
+    grace = cint(
+        frappe.db.get_single_value("School Settings", "billing_year_end_grace_days")
+    ) or DEFAULT_YEAR_END_GRACE_DAYS
+    if getdate(today_date) <= getdate(add_days(end_date, grace)):
+        return None
+
+    return _(
+        "O ano lectivo actual (<b>{0}</b>) terminou a {1} há mais de {2} dias. "
+        "A facturação automática está suspensa até ser submetida a Abertura do "
+        "novo Ano Lectivo."
+    ).format(year, frappe.utils.formatdate(end_date), grace)
+
+
 def run_due_schedules():
     """Daily scheduler job — auto-generate invoices for due billing schedules."""
     today = date.today()
+
+    block_reason = _year_end_billing_guard(today)
+    if block_reason:
+        from escola.escola.year_rollover import notify_management
+        notify_management(
+            subject=_("{0} — ano lectivo terminado").format(BILLING_PAUSED_SUBJECT),
+            content=block_reason,
+            subject_prefix=BILLING_PAUSED_SUBJECT,
+        )
+        frappe.db.commit()
+        return
+
     schedules = frappe.get_all(
         "Billing Schedule",
         filters={"is_active": 1},
@@ -84,6 +123,16 @@ def run_now(schedule_name):
     if not s.is_active:
         frappe.throw(_("Este agendamento está inactivo."))
     today = date.today()
+
+    # The automatic guard pauses cron billing after year end; a manual run is a
+    # deliberate action, so warn but proceed.
+    block_reason = _year_end_billing_guard(today)
+    if block_reason:
+        frappe.msgprint(
+            block_reason + " " + _("Esta execução manual será processada na mesma."),
+            title=_("Ano lectivo terminado"),
+            indicator="orange",
+        )
     result = _execute_schedule(s, today)
     frappe.db.set_value("Billing Schedule", s.name, "last_billed_date", today)
     frappe.db.commit()

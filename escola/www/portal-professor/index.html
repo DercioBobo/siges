@@ -259,6 +259,7 @@
         <h2 class="text-lg font-bold text-slate-800">Pautas de Notas</h2>
         <p class="text-sm text-slate-500 mt-0.5">Registe as notas por disciplina e período lectivo.</p>
       </div>
+      <div id="pautas-year-warn"></div>
       <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
         <select id="pautas-turma" onchange="loadPautas()" class="field flex-1 min-w-[150px]">
           <option value="">Todas as turmas</option>
@@ -279,6 +280,7 @@
         <h2 class="text-lg font-bold text-slate-800">Registo de Presenças</h2>
         <p class="text-sm text-slate-500 mt-0.5">Faltas justificadas e injustificadas por turma e período.</p>
       </div>
+      <div id="att-year-warn"></div>
       <div class="bg-white rounded-2xl border border-slate-200 p-3 flex flex-wrap gap-2 mb-5 shadow-sm">
         <select id="att-turma" onchange="loadAttendanceView()" class="field flex-1 min-w-[150px]">
           <option value="">Seleccione a turma</option>
@@ -384,6 +386,7 @@ let _turmas = [];
 let _terms  = [];
 let _currentTerm = null;
 let _academicYear = null;
+let _yearEnded = false;
 let _dashData = null;
 let _ready = null;
 
@@ -549,6 +552,7 @@ async function init() {
     _terms       = termData.terms || [];
     _currentTerm = termData.current_term || (_terms[0]?.name || null);
     _academicYear = termData.academic_year || null;
+    _yearEnded   = !!termData.year_ended;
 
     if (dash.teacher) {
       const first = (dash.teacher.full_name||'').charAt(0).toUpperCase() || '?';
@@ -962,6 +966,7 @@ function initPautas() {
     tt.appendChild(o);
   });
   if (_currentTerm) tt.value = _currentTerm;
+  if (_yearEnded) document.getElementById('pautas-year-warn').innerHTML = yearWarnHtml();
   if (!_terms.length) {
     document.getElementById('pautas-list').innerHTML = emptyHtml(noTermsMsg());
     return;
@@ -973,6 +978,20 @@ function noTermsMsg() {
   return _academicYear
     ? `Não existem períodos académicos definidos para o ano lectivo ${esc(_academicYear)}. Contacte a secretaria.`
     : 'O ano lectivo actual não está configurado. Contacte a secretaria.';
+}
+
+function yearWarnHtml() {
+  return `
+    <div class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+      <svg class="h-4 w-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      <span class="text-xs text-amber-800">
+        O ano lectivo <b>${esc(_academicYear||'')}</b> já terminou.
+        Está a lançar dados num ano terminado — confirme com a secretaria antes de continuar.
+      </span>
+    </div>`;
 }
 
 async function loadPautas() {
@@ -1366,6 +1385,7 @@ function initPresencas() {
     tt.appendChild(o);
   });
   if (_currentTerm) tt.value = _currentTerm;
+  if (_yearEnded) document.getElementById('att-year-warn').innerHTML = yearWarnHtml();
   if (!_terms.length) {
     document.getElementById('att-content').innerHTML = emptyHtml(noTermsMsg());
   }
