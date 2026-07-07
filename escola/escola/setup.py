@@ -115,6 +115,11 @@ def after_migrate():
     create_default_items()
     create_portal_roles()
 
+    # Grade columns must stay nullable so "sem nota" is distinguishable from 0;
+    # Frappe's schema sync would otherwise recreate them as NOT NULL DEFAULT 0.
+    from escola.escola.doctype.grade_entry.grade_entry import ensure_nullable_grade_columns
+    ensure_nullable_grade_columns()
+
 
 _PORTAL_ROLES = [
     {"role_name": "Encarregado de Educação", "desk_access": 0},

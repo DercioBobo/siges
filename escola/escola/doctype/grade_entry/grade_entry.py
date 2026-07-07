@@ -84,11 +84,21 @@ class GradeEntry(Document):
         """Frappe coerces None numeric values to 0 on DB write (get_valid_dict
         runs cint/flt), so 'sem nota' would become a real grade of 0 — corrupting
         averages on the next recalculation and making every pauta look Completa.
-        Rewrite the empty fields as NULL after each save."""
-        for row in self.grade_rows:
-            empty = {f: None for f in SCORE_FIELDS if row.get(f) is None}
-            if empty and row.name:
-                frappe.db.set_value("Grade Entry Row", row.name, empty, update_modified=False)
+        Rewrite the empty fields as NULL after each save.
+
+        Requires the score columns to be nullable (ensure_nullable_grade_columns,
+        run on migrate). If they aren't yet, fall back silently to the legacy
+        0-as-empty behaviour rather than blocking the teacher's save."""
+        try:
+            for row in self.grade_rows:
+                empty = {f: None for f in SCORE_FIELDS if row.get(f) is None}
+                if empty and row.name:
+                    frappe.db.set_value("Grade Entry Row", row.name, empty, update_modified=False)
+        except Exception:
+            frappe.log_error(
+                message=frappe.get_traceback(),
+                title="Grade Entry: colunas de notas não aceitam NULL — correr ensure_nullable_grade_columns",
+            )
 
     # ------------------------------------------------------------------
     # Header validations
@@ -226,6 +236,31 @@ class GradeEntry(Document):
             1 for r in self.grade_rows
             if r.mt is not None and r.mt < 10 and not r.is_absent
         )
+
+
+def ensure_nullable_grade_columns():
+    """Frappe creates Int/Float columns as NOT NULL DEFAULT 0, which makes a
+    missing grade indistinguishable from a real 0 (and rejects the NULLs that
+    _restore_null_scores writes). Relax the score columns to nullable.
+
+    Called from setup.after_migrate so a future schema sync can never silently
+    reintroduce NOT NULL. Idempotent — only alters columns that need it.
+    """
+    for col in SCORE_FIELDS:
+        info = frappe.db.sql(
+            """
+            SELECT COLUMN_TYPE, IS_NULLABLE
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'tabGrade Entry Row'
+              AND COLUMN_NAME = %s
+            """,
+            col,
+        )
+        if info and info[0][1] == "NO":
+            frappe.db.sql_ddl(
+                f"ALTER TABLE `tabGrade Entry Row` MODIFY `{col}` {info[0][0]} NULL DEFAULT NULL"
+            )
 
 
 def repair_coerced_zero_rows():
