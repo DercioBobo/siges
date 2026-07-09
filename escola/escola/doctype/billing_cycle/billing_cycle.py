@@ -74,6 +74,7 @@ def generate_invoices(doc_name):
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
     auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
     settings = frappe.get_single("School Settings")
+    tax_template = settings.sales_taxes_template if settings.get("auto_apply_sales_tax") else None
 
     _MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
               "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
@@ -146,6 +147,8 @@ def generate_invoices(doc_name):
         if sibling_discount:
             si.additional_discount_percentage = sibling_discount
 
+        _apply_sales_tax(si, tax_template)
+
         si.insert(ignore_permissions=True)
         if auto_submit:
             si.submit()
@@ -210,6 +213,8 @@ def generate_invoices(doc_name):
             disc = _get_sibling_discount(sga.student, cycle.academic_year, settings)
             if disc:
                 si.additional_discount_percentage = disc
+
+        _apply_sales_tax(si, tax_template)
 
         try:
             si.insert(ignore_permissions=True)
@@ -424,6 +429,18 @@ def _invoice_exists(cycle, student_name):
         return False
     except Exception:
         return False
+
+
+def _apply_sales_tax(si, tax_template):
+    """
+    Apply the School Settings' Sales Taxes and Charges Template to a draft invoice,
+    using ERPNext's own tax engine (native tax rows, calculated on save).
+    """
+    if not tax_template:
+        return
+
+    si.taxes_and_charges = tax_template
+    si.set_taxes()
 
 
 def _get_sibling_discount(student, academic_year, settings):

@@ -61,6 +61,10 @@
   "invoice_posting_day",
   "payment_due_day",
   "auto_submit_invoices",
+  "section_tax",
+  "auto_apply_sales_tax",
+  "column_break_tax",
+  "sales_taxes_template",
   "section_penalty",
   "default_fee_item_code",
   "penalty_item_code",
@@ -446,6 +450,31 @@
    "label": "Submeter Facturas Automaticamente",
    "default": "0",
    "description": "Se activo, as facturas geradas pelo Ciclo de Facturação são submetidas automaticamente. Por defeito ficam em Rascunho."
+  },
+  {
+   "fieldname": "section_tax",
+   "fieldtype": "Section Break",
+   "label": "Imposto (IVA)"
+  },
+  {
+   "fieldname": "auto_apply_sales_tax",
+   "fieldtype": "Check",
+   "label": "Aplicar IVA Automaticamente nas Facturas",
+   "default": "0",
+   "description": "Se activo, o modelo de impostos indicado é aplicado automaticamente a todas as facturas geradas pelo Ciclo de Facturação (propinas e extras)."
+  },
+  {
+   "fieldname": "column_break_tax",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_taxes_template",
+   "fieldtype": "Link",
+   "options": "Sales Taxes and Charges Template",
+   "label": "Modelo de Impostos e Encargos",
+   "depends_on": "eval:doc.auto_apply_sales_tax",
+   "mandatory_depends_on": "eval:doc.auto_apply_sales_tax",
+   "description": "Modelo nativo do ERPNext (Contas > Impostos e Encargos de Venda) usado para calcular o IVA nas facturas."
   },
   {
    "fieldname": "section_penalty",
