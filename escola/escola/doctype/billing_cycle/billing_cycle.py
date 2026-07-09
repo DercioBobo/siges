@@ -77,7 +77,10 @@ def generate_invoices(doc_name):
 
     _MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
               "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-    mes_referencia = _MESES[getdate(cycle.posting_date).month - 1] if cycle.posting_date else ""
+    # Use the end of the billing period (due_date) as the reference month, since a
+    # cycle spanning e.g. 25/06 - 10/07 bills for July, not June.
+    reference_date = cycle.due_date or cycle.posting_date
+    mes_referencia = _MESES[getdate(reference_date).month - 1] if reference_date else ""
 
     # --- Phase 1: pre-create all customers before touching invoices ---
     # A customer failure skips that student but never leaves invoices in a partial state.
@@ -127,15 +130,15 @@ def generate_invoices(doc_name):
 
         for ln in applicable_lines:
             base_description = ln.description or ln.item_code
-            description = "{0} - {1}".format(base_description, mes_referencia) if mes_referencia else base_description
+            row_label = "{0} - {1}".format(base_description, mes_referencia) if mes_referencia else base_description
             si.append(
                 "items",
                 {
                     "item_code": ln.item_code,
-                    "item_name": ln.description or ln.item_code,
+                    "item_name": row_label,
                     "qty": 1,
                     "rate": ln.amount,
-                    "description": description,
+                    "description": row_label,
                 },
             )
 
@@ -194,13 +197,13 @@ def generate_invoices(doc_name):
 
         for ext in extras:
             item_code = ext.get("item_code") or default_fee_item
-            desc = "{svc} - {mes}".format(svc=ext["service_name"], mes=mes_referencia) if mes_referencia else ext["service_name"]
+            row_label = "{svc} - {mes}".format(svc=ext["service_name"], mes=mes_referencia) if mes_referencia else ext["service_name"]
             si.append("items", {
                 "item_code": item_code,
-                "item_name": ext["service_name"],
+                "item_name": row_label,
                 "qty": 1,
                 "rate": ext["current_amount"],
-                "description": desc,
+                "description": row_label,
             })
 
         if sibling_discount_addon:
