@@ -293,7 +293,7 @@ def get_grade_entries(turma, term):
         for ge in frappe.get_all(
             "Grade Entry",
             filters={"class_group": turma, "academic_term": term, "docstatus": ("!=", 2)},
-            fields=["name", "subject"],
+            fields=["name", "subject", "docstatus"],
         )
     }
 
@@ -301,6 +301,13 @@ def get_grade_entries(turma, term):
         "Class Group Student",
         {"parent": turma, "parentfield": "students"},
     )
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import (
+        _sequential_enforced, _previous_term, _finalized_prev_subjects,
+    )
+    cg_academic_year = frappe.db.get_value("Class Group", turma, "academic_year")
+    prev_term = _previous_term(cg_academic_year, term) if _sequential_enforced() else None
+    finalized_prev = _finalized_prev_subjects(turma, prev_term.name) if prev_term else set()
 
     entries = []
     for sn in subj_names:
@@ -334,9 +341,14 @@ def get_grade_entries(turma, term):
             "entry_name": ge.name if ge else None,
             "status": status,
             "counts": counts,
+            "ge_docstatus": ge.docstatus if ge else 0,
+            "prev_locked": bool(prev_term) and sn not in finalized_prev,
         })
 
-    return {"entries": entries}
+    return {
+        "entries": entries,
+        "prev_term_name": prev_term.term_name if prev_term else None,
+    }
 
 
 @frappe.whitelist()
@@ -344,11 +356,21 @@ def get_grade_entry_rows(turma, term, subject):
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
 
-    ge_name = frappe.db.get_value(
+    ge = frappe.db.get_value(
         "Grade Entry",
         {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
-        "name",
+        ["name", "docstatus"],
+        as_dict=True,
     )
+    ge_name = ge.name if ge else None
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import (
+        _sequential_enforced, _previous_term, _finalized_prev_subjects,
+    )
+    cg_academic_year = frappe.db.get_value("Class Group", turma, "academic_year")
+    prev_term = _previous_term(cg_academic_year, term) if _sequential_enforced() else None
+    finalized_prev = _finalized_prev_subjects(turma, prev_term.name) if prev_term else set()
+    prev_locked = bool(prev_term) and subject not in finalized_prev
 
     students = frappe.db.sql("""
         SELECT cgs.student, cgs.student_name, s.student_code
@@ -387,13 +409,33 @@ def get_grade_entry_rows(turma, term, subject):
             "is_absent": int(ex.get("is_absent") or 0),
         })
 
-    return {"entry_name": ge_name, "subject": subject, "rows": rows}
+    return {
+        "entry_name": ge_name,
+        "subject": subject,
+        "rows": rows,
+        "ge_docstatus": ge.docstatus if ge else 0,
+        "prev_locked": prev_locked,
+        "prev_term_name": prev_term.term_name if prev_term else None,
+    }
 
 
 @frappe.whitelist()
 def save_grade_entry(turma, term, subject, rows, notes=None):
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import (
+        _sequential_enforced, _previous_term, _finalized_prev_subjects,
+    )
+    if _sequential_enforced():
+        cg_year = frappe.db.get_value("Class Group", turma, "academic_year")
+        prev_term = _previous_term(cg_year, term)
+        if prev_term and subject not in _finalized_prev_subjects(turma, prev_term.name):
+            frappe.throw(
+                _("Finalize a pauta desta disciplina no período anterior (<b>{0}</b>) "
+                  "antes de lançar notas neste período.").format(prev_term.term_name),
+                title=_("Período anterior por finalizar"),
+            )
 
     import json
     if isinstance(rows, str):
@@ -414,11 +456,20 @@ def save_grade_entry(turma, term, subject, rows, notes=None):
             row.set(f, float(v) if v is not None and v != "" else None)
         row.is_absent = int(data.get("is_absent") or 0)
 
-    ge_name = frappe.db.get_value(
+    ge = frappe.db.get_value(
         "Grade Entry",
         {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
-        "name",
+        ["name", "docstatus"],
+        as_dict=True,
     )
+    ge_name = ge.name if ge else None
+
+    if ge and ge.docstatus == 1:
+        frappe.throw(
+            _("A pauta já foi finalizada e não pode ser editada. "
+              "O Director Escolar pode cancelar a pauta para permitir alterações."),
+            title=_("Pauta finalizada"),
+        )
 
     if ge_name:
         doc = frappe.get_doc("Grade Entry", ge_name)
@@ -472,6 +523,47 @@ def save_grade_entry(turma, term, subject, rows, notes=None):
         "status": _subject_status(status_rows),
         "rows": saved_rows,
     }
+
+
+@frappe.whitelist()
+def get_grade_entry_finalizar_warnings(turma, term, subject):
+    teacher = _get_teacher()
+    _assert_teacher_owns_turma(teacher.name, turma)
+
+    ge_name = frappe.db.get_value(
+        "Grade Entry",
+        {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
+        "name",
+    )
+    if not ge_name:
+        return []
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import get_finalizar_warnings
+    return get_finalizar_warnings(ge_name)
+
+
+@frappe.whitelist()
+def submit_grade_entry(turma, term, subject):
+    """Finalize (submit) a Grade Entry from the Teacher Portal — mirrors the
+    desk Mapa de Aproveitamento's Finalizar action so pautas entered via the
+    portal can also be locked and unblock sequential-term progression."""
+    teacher = _get_teacher()
+    _assert_teacher_owns_turma(teacher.name, turma)
+
+    ge_name = frappe.db.get_value(
+        "Grade Entry",
+        {"class_group": turma, "academic_term": term, "subject": subject, "docstatus": ("!=", 2)},
+        "name",
+    )
+    if not ge_name:
+        frappe.throw(_("Guarde as notas antes de finalizar."))
+
+    doc = frappe.get_doc("Grade Entry", ge_name)
+    if doc.docstatus != 0:
+        frappe.throw(_("Esta pauta não está em estado de rascunho."))
+    doc.submit()
+    frappe.db.commit()
+    return {"docstatus": doc.docstatus}
 
 
 # ---------------------------------------------------------------------------

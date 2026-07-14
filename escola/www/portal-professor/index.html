@@ -1032,6 +1032,13 @@ async function loadPautas() {
       const cfg = STATUS_CFG[e.status] || STATUS_CFG['Vazio'];
       const cnt = e.counts || {};
       const pct = cnt.total ? Math.round((cnt.complete||0) / cnt.total * 100) : 0;
+      const locked      = e.ge_docstatus === 1;
+      const prev_locked = !!e.prev_locked && !locked;
+      const lockBadge = locked
+        ? `<span class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 bg-emerald-100 text-emerald-700"><i class="fa fa-lock"></i> Finalizada</span>`
+        : prev_locked
+          ? `<span class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 bg-amber-100 text-amber-700"><i class="fa fa-lock"></i> Bloqueada</span>`
+          : `<span class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${cfg.badge}">${esc(e.status)}</span>`;
       return `
       <div class="bg-white rounded-xl border ${cfg.border} p-4 hover:shadow-md transition-all cursor-pointer group"
            onclick="openGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(e.subject)}')">
@@ -1040,7 +1047,7 @@ async function loadPautas() {
             <div class="w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}"></div>
             <div class="font-semibold text-slate-800 group-hover:text-brand transition-colors truncate">${esc(e.subject)}</div>
           </div>
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${cfg.badge}">${esc(e.status)}</span>
+          ${lockBadge}
         </div>
         ${cnt.total?`
         <div class="mt-2.5 flex items-center gap-2">
@@ -1164,37 +1171,108 @@ async function openGradeEntry(turma, term, subject) {
     const termLabel  = _terms.find(t => t.name === term);
     const rows = data.rows || [];
 
+    _gradeCtx.entry_name    = data.entry_name || null;
+    _gradeCtx.ge_docstatus  = data.ge_docstatus || 0;
+    _gradeCtx.prev_locked   = !!data.prev_locked;
+    _gradeCtx.prev_term_name = data.prev_term_name || '';
+
+    const locked      = _gradeCtx.ge_docstatus === 1;
+    const prev_locked = _gradeCtx.prev_locked && !locked;
+    const read_only   = locked || prev_locked;
+
     document.getElementById('grade-modal-subtitle').textContent =
       `${turmaLabel?.school_class||turma} · ${termLabel?.term_name||term} · ${rows.length} aluno${rows.length!==1?'s':''}`;
 
     const draft = _getDraft();
     const body = document.getElementById('grade-modal-body');
     body.innerHTML = `
-      ${draft ? _draftBannerHtml(draft) : ''}
+      ${draft && !read_only ? _draftBannerHtml(draft) : ''}
+      ${locked ? `
+        <div class="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+          <i class="fa fa-lock text-emerald-600"></i>
+          <span class="text-xs text-emerald-800 font-medium">Pauta finalizada — as notas já não podem ser alteradas por aqui.</span>
+        </div>` : ''}
+      ${prev_locked ? `
+        <div class="mb-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <i class="fa fa-lock text-amber-600"></i>
+          <span class="text-xs text-amber-800 font-medium">Finalize a pauta do período anterior (${esc(_gradeCtx.prev_term_name)}) antes de lançar notas neste período.</span>
+        </div>` : ''}
       ${_buildGradeTable(rows)}
       <p class="text-[11px] text-slate-400 mt-3 px-1">
         MACSP = média ACSP &nbsp;·&nbsp; MACS = média(MACSP + ACSE) &nbsp;·&nbsp; MT = (2×MACS + ACP) ÷ 3
       </p>`;
-    body.oninput  = _onGradeEdited;
-    body.onchange = _onGradeEdited;
 
-    document.getElementById('grade-modal-footer').innerHTML = `
-      <div class="flex gap-3">
-        <button onclick="closeGradeModal()"
-                class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors">
-          Cancelar
-        </button>
-        <button id="grade-save-btn"
-                onclick="saveGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')"
-                class="flex-1 py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
-          Guardar Pautas
-        </button>
-      </div>`;
+    if (read_only) {
+      body.querySelectorAll('input').forEach(inp => inp.disabled = true);
+    } else {
+      body.oninput  = _onGradeEdited;
+      body.onchange = _onGradeEdited;
+    }
+
+    const footer = document.getElementById('grade-modal-footer');
+    if (read_only) {
+      footer.innerHTML = `
+        <button onclick="closeGradeModal(true)"
+                class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors">
+          Fechar
+        </button>`;
+    } else {
+      footer.innerHTML = `
+        <div class="flex gap-3">
+          <button onclick="closeGradeModal()"
+                  class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button id="grade-save-btn"
+                  onclick="saveGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')"
+                  class="flex-1 py-2.5 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-dark transition-colors">
+            Guardar Pautas
+          </button>
+          <button id="grade-finalizar-btn"
+                  onclick="finalizarGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')"
+                  ${_gradeCtx.entry_name ? '' : "disabled title='Guarde as notas antes de finalizar'"}
+                  class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="fa fa-check-circle"></i>&nbsp;Finalizar
+          </button>
+        </div>`;
+    }
 
     document.querySelectorAll('#ge-table [data-student]').forEach(tr => _recalcRow(tr));
   } catch(err) {
     document.getElementById('grade-modal-body').innerHTML = errorHtml(err.message,
       `openGradeEntry('${escJs(turma)}','${escJs(term)}','${escJs(subject)}')`);
+  }
+}
+
+async function finalizarGradeEntry(turma, term, subject) {
+  if (!_gradeCtx || !_gradeCtx.entry_name) return;
+  if (_gradeDirty) {
+    showToast('Guarde as notas antes de finalizar.', false);
+    return;
+  }
+
+  const btn = document.getElementById('grade-finalizar-btn');
+  let missing = [];
+  try {
+    missing = await api('get_grade_entry_finalizar_warnings', { turma, term, subject }) || [];
+  } catch (e) { /* non-fatal — proceed without the warning list */ }
+
+  let msg = `Confirma a finalização da pauta de "${subject}"?\n\n`
+    + 'Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.';
+  if (missing.length) {
+    msg += `\n\n${missing.length} aluno(s) sem notas completas:\n` + missing.map(n => `- ${n}`).join('\n');
+  }
+  if (!confirm(msg)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = 'A finalizar…'; }
+  try {
+    await api('submit_grade_entry', { turma, term, subject });
+    showToast('Pauta finalizada.');
+    await openGradeEntry(turma, term, subject);
+    if (document.getElementById('view-pautas')?.classList.contains('active')) loadPautas();
+  } catch (e) {
+    showToast(e.message, false);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-check-circle"></i>&nbsp;Finalizar'; }
   }
 }
 
@@ -1360,11 +1438,14 @@ async function saveGradeEntry(turma, term, subject) {
   if (btn) { btn.disabled = true; btn.textContent = 'A guardar…'; }
 
   try {
-    await api('save_grade_entry', { turma, term, subject, rows: JSON.stringify(rows) });
+    const resp = await api('save_grade_entry', { turma, term, subject, rows: JSON.stringify(rows) });
     _gradeDirty = false;
     _clearDraft();
     showToast('Pautas guardadas com sucesso!');
-    closeGradeModal(true);
+    if (_gradeCtx) _gradeCtx.entry_name = resp.name;
+    const fbtn = document.getElementById('grade-finalizar-btn');
+    if (fbtn) { fbtn.disabled = false; fbtn.removeAttribute('title'); }
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar Pautas'; }
     if (document.getElementById('view-pautas')?.classList.contains('active')) loadPautas();
   } catch(e) {
     showToast(e.message, false);
