@@ -215,7 +215,7 @@ def get_student_forecast(student_name):
     schedules = frappe.get_all(
         "Billing Schedule",
         filters={"school_class": school_class, "is_active": 1},
-        fields=["name", "billing_mode", "invoice_day", "due_days", "billing_month"],
+        fields=["name", "billing_mode", "billing_month"],
     )
     if not schedules:
         return {"periods": [], "academic_year": ay_name, "summary": {}}
@@ -231,8 +231,8 @@ def get_student_forecast(student_name):
 
     all_periods = []
     for sched in schedules:
-        invoice_day = int(sched.invoice_day or 0) or invoice_posting_day
-        due_days    = int(sched.due_days or 0) or invoice_due_days
+        invoice_day = invoice_posting_day
+        due_days    = invoice_due_days
 
         fee_lines = frappe.get_all(
             "Fee Structure Line",

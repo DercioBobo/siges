@@ -267,14 +267,13 @@ def _count_year_periods(student, academic_year):
     schedules = frappe.get_all(
         "Billing Schedule",
         filters={"school_class": school_class, "is_active": 1},
-        fields=["name", "billing_mode", "invoice_day", "billing_month"],
+        fields=["name", "billing_mode", "billing_month"],
     )
     inv_day = int(frappe.db.get_single_value("School Settings", "invoice_posting_day") or 25)
 
     total = 0
     for sched in schedules:
-        day = int(sched.invoice_day or 0) or inv_day
-        total += len(_billing_periods(sched, ay_start, ay_end, day))
+        total += len(_billing_periods(sched, ay_start, ay_end, inv_day))
     return total
 
 
@@ -384,7 +383,7 @@ def get_available_periods(student, academic_year):
     schedules = frappe.get_all(
         "Billing Schedule",
         filters={"school_class": school_class, "is_active": 1},
-        fields=["name", "billing_mode", "invoice_day", "billing_month"],
+        fields=["name", "billing_mode", "billing_month"],
     )
     if not schedules:
         return []
@@ -399,7 +398,7 @@ def get_available_periods(student, academic_year):
 
     result = []
     for sched in schedules:
-        day = int(sched.invoice_day or 0) or inv_day
+        day = inv_day
 
         # Amount for this billing_mode
         fee_lines = frappe.get_all(
