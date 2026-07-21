@@ -134,6 +134,9 @@ def _create_renewal_invoice(doc):
     if not item_code:
         return None
 
+    if frappe.db.get_value("Student", doc.student, "is_bolsista"):
+        return None
+
     try:
         customer = ensure_customer_for_student(doc.student)
     except Exception as e:

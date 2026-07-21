@@ -193,11 +193,13 @@ def get_student_forecast(student_name):
     """
     student = frappe.db.get_value(
         "Student", student_name,
-        ["current_class_group", "current_school_class"],
+        ["current_class_group", "current_school_class", "is_bolsista"],
         as_dict=True,
     )
     if not student or not student.current_class_group:
         return {"periods": [], "academic_year": None, "summary": {}}
+    if student.is_bolsista:
+        return {"periods": [], "academic_year": None, "summary": {}, "is_bolsista": 1}
 
     school_class   = student.current_school_class
     class_group    = student.current_class_group

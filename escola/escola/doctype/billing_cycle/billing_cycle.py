@@ -71,6 +71,8 @@ def generate_invoices(doc_name):
         fields=["student", "class_group"],
     )
 
+    bolsista_students = set(frappe.get_all("Student", filters={"is_bolsista": 1}, pluck="name"))
+
     default_company = frappe.db.get_single_value("Global Defaults", "default_company")
     auto_submit = frappe.db.get_single_value("School Settings", "auto_submit_invoices") or 0
     settings = frappe.get_single("School Settings")
@@ -88,6 +90,8 @@ def generate_invoices(doc_name):
     customer_map = {}
     pre_errors = []
     for sga in sgAs:
+        if sga.student in bolsista_students:
+            continue
         if _invoice_exists(cycle, sga.student):
             continue
         try:
@@ -101,6 +105,10 @@ def generate_invoices(doc_name):
     total_amount = 0.0
 
     for sga in sgAs:
+        if sga.student in bolsista_students:
+            skipped += 1
+            continue
+
         if _invoice_exists(cycle, sga.student):
             skipped += 1
             continue
@@ -163,6 +171,9 @@ def generate_invoices(doc_name):
     addon_errors = []
 
     for sga in sgAs:
+        if sga.student in bolsista_students:
+            continue
+
         extras = _get_active_extras(sga.student, cycle.posting_date)
         if not extras:
             continue

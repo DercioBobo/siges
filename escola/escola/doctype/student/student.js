@@ -822,6 +822,12 @@ function _render_forecast(fc) {
 	const fmt = v => format_currency(v);
 	const s   = fc.summary || {};
 
+	if (fc.is_bolsista) {
+		return `<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px;">
+			${__("Aluno Bolsista — isento de facturação.")}
+		</div>`;
+	}
+
 	if (!fc.periods || !fc.periods.length) {
 		return `<div style="padding:40px;text-align:center;color:#9ca3af;font-size:14px;">
 			${__("Nenhum período de facturação encontrado para o ano lectivo actual.")}

@@ -49,6 +49,8 @@ frappe.ui.form.on("Inscricao", {
 		highlight_selected_card(frm);
 	},
 
+	is_bolsista(frm) { _load_fee_info(frm); },
+
 	guardian(frm) {
 		// When an existing guardian is selected, clear the inline fields
 		if (frm.doc.guardian) {
@@ -122,6 +124,14 @@ async function _prefill_payments_from_pos(frm) {
 async function _load_fee_info(frm) {
 	const wrapper = frm.fields_dict.fee_info_html?.$wrapper;
 	if (!wrapper) return;
+	if (frm.doc.is_bolsista) {
+		wrapper.html(
+			`<p style="color:var(--text-muted);font-size:13px;margin:0 0 8px;">
+				${__("Aluno Bolsista — a factura de inscrição não será gerada.")}
+			</p>`
+		);
+		return;
+	}
 	const amount = await frappe.db.get_single_value("School Settings", "enrollment_fee_amount");
 	if (amount && parseFloat(amount) > 0) {
 		const fmt = frappe.format(parseFloat(amount), { fieldtype: "Currency" });

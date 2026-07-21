@@ -148,6 +148,7 @@ class Inscricao(Document):
             "current_status": status,
             "current_school_class": self.school_class or "",
             "primary_guardian": guardian_name,
+            "is_bolsista": self.is_bolsista or 0,
         })
         student.insert(ignore_permissions=True)
         self.db_set("student", student.name)
@@ -225,6 +226,9 @@ def _create_enrollment_invoice(doc):
 
     settings = frappe.get_single("School Settings")
     if not int(settings.get("auto_invoice_on_enrollment") or 0):
+        return None
+
+    if frappe.db.get_value("Student", doc.student, "is_bolsista"):
         return None
 
     item_code = settings.get("enrollment_fee_item_code")

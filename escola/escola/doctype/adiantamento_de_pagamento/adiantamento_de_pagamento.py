@@ -20,6 +20,7 @@ class AdiantamentoDePagamento(Document):
         self._recalculate_summary()
 
     def validate(self):
+        self._validate_not_bolsista()
         self._validate_no_overdue_debt()
         if not self.periods:
             frappe.throw(
@@ -45,6 +46,16 @@ class AdiantamentoDePagamento(Document):
         self._cancel_invoice()
 
     # ------------------------------------------------------------------
+
+    def _validate_not_bolsista(self):
+        if not self.student:
+            return
+        if frappe.db.get_value("Student", self.student, "is_bolsista"):
+            frappe.throw(
+                _("O aluno <b>{0}</b> é Bolsista e está isento de facturação. "
+                  "Não é possível criar um adiantamento de pagamento para este aluno.").format(self.student),
+                title=_("Adiantamento bloqueado"),
+            )
 
     def _validate_no_overdue_debt(self):
         if not self.student:
@@ -368,6 +379,9 @@ def get_available_periods(student, academic_year):
     Each item: {period_label, posting_date, billing_mode, gross_amount}.
     """
     from escola.escola.billing_forecast import _billing_periods
+
+    if frappe.db.get_value("Student", student, "is_bolsista"):
+        return []
 
     school_class = frappe.db.get_value("Student", student, "current_school_class")
     if not school_class:

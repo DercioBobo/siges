@@ -40,6 +40,7 @@
   "section_break_docs_preview",
   "doc_previews",
   "section_break_payment",
+  "is_bolsista",
   "fee_info_html",
   "payments",
   "section_break_system",
@@ -254,6 +255,13 @@
    "fieldname": "section_break_payment",
    "fieldtype": "Section Break",
    "label": "Pagamento"
+  },
+  {
+   "fieldname": "is_bolsista",
+   "fieldtype": "Check",
+   "label": "Bolsista (Isento de Propina)",
+   "default": "0",
+   "description": "Se marcado, a factura de taxa de inscrição não é gerada e o aluno é criado como Bolsista."
   },
   {
    "fieldname": "fee_info_html",

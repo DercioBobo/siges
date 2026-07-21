@@ -26,6 +26,7 @@
   "admission_date",
   "current_status",
   "financial_status",
+  "is_bolsista",
   "pending_required_docs",
   "column_break_8",
   "current_school_class",
@@ -173,6 +174,14 @@
    "default": "Regular",
    "read_only": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "is_bolsista",
+   "fieldtype": "Check",
+   "label": "Bolsista (Isento de Propina)",
+   "default": "0",
+   "in_list_view": 1,
+   "description": "Alunos bolsistas são excluídos da facturação automática (ciclos de facturação, adiantamentos, inscrição e renovação de matrícula)."
   },
   {
    "fieldname": "pending_required_docs",
