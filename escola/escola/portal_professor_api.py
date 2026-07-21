@@ -561,6 +561,10 @@ def submit_grade_entry(turma, term, subject):
     doc = frappe.get_doc("Grade Entry", ge_name)
     if doc.docstatus != 0:
         frappe.throw(_("Esta pauta não está em estado de rascunho."))
+
+    from escola.escola.page.mapa_aproveitamento.mapa_aproveitamento import _assert_grade_entry_complete
+    _assert_grade_entry_complete(ge_name)
+
     doc.submit()
     frappe.db.commit()
     return {"docstatus": doc.docstatus}

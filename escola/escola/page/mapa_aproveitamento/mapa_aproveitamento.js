@@ -750,18 +750,21 @@ class MapaAproveitamento {
         });
         const missing = wr.message || [];
 
-        let msg = __("Confirma a finalização da pauta de <b>{0}</b> para <b>{1}</b>?<br>"
-            + "Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.",
-            [frappe.utils.escape_html(subj.subject_name), frappe.utils.escape_html(d.term_name)]);
-
         if (missing.length) {
             const names = missing.map(n => `<li>${frappe.utils.escape_html(n)}</li>`).join("");
-            msg += `<br><br><span style="color:#b45309;font-weight:600;">
-                        <i class="fa fa-warning"></i>&nbsp;
-                        ${__("{0} aluno(s) sem notas completas (ACSP1, ACSP2, ACSE1, ACSE2, AT):", [missing.length])}
-                    </span>
-                    <ul style="margin:6px 0 0 16px;color:#92400e;">${names}</ul>`;
+            frappe.msgprint({
+                title: __("Notas incompletas"),
+                indicator: "orange",
+                message: __("Não é possível finalizar: {0} aluno(s) sem notas completas "
+                    + "(ACSP1, ACSP2, ACSE1, ACSE2, AT):", [missing.length])
+                    + `<ul style="margin:6px 0 0 16px;">${names}</ul>`,
+            });
+            return;
         }
+
+        const msg = __("Confirma a finalização da pauta de <b>{0}</b> para <b>{1}</b>?<br>"
+            + "Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.",
+            [frappe.utils.escape_html(subj.subject_name), frappe.utils.escape_html(d.term_name)]);
 
         frappe.confirm(msg, () => {
             frappe.call({

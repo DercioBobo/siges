@@ -1255,13 +1255,19 @@ async function finalizarGradeEntry(turma, term, subject) {
   let missing = [];
   try {
     missing = await api('get_grade_entry_finalizar_warnings', { turma, term, subject }) || [];
-  } catch (e) { /* non-fatal — proceed without the warning list */ }
-
-  let msg = `Confirma a finalização da pauta de "${subject}"?\n\n`
-    + 'Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.';
-  if (missing.length) {
-    msg += `\n\n${missing.length} aluno(s) sem notas completas:\n` + missing.map(n => `- ${n}`).join('\n');
+  } catch (e) {
+    showToast(e.message, false);
+    return;
   }
+
+  if (missing.length) {
+    alert(`Não é possível finalizar: ${missing.length} aluno(s) sem notas completas (ACSP1, ACSP2, ACSE1, ACSE2, AT):\n\n`
+      + missing.map(n => `- ${n}`).join('\n'));
+    return;
+  }
+
+  const msg = `Confirma a finalização da pauta de "${subject}"?\n\n`
+    + 'Após finalizar, as notas não poderão ser alteradas sem intervenção do Director Escolar.';
   if (!confirm(msg)) return;
 
   if (btn) { btn.disabled = true; btn.textContent = 'A finalizar…'; }

@@ -512,9 +512,8 @@ def save_attendance(class_group, academic_term, rows_json):
     return {"saved": True, "term_attendance": doc.name, "attendance": attendance}
 
 
-@frappe.whitelist()
-def get_finalizar_warnings(grade_entry):
-    """Return students missing any score field (excluding is_absent rows)."""
+def _missing_score_students(grade_entry):
+    """Students missing any score field (excluding is_absent rows)."""
     rows = frappe.get_all(
         "Grade Entry Row",
         filters={"parent": grade_entry},
@@ -522,12 +521,28 @@ def get_finalizar_warnings(grade_entry):
         order_by="idx asc",
     )
     score_fields = ["acsp_1", "acsp_2", "acse_1", "acse_2", "acp"]
-    missing = [
+    return [
         r.student_name or r.student
         for r in rows
         if not r.is_absent and any(r.get(f) is None for f in score_fields)
     ]
-    return missing
+
+
+@frappe.whitelist()
+def get_finalizar_warnings(grade_entry):
+    return _missing_score_students(grade_entry)
+
+
+def _assert_grade_entry_complete(grade_entry):
+    missing = _missing_score_students(grade_entry)
+    if missing:
+        names = "".join(f"<li>{frappe.utils.escape_html(n)}</li>" for n in missing)
+        frappe.throw(
+            _("Não é possível finalizar: {0} aluno(s) sem notas completas "
+              "(ACSP1, ACSP2, ACSE1, ACSE2, AT):").format(len(missing))
+            + f"<ul style='margin:6px 0 0 16px;'>{names}</ul>",
+            title=_("Notas incompletas"),
+        )
 
 
 @frappe.whitelist()
@@ -536,6 +551,7 @@ def submit_grade_entry(grade_entry):
     doc = frappe.get_doc("Grade Entry", grade_entry)
     if doc.docstatus != 0:
         frappe.throw(_("Esta pauta não está em estado de rascunho."))
+    _assert_grade_entry_complete(grade_entry)
     doc.submit()
     return {"docstatus": doc.docstatus}
 
