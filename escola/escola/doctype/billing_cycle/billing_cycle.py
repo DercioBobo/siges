@@ -32,6 +32,7 @@ def generate_invoices(doc_name):
     Returns a dict with created, skipped, and total_amount.
     """
     cycle = frappe.get_doc("Billing Cycle", doc_name)
+    force = bool(cycle.get("force_regenerate"))
 
     if not cycle.school_class:
         frappe.throw(_("Defina a Classe antes de gerar facturas."), title=_("Classe em falta"))
@@ -92,7 +93,7 @@ def generate_invoices(doc_name):
     for sga in sgAs:
         if sga.student in bolsista_students:
             continue
-        if _invoice_exists(cycle, sga.student):
+        if _invoice_exists(cycle, sga.student, force):
             continue
         try:
             customer_map[sga.student] = ensure_customer_for_student(sga.student)
@@ -109,7 +110,7 @@ def generate_invoices(doc_name):
             skipped += 1
             continue
 
-        if _invoice_exists(cycle, sga.student):
+        if _invoice_exists(cycle, sga.student, force):
             skipped += 1
             continue
 
@@ -178,7 +179,7 @@ def generate_invoices(doc_name):
         if not extras:
             continue
 
-        if _addon_invoice_exists(sga.student, cycle.posting_date):
+        if _addon_invoice_exists(sga.student, cycle.posting_date, force):
             continue
 
         # Re-use customer from Phase 1 or look it up
@@ -254,6 +255,9 @@ def generate_invoices(doc_name):
     cycle.db_set("skipped_count", skipped)
     cycle.db_set("error_count", len(all_errors))
     cycle.db_set("generation_errors", "\n".join(all_errors) if all_errors else "")
+
+    if force:
+        cycle.db_set("force_regenerate", 0)
 
     return {
         "created": created,
@@ -374,12 +378,19 @@ def cancel_cycle(doc_name):
 # ---------------------------------------------------------------------------
 
 
-def _invoice_exists(cycle, student_name):
+def _invoice_exists(cycle, student_name, force=False):
     """
     Check whether a non-cancelled invoice already exists for this student
     in the same billing period, across any cycle OR via an advance payment.
     Uses period-based matching (month/quarter/year).
+
+    When force=True (Billing Cycle's "Forçar Geração" checkbox), this check
+    is bypassed entirely — used to recover from a mis-dated invoice that
+    incorrectly occupies a billing period.
     """
+    if force:
+        return False
+
     mode = cycle.billing_mode
     date = cycle.posting_date
 
@@ -522,8 +533,11 @@ def _get_active_extras(student, posting_date):
         return []
 
 
-def _addon_invoice_exists(student, posting_date):
+def _addon_invoice_exists(student, posting_date, force=False):
     """Check if a non-cancelled addon invoice already exists for this student/month."""
+    if force:
+        return False
+
     date = posting_date
     try:
         result = frappe.db.sql(

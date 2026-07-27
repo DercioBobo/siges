@@ -15,6 +15,7 @@
   "cb_config",
   "school_class",
   "due_date",
+  "force_regenerate",
   "exception_ref",
   "penalties_disabled",
   "sb_cobranca",
@@ -101,6 +102,13 @@
    "in_list_view": 1,
    "label": "Data de Vencimento",
    "reqd": 1
+  },
+  {
+   "fieldname": "force_regenerate",
+   "fieldtype": "Check",
+   "label": "Forçar Geração (Ignorar Duplicados)",
+   "default": "0",
+   "description": "Ignora a verificação de facturas já existentes para o mesmo aluno/mês/modo de cobrança e gera novas facturas mesmo assim. Use apenas para corrigir erros de datação (ex: factura lançada no mês errado). É desactivado automaticamente após cada geração."
   },
   {
    "fieldname": "exception_ref",

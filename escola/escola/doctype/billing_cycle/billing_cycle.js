@@ -18,11 +18,18 @@ frappe.ui.form.on("Billing Cycle", {
                     return;
                 }
                 const already = (frm.doc.total_invoices_created || 0) > 0;
-                const msg = already
+                let msg = already
                     ? __("Este ciclo já gerou {0} factura(s). Serão criadas apenas facturas em falta. Continuar?",
                          [frm.doc.total_invoices_created])
                     : __("Serão geradas facturas para todos os alunos activos da Classe '{0}' com propinas no modo '{1}'. Continuar?",
                          [frm.doc.school_class, frm.doc.billing_mode]);
+
+                if (frm.doc.force_regenerate) {
+                    msg = "<b>" + __("Atenção: «Forçar Geração» está activo.") + "</b><br>"
+                        + __("Serão criadas novas facturas mesmo que já exista uma factura para o mesmo aluno/mês/modo de cobrança. "
+                           + "Isto pode duplicar facturas se usado indevidamente. Use apenas para corrigir erros de datação.")
+                        + "<br><br>" + msg;
+                }
 
                 frappe.confirm(msg, () => {
                     frappe.call({
