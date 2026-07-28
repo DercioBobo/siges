@@ -91,21 +91,26 @@ class AdiantamentoDePagamento(Document):
         full_year = _count_year_periods(self.student, self.academic_year)
         self.full_year_periods = full_year
 
-        # Discount tier
-        if n == full_year and n > 0:
-            pct    = _DISCOUNT_FULL_YEAR
-            reason = _("Ano Lectivo completo")
-        elif n >= _MIN_PERIODS_DISCOUNT:
-            pct    = _DISCOUNT_SIX_PLUS
-            reason = _("{0} períodos ou mais").format(_MIN_PERIODS_DISCOUNT)
+        if self.discount_is_manual:
+            # User overrode the percent on the client — keep it, just refresh the totals.
+            pct = flt(self.discount_percent)
         else:
-            pct    = 0.0
-            reason = ""
+            # Discount tier
+            if n == full_year and n > 0:
+                pct    = _DISCOUNT_FULL_YEAR
+                reason = _("Ano Lectivo completo")
+            elif n >= _MIN_PERIODS_DISCOUNT:
+                pct    = _DISCOUNT_SIX_PLUS
+                reason = _("{0} períodos ou mais").format(_MIN_PERIODS_DISCOUNT)
+            else:
+                pct    = 0.0
+                reason = ""
 
-        self.discount_percent = pct
-        self.discount_reason  = reason
-        self.discount_total   = self.gross_total * pct / 100.0
-        self.net_total        = self.gross_total - self.discount_total
+            self.discount_percent = pct
+            self.discount_reason  = reason
+
+        self.discount_total = self.gross_total * pct / 100.0
+        self.net_total       = self.gross_total - self.discount_total
 
     def _validate_no_duplicate_periods(self):
         seen = set()

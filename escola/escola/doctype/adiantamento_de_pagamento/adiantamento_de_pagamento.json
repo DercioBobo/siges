@@ -20,6 +20,7 @@
   "total_periods",
   "full_year_periods",
   "discount_percent",
+  "discount_is_manual",
   "discount_reason",
   "col_break_summary",
   "gross_total",
@@ -123,6 +124,12 @@
    "fieldname": "discount_percent",
    "fieldtype": "Percent",
    "label": "Desconto (%)"
+  },
+  {
+   "fieldname": "discount_is_manual",
+   "fieldtype": "Check",
+   "label": "Desconto Manual",
+   "hidden": 1
   },
   {
    "fieldname": "discount_reason",

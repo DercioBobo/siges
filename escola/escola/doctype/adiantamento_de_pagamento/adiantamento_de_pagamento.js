@@ -95,8 +95,8 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 	},
 
 	discount_percent(frm) {
-		frm.doc.discount_reason = __("Desconto manual");
-		frm.refresh_field("discount_reason");
+		frm.set_value("discount_is_manual", 1);
+		frm.set_value("discount_reason", __("Desconto manual"));
 		_apply_discount(frm, parseFloat(frm.doc.discount_percent) || 0);
 	},
 });
@@ -178,6 +178,15 @@ function _recalculate(frm) {
 	const gross     = periods.reduce((s, p) => s + (parseFloat(p.gross_amount) || 0), 0);
 	const full_year = parseInt(frm.doc.full_year_periods) || 0;
 
+	frm.set_value("total_periods", n);
+	frm.set_value("gross_total",   gross);
+
+	if (frm.doc.discount_is_manual) {
+		// User overrode the percent — leave it alone, just refresh the totals.
+		_apply_discount(frm, parseFloat(frm.doc.discount_percent) || 0);
+		return;
+	}
+
 	let pct    = 0;
 	let reason = "";
 	if (n > 0 && full_year > 0 && n === full_year) {
@@ -188,8 +197,6 @@ function _recalculate(frm) {
 		reason = __("{0} períodos ou mais ({1}%)", [_MIN_DISCOUNT_PERIODS, pct]);
 	}
 
-	frm.set_value("total_periods",   n);
-	frm.set_value("gross_total",     gross);
 	frm.set_value("discount_percent", pct);
 	frm.set_value("discount_reason", reason);
 
