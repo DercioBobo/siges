@@ -122,8 +122,7 @@
   {
    "fieldname": "discount_percent",
    "fieldtype": "Percent",
-   "label": "Desconto (%)",
-   "read_only": 1
+   "label": "Desconto (%)"
   },
   {
    "fieldname": "discount_reason",

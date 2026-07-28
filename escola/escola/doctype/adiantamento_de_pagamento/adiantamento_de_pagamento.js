@@ -93,6 +93,12 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 			frm.refresh_field("payments");
 		}
 	},
+
+	discount_percent(frm) {
+		frm.doc.discount_reason = __("Desconto manual");
+		frm.refresh_field("discount_reason");
+		_apply_discount(frm, parseFloat(frm.doc.discount_percent) || 0);
+	},
 });
 
 // Recalculate when period rows change
@@ -182,15 +188,21 @@ function _recalculate(frm) {
 		reason = __("{0} períodos ou mais ({1}%)", [_MIN_DISCOUNT_PERIODS, pct]);
 	}
 
-	const discount = gross * pct / 100;
-	const net      = gross - discount;
-
 	frm.set_value("total_periods",   n);
 	frm.set_value("gross_total",     gross);
 	frm.set_value("discount_percent", pct);
 	frm.set_value("discount_reason", reason);
-	frm.set_value("discount_total",  discount);
-	frm.set_value("net_total",       net);
+
+	_apply_discount(frm, pct);
+}
+
+function _apply_discount(frm, pct) {
+	const gross    = parseFloat(frm.doc.gross_total) || 0;
+	const discount = gross * pct / 100;
+	const net      = gross - discount;
+
+	frm.set_value("discount_total", discount);
+	frm.set_value("net_total",      net);
 
 	_update_discount_badge(frm);
 	_sync_payments_total(frm, net);
