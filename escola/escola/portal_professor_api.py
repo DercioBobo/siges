@@ -287,6 +287,41 @@ def get_turma_students(turma):
     return {"students": students, "total": len(students)}
 
 
+@frappe.whitelist()
+def search_students(query):
+    """Search students by name/code across every turma the teacher has access to."""
+    teacher = _get_teacher()
+    query = (query or "").strip()
+    if len(query) < 2:
+        return {"results": []}
+
+    turmas = _get_teacher_turmas(teacher.name)
+    if not turmas:
+        return {"results": []}
+
+    turma_map = {t["name"]: t for t in turmas}
+    like = f"%{query}%"
+
+    rows = frappe.db.sql("""
+        SELECT cgs.student, cgs.student_name, cgs.parent AS class_group,
+               s.student_code, s.financial_status
+        FROM `tabClass Group Student` cgs
+        LEFT JOIN `tabStudent` s ON s.name = cgs.student
+        WHERE cgs.parentfield = 'students'
+          AND cgs.parent IN %(turmas)s
+          AND (cgs.student_name LIKE %(like)s OR s.student_code LIKE %(like)s)
+        ORDER BY cgs.student_name
+        LIMIT 15
+    """, {"turmas": tuple(turma_map.keys()), "like": like}, as_dict=True)
+
+    for r in rows:
+        t = turma_map.get(r.class_group, {})
+        r["school_class"] = t.get("school_class") or r.class_group
+        r["section_name"] = t.get("section_name") or ""
+
+    return {"results": rows}
+
+
 # ---------------------------------------------------------------------------
 # Grade entries
 # ---------------------------------------------------------------------------

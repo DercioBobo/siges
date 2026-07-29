@@ -56,6 +56,10 @@
     #drawer-bd { opacity:0; pointer-events:none; transition:opacity .2s; }
     #drawer-bd.open { opacity:1; pointer-events:auto; }
 
+    /* Student search */
+    #search-modal { display:none; }
+    #search-modal.open { display:flex; }
+
     /* Field */
     .field { width:100%; padding:.5rem .75rem; background:#f8fafc; border:1px solid #e2e8f0;
              border-radius:.75rem; font-size:.875rem; outline:none; transition:border-color .15s; }
@@ -209,6 +213,12 @@
         </svg>
       </button>
       <h1 id="topbar-title" class="font-bold text-slate-800 text-base flex-1 truncate">Início</h1>
+      <button onclick="openStudentSearch()" title="Procurar aluno"
+              class="p-2 -mr-1 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors shrink-0">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </button>
       <div class="hidden lg:flex items-center gap-2.5">
         <div class="w-7 h-7 rounded-full bg-brand flex items-center justify-center shrink-0">
           <span class="text-white text-xs font-bold" id="topbar-initial">…</span>
@@ -371,6 +381,28 @@
   </div>
   <div id="drawer-body" class="overflow-y-auto flex-1 px-5 py-4"></div>
   <div id="drawer-footer" class="shrink-0 px-5 py-4 border-t border-slate-100 bg-white"></div>
+</div>
+
+<!-- ═══════════════════════════════════════ STUDENT SEARCH ══ -->
+<div id="search-modal"
+     class="fixed inset-0 z-[80] bg-slate-900/60 justify-center px-4 pt-16 sm:pt-24"
+     onclick="if(event.target===this)closeStudentSearch()">
+  <div class="bg-white w-full max-w-lg h-fit rounded-2xl shadow-2xl overflow-hidden">
+    <div class="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
+      <svg class="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input id="search-input" type="text" placeholder="Procurar aluno pelo nome ou código…" autocomplete="off"
+             class="flex-1 text-sm border-0 focus:outline-none focus:ring-0 py-1" oninput="onStudentSearchInput(this.value)">
+      <button onclick="closeStudentSearch()"
+              class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors shrink-0">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="search-results" class="max-h-80 overflow-y-auto p-2"></div>
+  </div>
 </div>
 
 {% endif %}
@@ -821,7 +853,7 @@ async function openTurmaDrawer(turma) {
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          <input type="text" placeholder="Filtrar…" oninput="filterDrawerStudents(this.value)"
+          <input id="drawer-filter-input" type="text" placeholder="Filtrar…" oninput="filterDrawerStudents(this.value)"
                  class="w-full pl-8 pr-3 py-1.5 bg-slate-100 rounded-xl text-sm border-0 focus:outline-none focus:ring-2 focus:ring-brand/30">
         </div>
       </div>
@@ -863,6 +895,70 @@ function filterDrawerStudents(q) {
   document.querySelectorAll('.student-row').forEach(row => {
     row.style.display = !q || row.dataset.name.includes(q.toLowerCase()) ? '' : 'none';
   });
+}
+
+// ── GLOBAL STUDENT SEARCH ────────────────────────────────────────
+let _searchTimer = null;
+
+function openStudentSearch() {
+  const input = document.getElementById('search-input');
+  input.value = '';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeStudentSearch() {
+  document.getElementById('search-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function onStudentSearchInput(q) {
+  clearTimeout(_searchTimer);
+  const box = document.getElementById('search-results');
+  q = (q || '').trim();
+  if (q.length < 2) {
+    box.innerHTML = q ? `<div class="text-center text-xs text-slate-400 py-6">Escreva pelo menos 2 caracteres…</div>` : '';
+    return;
+  }
+  box.innerHTML = `<div class="flex justify-center py-6"><div class="animate-spin h-5 w-5 border-[3px] border-brand border-t-transparent rounded-full"></div></div>`;
+  _searchTimer = setTimeout(() => _runStudentSearch(q), 250);
+}
+
+async function _runStudentSearch(q) {
+  const box = document.getElementById('search-results');
+  try {
+    const data = await api('search_students', { query: q });
+    const results = data.results || [];
+    if (!results.length) {
+      box.innerHTML = `<div class="text-center text-sm text-slate-400 py-8">Nenhum aluno encontrado.</div>`;
+      return;
+    }
+    box.innerHTML = results.map(r => `
+      <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+           onclick="goToStudent('${escJs(r.class_group)}','${escJs(r.student_name||'')}')">
+        <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+          <span class="text-brand text-xs font-bold">${esc((r.student_name||'?').charAt(0))}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium text-slate-800 truncate">${esc(r.student_name||r.student)}</div>
+          <div class="text-xs text-slate-400 truncate">${esc(r.school_class||'')}${r.section_name?' — Turma '+esc(r.section_name):''}${r.student_code?' · '+esc(r.student_code):''}</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    box.innerHTML = errorHtml(e.message);
+  }
+}
+
+async function goToStudent(turma, studentName) {
+  closeStudentSearch();
+  await openTurmaDrawer(turma);
+  const input = document.getElementById('drawer-filter-input');
+  if (input) {
+    input.value = studentName;
+    filterDrawerStudents(studentName);
+  }
 }
 
 // ── HORÁRIO ────────────────────────────────────────────────────
@@ -1661,7 +1757,7 @@ function closeDrawer() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeGradeModal(); closeDrawer(); closeSidebar(); }
+  if (e.key === 'Escape') { closeGradeModal(); closeDrawer(); closeSidebar(); closeStudentSearch(); }
 });
 
 window.addEventListener('beforeunload', e => {
