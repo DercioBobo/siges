@@ -214,15 +214,16 @@ class AdiantamentoDePagamento(Document):
         except Exception:
             pass
 
-        # One line per period so the Sales Invoice shows the full breakdown
+        # One line per period, at the gross (undiscounted) rate — the discount is
+        # applied once, below, via si.discount_amount. Applying it here too would
+        # double the discount.
         for p in self.periods:
-            net_line = flt(p.gross_amount) * (1 - flt(self.discount_percent) / 100.0)
             si.append("items", {
                 "item_code":   item_code,
                 "item_name":   p.period_label,
                 "description": p.period_label,
                 "qty":         1,
-                "rate":        net_line,
+                "rate":        flt(p.gross_amount),
             })
 
         # Discount line (negative) to show the deduction explicitly
