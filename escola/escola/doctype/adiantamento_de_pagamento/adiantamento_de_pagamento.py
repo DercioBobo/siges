@@ -259,6 +259,14 @@ class AdiantamentoDePagamento(Document):
             frappe.msgprint(_("Factura de adiantamento eliminada."), indicator="orange")
         elif inv_status == 1:
             frappe.get_doc("Sales Invoice", self.sales_invoice).cancel()
+            # Clear the cross-references between the two now-cancelled docs.
+            # Sales Invoice.escola_advance_payment still points back here, and this
+            # doc (plus its period rows) still point at the invoice — that mutual
+            # link makes both undeletable (LinkExistsError on whichever side is
+            # deleted first). Neither field is needed once both are cancelled.
+            frappe.db.set_value("Sales Invoice", self.sales_invoice, "escola_advance_payment", None)
+            for p in self.periods:
+                p.db_set("invoice", None)
             frappe.msgprint(_("Factura de adiantamento cancelada."), indicator="orange")
 
 
