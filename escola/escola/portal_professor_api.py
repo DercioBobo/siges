@@ -98,6 +98,40 @@ def _get_teacher_turmas(teacher_name):
     return turmas
 
 
+def _get_teacher_subject_pairs(teacher_name, academic_year):
+    """Return the set of (class_group, subject) pairs the teacher actually teaches."""
+    year_sql = "AND cg.academic_year = %s" if academic_year else ""
+    params = (teacher_name, academic_year) if academic_year else (teacher_name,)
+
+    pairs = set()
+
+    # Primário (Professor Único): covers every subject of the school class
+    prim = frappe.db.sql(f"""
+        SELECT cg.name AS class_group, scs.subject AS subject
+        FROM `tabSchool Class Subject` scs
+        JOIN `tabClass Group` cg ON cg.school_class = scs.parent
+        JOIN `tabSchool Class` sc ON sc.name = scs.parent
+        WHERE scs.teacher = %s
+          AND cg.is_active = 1
+          AND sc.teaching_model = 'Professor Único'
+        {year_sql}
+    """, params, as_dict=True)
+    pairs.update((r.class_group, r.subject) for r in prim)
+
+    # Secundário (Professores por Disciplina): explicit per-turma assignment
+    sec = frappe.db.sql(f"""
+        SELECT cgsl.parent AS class_group, cgsl.subject AS subject
+        FROM `tabClass Group Subject Line` cgsl
+        JOIN `tabClass Group` cg ON cg.name = cgsl.parent
+        WHERE cgsl.teacher = %s
+          AND cg.is_active = 1
+        {year_sql}
+    """, params, as_dict=True)
+    pairs.update((r.class_group, r.subject) for r in sec)
+
+    return pairs
+
+
 def _assert_teacher_owns_turma(teacher_name, turma):
     """Raise PermissionError if teacher has no connection to the given turma."""
     owned = {t["name"] for t in _get_teacher_turmas(teacher_name)}
@@ -156,19 +190,20 @@ def get_dashboard():
             WHERE ta.class_group IN %s AND tar.at_risk = 1
         """, [tuple(t["name"] for t in turmas)])[0][0] or 0
 
-    # Recent grade entries
+    # Recent grade entries — restricted to (turma, subject) pairs the teacher
+    # actually teaches, not every subject in a turma they merely direct.
     recent_entries = []
-    if turmas:
-        recent_entries = frappe.db.get_all(
-            "Grade Entry",
-            filters={
-                "class_group": ("in", [t["name"] for t in turmas]),
-                "docstatus": ("!=", 2),
-            },
-            fields=["name", "class_group", "academic_term", "subject"],
-            order_by="modified desc",
-            limit=5,
-        )
+    subject_pairs = _get_teacher_subject_pairs(teacher.name, academic_year)
+    if subject_pairs:
+        conditions = " OR ".join(["(class_group = %s AND subject = %s)"] * len(subject_pairs))
+        params = [v for pair in subject_pairs for v in pair]
+        recent_entries = frappe.db.sql(f"""
+            SELECT name, class_group, academic_term, subject
+            FROM `tabGrade Entry`
+            WHERE docstatus != 2 AND ({conditions})
+            ORDER BY modified DESC
+            LIMIT 5
+        """, params, as_dict=True)
 
     return {
         "teacher": {
@@ -585,6 +620,13 @@ def get_attendance(turma, term):
         "name",
     )
 
+    behaviour_options = frappe.db.get_all(
+        "Behaviour Option",
+        filters={"is_active": 1},
+        fields=["name", "label"],
+        order_by="weight asc",
+    )
+
     if not att_name:
         # Return blank rows for all students in turma
         students = frappe.db.sql("""
@@ -597,20 +639,21 @@ def get_attendance(turma, term):
             "exists": False,
             "rows": [{"student": s.student, "student_name": s.student_name,
                       "justified_absences": 0, "unjustified_absences": 0,
-                      "total_absences": 0, "at_risk": 0} for s in students],
+                      "total_absences": 0, "at_risk": 0, "comportamento": ""} for s in students],
+            "behaviour_options": behaviour_options,
         }
 
     rows = frappe.db.get_all(
         "Term Attendance Row",
         filters={"parent": att_name},
-        fields=["student", "justified_absences", "unjustified_absences", "total_absences", "at_risk"],
+        fields=["student", "justified_absences", "unjustified_absences", "total_absences", "at_risk", "comportamento"],
         order_by="student",
     )
     student_names = {r.student: frappe.db.get_value("Student", r.student, "full_name") or r.student for r in rows}
     for r in rows:
         r["student_name"] = student_names.get(r.student, r.student)
 
-    return {"exists": True, "att_name": att_name, "rows": rows}
+    return {"exists": True, "att_name": att_name, "rows": rows, "behaviour_options": behaviour_options}
 
 
 @frappe.whitelist()
@@ -655,6 +698,7 @@ def save_attendance(turma, term, rows):
             "unjustified_absences":  unjustified,
             "total_absences":        total,
             "at_risk":               at_risk,
+            "comportamento":         r.get("comportamento") or None,
         })
 
     att.total_students   = len(rows)

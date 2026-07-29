@@ -1497,6 +1497,7 @@ async function loadAttendanceView() {
   try {
     const data = await api('get_attendance', { turma, term });
     const rows = data.rows || [];
+    const behaviourOptions = data.behaviour_options || [];
     const turmaLabel = _turmas.find(t => t.name === turma);
     const termLabel  = _terms.find(t => t.name === term);
 
@@ -1518,6 +1519,7 @@ async function loadAttendanceView() {
                 <th class="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 w-28">F. Justificadas</th>
                 <th class="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 w-28">F. Injustificadas</th>
                 <th class="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 w-20">Total</th>
+                <th class="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 w-36">Comportamento</th>
               </tr>
             </thead>
             <tbody id="att-tbody">
@@ -1540,6 +1542,12 @@ async function loadAttendanceView() {
                   <span class="att-total font-semibold text-sm ${(r.total_absences||0)>0?'text-orange-600':'text-slate-400'}">
                     ${r.total_absences||0}
                   </span>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <select class="att-comportamento w-full px-2 py-1.5 bg-slate-100 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
+                    <option value=""></option>
+                    ${behaviourOptions.map(o => `<option value="${esc(o.name)}" ${r.comportamento===o.name?'selected':''}>${esc(o.label)}</option>`).join('')}
+                  </select>
                 </td>
               </tr>`).join('')}
             </tbody>
@@ -1574,10 +1582,12 @@ async function saveAttendance() {
   const rows  = [];
   document.querySelectorAll('#att-tbody tr[data-student]').forEach(tr => {
     const inputs = tr.querySelectorAll('input[type="number"]');
+    const comportamento = tr.querySelector('.att-comportamento');
     rows.push({
       student:               tr.dataset.student,
       justified_absences:    parseInt(inputs[0]?.value||0),
       unjustified_absences:  parseInt(inputs[1]?.value||0),
+      comportamento:         comportamento ? comportamento.value : '',
     });
   });
   const btn = document.getElementById('att-save-btn');
