@@ -66,6 +66,10 @@ class StudentTransfer(Document):
     # ------------------------------------------------------------------
 
     def _handle_exit(self):
+        from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+            _roster_sync, _sync_student_current_turma,
+        )
+
         assignments = frappe.get_all(
             "Student Group Assignment",
             filters={"student": self.student, "academic_year": self.academic_year, "status": "Activa"},
@@ -79,6 +83,10 @@ class StudentTransfer(Document):
 
         for a in assignments:
             frappe.db.set_value("Student Group Assignment", a.name, "status", "Transferida")
+            # Bypasses on_update, so trigger the roster/turma sync manually.
+            sga = frappe.get_doc("Student Group Assignment", a.name)
+            _roster_sync(sga)
+            _sync_student_current_turma(sga)
 
         self.db_set("from_assignment", assignments[0].name)
         _safe_set_student_status(self.student, "Transferido")
@@ -95,9 +103,17 @@ class StudentTransfer(Document):
         if self.from_assignment and frappe.db.exists(
             "Student Group Assignment", self.from_assignment
         ):
+            from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+                _roster_sync, _sync_student_current_turma,
+            )
+
             frappe.db.set_value(
                 "Student Group Assignment", self.from_assignment, "status", "Activa"
             )
+            # Bypasses on_update, so trigger the roster/turma sync manually.
+            sga = frappe.get_doc("Student Group Assignment", self.from_assignment)
+            _roster_sync(sga)
+            _sync_student_current_turma(sga)
         _safe_set_student_status(self.student, "Activo")
         frappe.msgprint(
             _("Saída cancelada. Alocação reactivada."),

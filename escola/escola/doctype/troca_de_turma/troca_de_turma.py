@@ -138,6 +138,10 @@ class TrocaDeTurma(Document):
     # ------------------------------------------------------------------
 
     def _execute_transfer(self):
+        from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+            _roster_sync, _sync_student_current_turma,
+        )
+
         old_sga = frappe.db.get_value(
             "Student Group Assignment",
             {
@@ -157,6 +161,10 @@ class TrocaDeTurma(Document):
             )
 
         frappe.db.set_value("Student Group Assignment", old_sga, "status", "Transferida")
+        # Bypasses on_update, so trigger the roster/turma sync manually.
+        old_sga_doc = frappe.get_doc("Student Group Assignment", old_sga)
+        _roster_sync(old_sga_doc)
+        _sync_student_current_turma(old_sga_doc)
         self.db_set("from_assignment", old_sga)
 
         to_sc = frappe.db.get_value("Class Group", self.to_class_group, "school_class")
@@ -181,18 +189,30 @@ class TrocaDeTurma(Document):
         )
 
     def _revert_transfer(self):
+        from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+            _roster_sync, _sync_student_current_turma,
+        )
+
         if self.new_assignment and frappe.db.exists(
             "Student Group Assignment", self.new_assignment
         ):
             frappe.db.set_value(
                 "Student Group Assignment", self.new_assignment, "status", "Encerrada"
             )
+            # Bypasses on_update, so trigger the roster/turma sync manually.
+            new_sga_doc = frappe.get_doc("Student Group Assignment", self.new_assignment)
+            _roster_sync(new_sga_doc)
+            _sync_student_current_turma(new_sga_doc)
         if self.from_assignment and frappe.db.exists(
             "Student Group Assignment", self.from_assignment
         ):
             frappe.db.set_value(
                 "Student Group Assignment", self.from_assignment, "status", "Activa"
             )
+            # Bypasses on_update, so trigger the roster/turma sync manually.
+            from_sga_doc = frappe.get_doc("Student Group Assignment", self.from_assignment)
+            _roster_sync(from_sga_doc)
+            _sync_student_current_turma(from_sga_doc)
         frappe.msgprint(
             _("Troca cancelada. O aluno foi recolocado na Turma de Origem <b>{0}</b>.").format(
                 self.from_class_group

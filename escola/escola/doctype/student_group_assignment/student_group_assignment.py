@@ -193,3 +193,41 @@ def _update_student_count(class_group_name):
     frappe.db.set_value(
         "Class Group", class_group_name, "student_count", count, update_modified=False
     )
+
+
+def repair_stale_rosters():
+    """One-off repair for drift left by Student Transfer and Troca de Turma docs
+    submitted before they were wired to trigger the roster sync: those closed the
+    old Student Group Assignment via frappe.db.set_value, which bypasses on_update,
+    so Class Group Student rows and Student.current_class_group/current_school_class
+    were never refreshed. Rebuilds every Class Group's roster and recomputes each
+    student's current turma from their (at most one) active SGA.
+
+    Run with:
+    bench --site <site> execute escola.escola.doctype.student_group_assignment.student_group_assignment.repair_stale_rosters
+    """
+    from escola.escola.doctype.class_group.class_group import rebuild_roster
+
+    class_groups = frappe.get_all("Class Group", pluck="name")
+    for cg in class_groups:
+        rebuild_roster(cg)
+
+    students = frappe.get_all("Student", pluck="name")
+    for student in students:
+        active = frappe.db.get_value(
+            "Student Group Assignment",
+            {"student": student, "status": "Activa"},
+            ["name", "class_group", "school_class"],
+            as_dict=True,
+        )
+        fake_sga = frappe._dict({
+            "name": active.name if active else None,
+            "student": student,
+            "status": "Activa" if active else "Encerrada",
+            "class_group": active.class_group if active else None,
+            "school_class": active.school_class if active else None,
+        })
+        _sync_student_current_turma(fake_sga)
+
+    frappe.db.commit()
+    return {"class_groups_rebuilt": len(class_groups), "students_checked": len(students)}
