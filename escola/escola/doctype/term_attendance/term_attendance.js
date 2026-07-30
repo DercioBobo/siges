@@ -199,7 +199,7 @@ function _show_summary(frm) {
     if (!rows.length) return;
     let msg = __("{0} aluno(s)", [rows.length]);
     if (atRisk > 0) {
-        msg += ` &nbsp;|&nbsp; <span style="color:var(--orange-600)">${__("{0} em risco de faltas", [atRisk])}</span>`;
+        msg += ` | ${__("{0} em risco de faltas", [atRisk])}`;
     }
     frm.dashboard.set_headline(msg);
 }

@@ -409,11 +409,10 @@ function _load_financial_summary(frm) {
 				return;
 			}
 
-			const color      = _FINANCIAL_COLORS[d.financial_status] || "gray";
 			const alert_text = __(_ALERT_MESSAGES[d.alert_level] || "");
 
 			const parts = [
-				`<b style="color:var(--${color}-600)">${alert_text}</b>`,
+				alert_text,
 				__("Em dívida: {0}", [format_currency(d.total_outstanding)]),
 			];
 
@@ -424,7 +423,7 @@ function _load_financial_summary(frm) {
 			if (d.total_with_penalty > d.total_outstanding)
 				parts.push(__("Total com multa: {0}", [format_currency(d.total_with_penalty)]));
 
-			frm.dashboard.set_headline(parts.join(" &nbsp;|&nbsp; "));
+			frm.dashboard.set_headline(parts.join(" | "));
 		},
 	});
 }

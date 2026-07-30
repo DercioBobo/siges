@@ -157,7 +157,7 @@ function _show_summary(frm) {
     const withoutTeacher = lines.filter(l => !l.teacher).length;
     let msg = __("{0} disciplina(s)", [lines.length]);
     if (withoutTeacher > 0) {
-        msg += ` &nbsp;|&nbsp; <span style="color:var(--orange-600)">${__("{0} sem professor atribuído", [withoutTeacher])}</span>`;
+        msg += ` | ${__("{0} sem professor atribuído", [withoutTeacher])}`;
     }
     frm.dashboard.set_headline(msg);
 }
