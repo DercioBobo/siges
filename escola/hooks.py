@@ -23,6 +23,7 @@ app_version = app_version
 # Creates custom fields on ERPNext standard DocTypes for billing linkage.
 # -----------------------------------------------------------------
 after_install = "escola.escola.setup.after_install"
+before_migrate = ["escola.escola.doctype.grade_entry.grade_entry.coalesce_null_scores_before_migrate"]
 after_migrate = ["escola.escola.setup.after_migrate"]
 
 # -----------------------------------------------------------------

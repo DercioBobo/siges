@@ -117,8 +117,12 @@ def after_migrate():
 
     # Grade columns must stay nullable so "sem nota" is distinguishable from 0;
     # Frappe's schema sync would otherwise recreate them as NOT NULL DEFAULT 0.
-    from escola.escola.doctype.grade_entry.grade_entry import ensure_nullable_grade_columns
+    from escola.escola.doctype.grade_entry.grade_entry import (
+        ensure_nullable_grade_columns,
+        restore_null_scores_after_migrate,
+    )
     ensure_nullable_grade_columns()
+    restore_null_scores_after_migrate()
 
 
 _PORTAL_ROLES = [
