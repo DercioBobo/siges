@@ -258,6 +258,7 @@ def coalesce_null_scores_before_migrate():
     """
     if not frappe.db.table_exists("Grade Entry Row"):
         return
+    frappe.db.commit()  # flush pending writes — DROP/CREATE TABLE would implicitly commit them
     frappe.db.sql(f"DROP TABLE IF EXISTS `{_NULL_BACKUP_TABLE}`")
     null_flags = ", ".join(f"{f} IS NULL AS n_{f}" for f in SCORE_FIELDS)
     frappe.db.sql(
@@ -287,6 +288,7 @@ def restore_null_scores_after_migrate():
         SET {restored}
         """
     )
+    frappe.db.commit()  # flush pending writes — DROP TABLE would implicitly commit them
     frappe.db.sql(f"DROP TABLE `{_NULL_BACKUP_TABLE}`")
     frappe.db.commit()
 
