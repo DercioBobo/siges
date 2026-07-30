@@ -240,6 +240,57 @@ class GradeEntry(Document):
         )
 
 
+_NULL_BACKUP_TABLE = "_ger_null_backup"
+
+
+def coalesce_null_scores_before_migrate():
+    """Frappe's schema sync only re-issues ALTER for a column whose definition
+    actually changed — but when it does (e.g. a fieldtype/precision edit like
+    Int -> Float), it recomputes the column from scratch as NOT NULL DEFAULT 0,
+    ignoring the nullable override from ensure_nullable_grade_columns. Existing
+    NULLs ("sem nota") then make the ALTER fail with
+    'Data truncated for column ... at row N'.
+
+    Runs from hooks.py's before_migrate, i.e. before frappe.model.sync runs.
+    Records which cells are genuinely empty, then coalesces them to 0 so the
+    ALTER can proceed. restore_null_scores_after_migrate() puts the NULLs
+    back once the schema change is done.
+    """
+    if not frappe.db.table_exists("Grade Entry Row"):
+        return
+    frappe.db.sql(f"DROP TABLE IF EXISTS `{_NULL_BACKUP_TABLE}`")
+    null_flags = ", ".join(f"{f} IS NULL AS n_{f}" for f in SCORE_FIELDS)
+    frappe.db.sql(
+        f"""
+        CREATE TABLE `{_NULL_BACKUP_TABLE}` AS
+        SELECT name, {null_flags}
+        FROM `tabGrade Entry Row`
+        """
+    )
+    coalesced = ", ".join(f"{f} = COALESCE({f}, 0)" for f in SCORE_FIELDS)
+    frappe.db.sql(f"UPDATE `tabGrade Entry Row` SET {coalesced}")
+    frappe.db.commit()
+
+
+def restore_null_scores_after_migrate():
+    """Companion to coalesce_null_scores_before_migrate(): restores real NULLs
+    from the backup table once the schema sync has recreated the columns.
+    Must run after ensure_nullable_grade_columns() so the columns can accept
+    NULL again."""
+    if not frappe.db.sql(f"SHOW TABLES LIKE '{_NULL_BACKUP_TABLE}'"):
+        return
+    restored = ", ".join(f"g.{f} = IF(b.n_{f}, NULL, g.{f})" for f in SCORE_FIELDS)
+    frappe.db.sql(
+        f"""
+        UPDATE `tabGrade Entry Row` g
+        JOIN `{_NULL_BACKUP_TABLE}` b ON b.name = g.name
+        SET {restored}
+        """
+    )
+    frappe.db.sql(f"DROP TABLE `{_NULL_BACKUP_TABLE}`")
+    frappe.db.commit()
+
+
 def ensure_nullable_grade_columns():
     """Frappe creates Int/Float columns as NOT NULL DEFAULT 0, which makes a
     missing grade indistinguishable from a real 0 (and rejects the NULLs that
