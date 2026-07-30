@@ -16,6 +16,12 @@ frappe.pages["mapa-aproveitamento"].on_page_show = function (wrapper) {
 
 // ---------------------------------------------------------------------------
 
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for MT/MF.
+function _round_half_up(v) {
+    return Math.round(Math.round(v * 100) / 100);
+}
+
 class MapaAproveitamento {
     constructor(page, wrapper) {
         this.page      = page;
@@ -509,7 +515,8 @@ class MapaAproveitamento {
         (subj.rows || []).forEach(r => { row_map[r.student] = r; });
 
         const _v    = (v) => (v !== null && v !== undefined) ? v : "";
-        const _f2   = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const _f2   = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? n.toFixed(2) : ""; };
+        const _fi   = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(_round_half_up(n)) : ""; };
 
         const rows_html = students.map((s, i) => {
             const r   = row_map[s.student] || {};
@@ -518,7 +525,7 @@ class MapaAproveitamento {
 
             const inp = (f) =>
                 `<input type="number" class="ma-score" data-field="${f}"
-                        min="0" max="20" step="1" value="${_v(r[f])}"${dis}>`;
+                        min="0" max="20" step="0.01" value="${_v(r[f])}"${dis}>`;
 
             return `
                 <tr data-student="${frappe.utils.escape_html(s.student)}">
@@ -533,7 +540,7 @@ class MapaAproveitamento {
                     <td>${inp("acse_2")}</td>
                     <td class="computed" data-field="macs">${_f2(r.macs)}</td>
                     <td>${inp("acp")}</td>
-                    <td class="computed mt-cell" data-field="mt">${_f2(r.mt)}</td>
+                    <td class="computed mt-cell" data-field="mt">${_fi(r.mt)}</td>
                 </tr>`;
         }).join("");
 
@@ -584,21 +591,21 @@ class MapaAproveitamento {
 
     _recalc_row($tr) {
         const _n  = (f) => { const v = parseFloat($tr.find(`[data-field="${f}"]`).val()); return isNaN(v) ? null : v; };
-        const _ri = (v) => Math.round(v);
+        const _ri = (v) => Math.round(v * 100) / 100;
 
         const acsp = ["acsp_1","acsp_2"].map(_n).filter(v => v !== null);
         const macsp = acsp.length ? _ri(acsp.reduce((a,b)=>a+b,0)/acsp.length) : null;
-        $tr.find("[data-field='macsp']").text(macsp !== null ? macsp : "");
+        $tr.find("[data-field='macsp']").text(macsp !== null ? macsp.toFixed(2) : "");
 
         const acse = ["acse_1","acse_2"].map(_n).filter(v => v !== null);
         const macs_in = (macsp !== null ? [macsp] : []).concat(acse);
         const macs = macs_in.length ? _ri(macs_in.reduce((a,b)=>a+b,0)/macs_in.length) : null;
-        $tr.find("[data-field='macs']").text(macs !== null ? macs : "");
+        $tr.find("[data-field='macs']").text(macs !== null ? macs.toFixed(2) : "");
 
         const acp = _n("acp");
-        const mt  = (macs !== null && acp !== null) ? _ri((2*macs + acp)/3) : null;
+        const mt  = (macs !== null && acp !== null) ? _round_half_up((2*macs + acp)/3) : null;
         const $mt = $tr.find("[data-field='mt']");
-        $mt.text(mt !== null ? mt : "").removeClass("pos neg");
+        $mt.text(mt !== null ? String(mt) : "").removeClass("pos neg");
         if (mt !== null) $mt.addClass(mt >= 10 ? "pos" : "neg");
     }
 
@@ -627,7 +634,7 @@ class MapaAproveitamento {
             }
         });
         const total = (this.data && this.data.students) ? this.data.students.length : 0;
-        const avg   = cnt ? (sum / cnt).toFixed(1) : "—";
+        const avg   = cnt ? String(_round_half_up(sum / cnt)) : "—";
         const avg_color = !cnt ? "#9CA3AF" : (sum / cnt >= 10 ? "#047857" : "#DC2626");
 
         const kpi = (ic, ic_bg, ic_color, val, val_color, lbl) => `
@@ -660,7 +667,7 @@ class MapaAproveitamento {
             const $tr    = $(tr);
             const student = $tr.data("student");
             if (!student) return;
-            const _iv  = (f) => { const n = parseInt($tr.find(`[data-field="${f}"]`).val()); return isNaN(n) ? null : n; };
+            const _iv  = (f) => { const n = parseFloat($tr.find(`[data-field="${f}"]`).val()); return isNaN(n) ? null : n; };
             rows.push({
                 student,
                 acsp_1: _iv("acsp_1"),
@@ -704,15 +711,16 @@ class MapaAproveitamento {
 
                 const by_student = {};
                 (resp.rows || []).forEach(sr => { by_student[sr.student] = sr; });
-                const _ri = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+                const _f2 = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? n.toFixed(2) : ""; };
+                const _fi = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(_round_half_up(n)) : ""; };
                 this.$grid_area.find(".ma-grid tbody tr").each((i, tr) => {
                     const sid = $(tr).data("student");
                     if (!sid || !by_student[sid]) return;
                     const sr  = by_student[sid];
                     const $tr = $(tr);
-                    $tr.find("[data-field='macsp']").text(_ri(sr.macsp));
-                    $tr.find("[data-field='macs']").text(_ri(sr.macs));
-                    $tr.find("[data-field='mt']").text(_ri(sr.mt));
+                    $tr.find("[data-field='macsp']").text(_f2(sr.macsp));
+                    $tr.find("[data-field='macs']").text(_f2(sr.macs));
+                    $tr.find("[data-field='mt']").text(_fi(sr.mt));
                 });
                 this._update_footer(idx);   // refresh KPIs + MT colours from saved values
 
@@ -1087,7 +1095,8 @@ class MapaAproveitamento {
         const row_map = {};
         (subj.rows || []).forEach(r => { row_map[r.student] = r; });
 
-        const _f2 = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const _f2 = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? n.toFixed(2) : ""; };
+        const _fi = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(_round_half_up(n)) : ""; };
         const _mt_style = (v) => {
             if (v === null || v === undefined || v === "") return "";
             return parseFloat(v) >= 10 ? "color:#065F46;font-weight:700" : "color:#991B1B;font-weight:700";
@@ -1162,9 +1171,9 @@ class MapaAproveitamento {
                         return `<td${sepCls} style="text-align:center;font-size:12px;${st}"
                                     title="${frappe.utils.escape_html(v)}">${sh}</td>`;
                     }
-                    const val  = _f2(td[k]);
-                    const calc = CALC_KEYS.has(k);
                     const isMt = k === "mt";
+                    const val  = isMt ? _fi(td[k]) : _f2(td[k]);
+                    const calc = CALC_KEYS.has(k);
                     const st   = isMt && val ? _mt_style(td[k]) : "";
                     const bg   = calc ? "background:#F9FAFB;" : "";
                     const fw   = calc ? "font-weight:700;" : "";
@@ -1178,7 +1187,7 @@ class MapaAproveitamento {
                 return td.is_absent ? null : (td.mt !== undefined ? td.mt : null);
             });
             cells += mt_vals.map((mt, mi) => {
-                const val = _f2(mt);
+                const val = _fi(mt);
                 const st  = val ? _mt_style(mt) : "";
                 const sep = mi === 0 ? ' class="ma-annual-term-sep"' : '';
                 return `<td${sep} style="text-align:center;font-size:12px;${st}">${val}</td>`;
@@ -1186,7 +1195,7 @@ class MapaAproveitamento {
 
             // MF
             const mf    = (r.mf !== undefined && r.mf !== null) ? r.mf : null;
-            const mf_v  = _f2(mf);
+            const mf_v  = _fi(mf);
             const mf_st = mf_v ? _mt_style(mf) : "";
             cells += `<td style="text-align:center;font-size:12px;font-weight:700;
                                  ${mf_st}${mf_v ? ";background:#FEF9C3" : ""}">${mf_v}</td>`;

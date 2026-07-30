@@ -40,15 +40,17 @@
   },
   {
    "fieldname": "acsp_1",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "ACSP 1",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
   {
    "fieldname": "acsp_2",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "ACSP 2",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
@@ -57,21 +59,23 @@
    "fieldtype": "Float",
    "label": "MACSP",
    "read_only": 1,
-   "precision": "0",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
   {
    "fieldname": "acse_1",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "ACSE 1",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
   {
    "fieldname": "acse_2",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "ACSE 2",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
@@ -80,14 +84,15 @@
    "fieldtype": "Float",
    "label": "MACS",
    "read_only": 1,
-   "precision": "0",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },
   {
    "fieldname": "acp",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "label": "AT",
+   "precision": "2",
    "in_list_view": 1,
    "columns": 1
   },

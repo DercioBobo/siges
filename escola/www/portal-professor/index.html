@@ -1395,6 +1395,12 @@ function closeGradeModal(force) {
   document.body.style.overflow = '';
 }
 
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for final grades.
+function _roundHalfUp(v) {
+  return Math.round(Math.round(v * 100) / 100);
+}
+
 function _buildGradeTable(rows) {
   const COL_GROUPS = [
     { label:'Avaliação Contínua Sistemática Prática', span:3, cls:'bg-blue-50 text-blue-700' },
@@ -1433,16 +1439,18 @@ function _buildGradeTable(rows) {
         </td>`;
       }
       const val = r[c.key];
-      const disp = (val !== null && val !== undefined) ? String(Math.round(parseFloat(val))) : '';
+      const isMt = c.key === 'mt';
+      const disp = (val !== null && val !== undefined)
+        ? (isMt ? String(_roundHalfUp(parseFloat(val))) : parseFloat(val).toFixed(2))
+        : '';
       if (c.calc) {
-        const isMt = c.key === 'mt';
         const mtStyle = (isMt && disp) ? (parseFloat(disp) >= MIN_PASS ? 'color:#166534;font-weight:700' : 'color:#991b1b;font-weight:700') : '';
         return `<td class="py-2 px-1 text-center">
           <span data-field="${c.key}" class="text-xs tabular-nums" style="${mtStyle}">${disp}</span>
         </td>`;
       }
       return `<td class="py-1.5 px-1">
-        <input type="number" min="0" max="20" step="0.5" data-field="${c.key}"
+        <input type="number" min="0" max="20" step="0.01" data-field="${c.key}"
                value="${(val !== null && val !== undefined) ? val : ''}"
                class="w-full text-center py-1 px-0.5 bg-white border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-brand/30"
                style="min-width:44px${absent?';opacity:.35;pointer-events:none':''}"
@@ -1489,8 +1497,9 @@ function _recalcRow(tr) {
   const setCalc = (f, v) => {
     const el = tr.querySelector(`[data-field="${f}"]`);
     if (!el) return;
-    el.textContent = v !== null ? String(Math.round(v)) : '';
-    if (f === 'mt') {
+    const isMt = f === 'mt';
+    el.textContent = v !== null ? (isMt ? String(_roundHalfUp(v)) : v.toFixed(2)) : '';
+    if (isMt) {
       el.style.color      = v !== null ? (v >= MIN_PASS ? '#166534' : '#991b1b') : '';
       el.style.fontWeight = v !== null ? '700' : '';
     }

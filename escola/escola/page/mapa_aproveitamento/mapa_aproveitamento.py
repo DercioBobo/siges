@@ -2,6 +2,8 @@ import frappe
 import json
 from frappe import _
 
+from escola.escola.grade_utils import round_half_up
+
 
 def _teacher_class_groups():
     """Return list of class group names for the current user if they are a Professor, else None."""
@@ -688,7 +690,7 @@ def get_annual_grade_book(class_group, academic_year):
                     })
 
                 mt_vals = [t["mt"] for t in term_entries if t["mt"] is not None and not t["is_absent"]]
-                mf = round(sum(mt_vals) / len(mt_vals)) if mt_vals else None
+                mf = round_half_up(sum(mt_vals) / len(mt_vals)) if mt_vals else None
 
                 subj_rows.append({
                     "student": sid,

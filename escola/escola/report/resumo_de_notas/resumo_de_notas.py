@@ -52,7 +52,7 @@ def execute(filters=None):
             "fieldname": "mt",
             "fieldtype": "Float",
             "width": 80,
-            "precision": 2,
+            "precision": 0,
         },
         {
             "label": _("S/Nota"),

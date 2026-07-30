@@ -24,7 +24,7 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Nota Final",
-   "precision": "1",
+   "precision": "0",
    "reqd": 1
   },
   {

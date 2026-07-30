@@ -2,6 +2,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from escola.escola.grade_utils import round_half_up
+
 
 class ReportCard(Document):
     def validate(self):
@@ -51,8 +53,8 @@ class ReportCard(Document):
         self.passed_subjects = sum(1 for r in rows if r.result == "Aprovado")
         self.failed_subjects = sum(1 for r in rows if r.result == "Reprovado")
         if rows:
-            self.overall_average = round(
-                sum(r.final_grade for r in rows) / len(rows), 1
+            self.overall_average = round_half_up(
+                sum(r.final_grade for r in rows) / len(rows)
             )
         else:
             self.overall_average = 0
@@ -88,7 +90,7 @@ def _build_report_card_data(annual_name, student, school_class):
             continue
         rows.append({
             "subject": subject,
-            "final_grade": round(avg, 2),
+            "final_grade": round_half_up(avg),
             "result": "Aprovado" if avg >= min_passing else "Reprovado",
             "remarks": "",
         })

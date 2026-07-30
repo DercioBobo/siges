@@ -35,7 +35,7 @@ def execute(filters=None):
             "fieldname": "annual_avg",
             "fieldtype": "Float",
             "width": 100,
-            "precision": 2,
+            "precision": 0,
         },
         {
             "label": _("Resultado"),
@@ -61,7 +61,7 @@ def execute(filters=None):
             ge.subject,
             ger.student,
             s.full_name,
-            ROUND(AVG(ger.mt), 2) AS annual_avg
+            ROUND(AVG(ger.mt), 0) AS annual_avg
         FROM `tabGrade Entry Row` ger
         INNER JOIN `tabGrade Entry` ge ON ge.name = ger.parent
         INNER JOIN `tabStudent`     s  ON s.name  = ger.student

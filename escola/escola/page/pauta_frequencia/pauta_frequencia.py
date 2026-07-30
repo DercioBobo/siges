@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from escola.escola.grade_utils import round_half_up
+
 
 def _teacher_class_groups():
     """Return list of class group names for the current user if they are a Professor, else None."""
@@ -227,10 +229,10 @@ def get_pauta_data(class_group, academic_year):
         for subj in subjects:
             vals = [sd.get(subj["name"], {}).get(p) for p in range(1, n_terms + 1)]
             valid = [v for v in vals if v is not None]
-            annual_subj_avgs[subj["name"]] = round(sum(valid) / len(valid)) if valid else None
+            annual_subj_avgs[subj["name"]] = round_half_up(sum(valid) / len(valid)) if valid else None
 
         avgs = [v for v in annual_subj_avgs.values() if v is not None]
-        global_avg = round(sum(avgs) / len(avgs)) if avgs else None
+        global_avg = round_half_up(sum(avgs) / len(avgs)) if avgs else None
 
         ar = result_map.get(s.student)
         if ar and ar.result:

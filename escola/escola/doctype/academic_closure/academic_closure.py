@@ -2,6 +2,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from escola.escola.grade_utils import round_half_up
+
 
 class AcademicClosure(Document):
     def validate(self):
@@ -132,7 +134,7 @@ def load_promotions_by_params(class_group, academic_year):
         for r in ann_rows:
             by_student.setdefault(r.student, []).append(r.final_grade)
         for student, grades in by_student.items():
-            avg_map[student] = round(sum(grades) / len(grades), 1) if grades else 0
+            avg_map[student] = round_half_up(sum(grades) / len(grades)) if grades else 0
 
     return {
         "rows": [
@@ -180,7 +182,7 @@ def load_students_for_closure(class_group, academic_year):
         for r in ann_rows:
             by_student.setdefault(r.student, []).append(r.final_grade)
         for student, grades in by_student.items():
-            avg_map[student] = round(sum(grades) / len(grades), 1) if grades else 0
+            avg_map[student] = round_half_up(sum(grades) / len(grades)) if grades else 0
 
     return {
         "rows": [

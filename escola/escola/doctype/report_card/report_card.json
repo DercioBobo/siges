@@ -96,7 +96,7 @@
    "fieldname": "overall_average",
    "fieldtype": "Float",
    "label": "Média Final",
-   "precision": "1",
+   "precision": "0",
    "read_only": 1
   },
   {

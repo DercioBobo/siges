@@ -39,7 +39,7 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Média Final",
-   "precision": "1"
+   "precision": "0"
   },
   {
    "fieldname": "remarks",

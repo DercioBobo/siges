@@ -3,6 +3,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from escola.escola.doctype.term_attendance.term_attendance import get_annual_absences
+from escola.escola.grade_utils import round_half_up
 
 
 @frappe.whitelist()
@@ -104,7 +105,7 @@ def calculate_assessment(doc_name):
         subject_term_avgs = {}  # subject → {pos: avg}
         for subject, term_scores in data[student].items():
             subject_term_avgs[subject] = {
-                pos: round(sum(vals) / len(vals), 2)
+                pos: round_half_up(sum(vals) / len(vals))
                 for pos, vals in term_scores.items()
             }
 
@@ -117,10 +118,10 @@ def calculate_assessment(doc_name):
                 if pos in subject_term_avgs[subj]
             ]
             if vals:
-                term_avgs[pos] = round(sum(vals) / len(vals), 2)
+                term_avgs[pos] = round_half_up(sum(vals) / len(vals))
 
         all_term_avgs = list(term_avgs.values())
-        final_grade   = round(sum(all_term_avgs) / len(all_term_avgs), 2) if all_term_avgs else 0.0
+        final_grade   = round_half_up(sum(all_term_avgs) / len(all_term_avgs)) if all_term_avgs else 0
         result        = "Aprovado" if final_grade >= min_passing else "Reprovado"
 
         result_rows.append({
@@ -142,7 +143,7 @@ def calculate_assessment(doc_name):
                 "t1":  term_avgs_s.get(1),
                 "t2":  term_avgs_s.get(2),
                 "t3":  term_avgs_s.get(3),
-                "avg": round(sum(s_avgs) / len(s_avgs), 2) if s_avgs else None,
+                "avg": round_half_up(sum(s_avgs) / len(s_avgs)) if s_avgs else None,
             }
         details[student] = subject_details
 
@@ -387,7 +388,7 @@ def get_mapa_print_data(doc_name):
             valid = [v for v in vals if v is not None]
             subj_data[subj["name"]] = {
                 "terms": vals,
-                "af": round(sum(valid) / len(valid), 2) if valid else None,
+                "af": round_half_up(sum(valid) / len(valid)) if valid else None,
             }
 
         # Per-term class-wide averages
@@ -395,10 +396,10 @@ def get_mapa_print_data(doc_name):
         for p in range(1, len(terms) + 1):
             vals = [sd.get(subj["name"], {}).get(p) for subj in subjects]
             valid = [v for v in vals if v is not None]
-            term_avgs.append(round(sum(valid) / len(valid), 2) if valid else None)
+            term_avgs.append(round_half_up(sum(valid) / len(valid)) if valid else None)
 
         valid_ta = [v for v in term_avgs if v is not None]
-        final_grade = round(sum(valid_ta) / len(valid_ta), 2) if valid_ta else None
+        final_grade = round_half_up(sum(valid_ta) / len(valid_ta)) if valid_ta else None
 
         ar = assessment_map.get(s.student)
         student_rows.append({

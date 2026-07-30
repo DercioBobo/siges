@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from escola.escola.grade_utils import round_half_up
+
 
 @frappe.whitelist()
 def get_student_report(student, academic_year=None):
@@ -80,13 +82,13 @@ def _build_year(student, sga):
     # subject → term → MT
     sm = {}
     for r in rows:
-        sm.setdefault(r.subject, {})[r.academic_term] = round(float(r.avg_score), 1)
+        sm.setdefault(r.subject, {})[r.academic_term] = round_half_up(float(r.avg_score))
 
     subjects = []
     for subj in sorted(sm):
         term_grades = [sm[subj].get(t.name) for t in terms]
         valid = [g for g in term_grades if g is not None]
-        annual = round(sum(valid) / len(valid), 1) if valid else None
+        annual = round_half_up(sum(valid) / len(valid)) if valid else None
         subjects.append({
             "subject":        subj,
             "term_grades":    term_grades,
@@ -97,11 +99,11 @@ def _build_year(student, sga):
     term_averages = []
     for i in range(len(terms)):
         vals = [s["term_grades"][i] for s in subjects if s["term_grades"][i] is not None]
-        term_averages.append(round(sum(vals) / len(vals), 1) if vals else None)
+        term_averages.append(round_half_up(sum(vals) / len(vals)) if vals else None)
 
     # overall annual average
     ann_vals = [s["annual_average"] for s in subjects if s["annual_average"] is not None]
-    overall = round(sum(ann_vals) / len(ann_vals), 1) if ann_vals else None
+    overall = round_half_up(sum(ann_vals) / len(ann_vals)) if ann_vals else None
 
     term_attendance = _get_term_attendance(student, sga.class_group, terms)
 

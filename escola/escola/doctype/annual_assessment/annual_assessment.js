@@ -265,10 +265,10 @@ function _render_summary_html(frm, rows) {
 	if (!rows || !rows.length) { _set_html(frm, ""); return; }
 
 	const tbody = rows.map(r => {
-		const avg = r.final_grade != null ? String(Math.round(parseFloat(r.final_grade))) : "—";
-		const t1  = r.term_1_average != null ? String(Math.round(parseFloat(r.term_1_average))) : "—";
-		const t2  = r.term_2_average != null ? String(Math.round(parseFloat(r.term_2_average))) : "—";
-		const t3  = r.term_3_average != null ? String(Math.round(parseFloat(r.term_3_average))) : "—";
+		const avg = r.final_grade != null ? String(round_half_up(parseFloat(r.final_grade))) : "—";
+		const t1  = r.term_1_average != null ? String(round_half_up(parseFloat(r.term_1_average))) : "—";
+		const t2  = r.term_2_average != null ? String(round_half_up(parseFloat(r.term_2_average))) : "—";
+		const t3  = r.term_3_average != null ? String(round_half_up(parseFloat(r.term_3_average))) : "—";
 		const res = r.result || "—";
 		const badge_color = res === "Aprovado" ? "#16a34a" : res === "Reprovado" ? "#dc2626" : "#6b7280";
 		const badge_bg    = res === "Aprovado" ? "#dcfce7" : res === "Reprovado" ? "#fee2e2" : "#f3f4f6";
@@ -323,10 +323,10 @@ function _render_grades_html(frm, rows, details, terms) {
 	const t_labels = terms || ["T1", "T2", "T3"];
 
 	const tbody = rows.map(r => {
-		const avg = r.final_grade != null ? String(Math.round(parseFloat(r.final_grade))) : "—";
-		const t1  = r.term_1_average != null ? String(Math.round(parseFloat(r.term_1_average))) : "—";
-		const t2  = r.term_2_average != null ? String(Math.round(parseFloat(r.term_2_average))) : "—";
-		const t3  = r.term_3_average != null ? String(Math.round(parseFloat(r.term_3_average))) : "—";
+		const avg = r.final_grade != null ? String(round_half_up(parseFloat(r.final_grade))) : "—";
+		const t1  = r.term_1_average != null ? String(round_half_up(parseFloat(r.term_1_average))) : "—";
+		const t2  = r.term_2_average != null ? String(round_half_up(parseFloat(r.term_2_average))) : "—";
+		const t3  = r.term_3_average != null ? String(round_half_up(parseFloat(r.term_3_average))) : "—";
 		const res = r.result || "—";
 		const badge_color = res === "Aprovado" ? "#16a34a" : res === "Reprovado" ? "#dc2626" : "#6b7280";
 		const badge_bg    = res === "Aprovado" ? "#dcfce7" : res === "Reprovado" ? "#fee2e2" : "#f3f4f6";
@@ -416,7 +416,7 @@ function _open_student_modal(student, doc_name) {
 function _show_student_dialog(student, detail, terms, row_data) {
 	const t_labels = terms && terms.length ? terms : ["T1", "T2", "T3"];
 	const subjects = detail ? Object.keys(detail).sort() : [];
-	const fmt = v => (v != null ? String(Math.round(parseFloat(v))) : "—");
+	const fmt = v => (v != null ? String(round_half_up(parseFloat(v))) : "—");
 
 	// Compute row summary from detail if row_data not passed
 	let final_avg = "—", result_label = "—", result_color = "#6b7280", result_bg = "#f3f4f6";
@@ -538,6 +538,10 @@ function _show_student_dialog(student, detail, terms, row_data) {
 
 function round2(v) { return Math.round(v * 100) / 100; }
 
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for final grades.
+function round_half_up(v) { return Math.round(round2(v)); }
+
 function _set_html(frm, html) {
 	const fd = frm.fields_dict["grades_detail_html"];
 	if (fd) fd.$wrapper.html(html);
@@ -610,7 +614,7 @@ function _open_mapa_print_window(data) {
 }
 
 function _build_mapa_html(d) {
-	const fmt = (v) => (v !== null && v !== undefined) ? String(Math.round(parseFloat(v))) : "—";
+	const fmt = (v) => (v !== null && v !== undefined) ? String(round_half_up(parseFloat(v))) : "—";
 	const _e  = (v) => frappe.utils.escape_html(v || "");
 	const subjects = d.subjects || [];
 	const terms    = d.terms    || [];
@@ -646,7 +650,7 @@ function _build_mapa_html(d) {
 				const n = v !== null && v !== undefined ? parseFloat(v) : null;
 				const color = n !== null ? (n >= 10 ? "#166534" : "#991B1B") : "#9CA3AF";
 				return `<td style="border:1px solid #E5E7EB;padding:3px 4px;text-align:center;
-				             font-size:10px;color:${color};">${n !== null ? String(Math.round(n)) : "—"}</td>`;
+				             font-size:10px;color:${color};">${n !== null ? String(round_half_up(n)) : "—"}</td>`;
 			}).join("");
 			const af_n = sd.af !== null && sd.af !== undefined ? parseFloat(sd.af) : null;
 			const af_color = af_n !== null ? (af_n >= 10 ? "#166534" : "#991B1B") : "#9CA3AF";
@@ -654,7 +658,7 @@ function _build_mapa_html(d) {
 			return term_cells +
 				`<td style="border:1px solid #E5E7EB;padding:3px 4px;text-align:center;
 				     font-size:10px;font-weight:700;background:${af_bg};color:${af_color};">
-					${af_n !== null ? String(Math.round(af_n)) : "—"}
+					${af_n !== null ? String(round_half_up(af_n)) : "—"}
 				</td>`;
 		}).join("");
 
@@ -671,7 +675,7 @@ function _build_mapa_html(d) {
 			    title="${frappe.utils.escape_html(r.student_name || "")}">${frappe.utils.escape_html(r.student_name || r.student)}</td>
 			${subj_cells}
 			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:11px;
-			     font-weight:800;background:${fg_bg};color:${fg_color};">${fg_n !== null ? String(Math.round(fg_n)) : "—"}</td>
+			     font-weight:800;background:${fg_bg};color:${fg_color};">${fg_n !== null ? String(round_half_up(fg_n)) : "—"}</td>
 			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:9px;
 			     font-weight:700;background:${res_bg};color:${res_color};">${res}</td>
 			<td style="border:1px solid #E5E7EB;padding:3px 5px;text-align:center;font-size:10px;color:#6B7280;">${r.total_absences !== null && r.total_absences !== undefined ? r.total_absences : "—"}</td>

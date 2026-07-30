@@ -39,6 +39,12 @@ frappe.ui.form.on("Student", {
 // Actions modal (single toolbar button → modal with card grid)
 // ---------------------------------------------------------------------------
 
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for final grades.
+function _round_half_up(v) {
+	return Math.round(Math.round(v * 100) / 100);
+}
+
 function _inject_student_styles() {
 	if (document.getElementById("escola-student-styles")) return;
 	const s = document.createElement("style");
@@ -1061,7 +1067,7 @@ async function _show_student_results_modal(frm) {
 
 function _render_results_card(frm, data) {
 	const esc   = (v) => frappe.utils.escape_html(v || "");
-	const fmt   = (v) => (v !== null && v !== undefined) ? String(Math.round(parseFloat(v))) : "—";
+	const fmt   = (v) => (v !== null && v !== undefined) ? String(_round_half_up(parseFloat(v))) : "—";
 	const initials = (frm.doc.first_name || "?")[0].toUpperCase();
 
 	const STATUS_COLOR = {
@@ -1130,7 +1136,7 @@ function _render_results_card(frm, data) {
 			// Subject rows
 			const subjectRows = (yr.subjects || []).map(s => {
 				const termCells = (s.term_grades || []).map(g =>
-					`<td style="text-align:center;font-size:12px;padding:4px 6px;">${g !== null && g !== undefined ? Math.round(g) : "—"}</td>`
+					`<td style="text-align:center;font-size:12px;padding:4px 6px;">${g !== null && g !== undefined ? _round_half_up(parseFloat(g)) : "—"}</td>`
 				).join("");
 				const mf = s.annual_average;
 				const mfColor = mf !== null ? (mf >= 10 ? "#065F46" : "#991B1B") : "inherit";
@@ -1144,7 +1150,7 @@ function _render_results_card(frm, data) {
 
 			// Averages footer row
 			const avgCells = (yr.term_averages || []).map(a =>
-				`<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 6px;">${a !== null && a !== undefined ? Math.round(a) : "—"}</td>`
+				`<td style="text-align:center;font-size:12px;font-weight:700;padding:5px 6px;">${a !== null && a !== undefined ? _round_half_up(parseFloat(a)) : "—"}</td>`
 			).join("");
 
 			// Comportamento abbreviation helper

@@ -38,7 +38,7 @@ def execute(filters=None):
             "fieldname": "overall_average",
             "fieldtype": "Float",
             "width": 100,
-            "precision": 1,
+            "precision": 0,
         },
         {
             "label": _("Total Disciplinas"),

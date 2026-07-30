@@ -95,7 +95,13 @@ function _num(v) {
 }
 
 function _round2(v) {
-    return Math.round(v);
+    return Math.round(v * 100) / 100;
+}
+
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for MT.
+function _round_half_up(v) {
+    return Math.round(_round2(v));
 }
 
 function _recalc(frm, cdt, cdn) {
@@ -113,9 +119,9 @@ function _recalc(frm, cdt, cdn) {
     const macs = macs_inputs.length ? _round2(macs_inputs.reduce((a, b) => a + b, 0) / macs_inputs.length) : null;
     frappe.model.set_value(cdt, cdn, "macs", macs);
 
-    // MT = (2 × MACS + ACP) / 3
+    // MT = (2 × MACS + ACP) / 3 — final grade, rounded to a whole number
     const acp = _num(row.acp);
-    const mt = (macs !== null && acp !== null) ? _round2((2 * macs + acp) / 3) : null;
+    const mt = (macs !== null && acp !== null) ? _round_half_up((2 * macs + acp) / 3) : null;
     frappe.model.set_value(cdt, cdn, "mt", mt);
 }
 

@@ -21,6 +21,12 @@ frappe.pages["pauta-frequencia"].on_page_show = function (wrapper) {
 
 // ---------------------------------------------------------------------------
 
+// Half-up rounding to a whole number (13.5 -> 14, 13.45 -> 13) — matches
+// escola.escola.grade_utils.round_half_up used server-side for final grades.
+function _round_half_up(v) {
+    return Math.round(Math.round(v * 100) / 100);
+}
+
 class PautaFrequencia {
     constructor(page, wrapper) {
         this.page    = page;
@@ -270,7 +276,7 @@ class PautaFrequencia {
         th3 += `<th></th>`;
 
         // ---- student rows ----
-        const _v  = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const _v  = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(_round_half_up(n)) : ""; };
         const _i  = (v) => (v !== null && v !== undefined) ? v : "";
 
         const rows_html = d.students.map(s => {
@@ -369,7 +375,7 @@ class PautaFrequencia {
                 pos_f:   pos_f.length,
                 pct_mf:  all_mf.length ? Math.round(pos_mf.length * 100 / all_mf.length) : 0,
                 pct_f:   all_f.length  ? Math.round(pos_f.length  * 100 / all_f.length)  : 0,
-                avg:     avg_mf !== null ? String(Math.round(avg_mf)) : "",
+                avg:     avg_mf !== null ? String(_round_half_up(avg_mf)) : "",
                 dist_mf,
                 dist_f,
             };
@@ -407,7 +413,7 @@ class PautaFrequencia {
             const vals = d.students
                 .map(s => s.annual_subject_avgs[subj.name])
                 .filter(v => v !== null && v !== undefined);
-            return vals.length ? String(Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)) : "";
+            return vals.length ? String(_round_half_up(vals.reduce((a, b) => a + b, 0) / vals.length)) : "";
         });
         const final_avgs_row = _row("Média Final por Disciplina", final_avgs);
 
@@ -455,7 +461,7 @@ class PautaFrequencia {
         const min_pass = d.min_passing || 10;
 
         const esc = (v) => frappe.utils.escape_html(String(v || ""));
-        const fv  = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(Math.round(n)) : ""; };
+        const fv  = (v) => { const n = parseFloat(v); return (!isNaN(n) && v !== null && v !== undefined) ? String(_round_half_up(n)) : ""; };
         const iv  = (v) => (v !== null && v !== undefined && v !== 0) ? v : "";
 
         // ---- Main table header row 1 ----
@@ -542,7 +548,7 @@ class PautaFrequencia {
                 pos_mf: pos_mf.length, pos_f: pos_f.length,
                 pct_mf: all_mf.length ? Math.round(pos_mf.length * 100 / all_mf.length) : 0,
                 pct_f:  all_f.length  ? Math.round(pos_f.length  * 100 / all_f.length)  : 0,
-                avg: avg_mf !== null ? String(Math.round(avg_mf)) : "",
+                avg: avg_mf !== null ? String(_round_half_up(avg_mf)) : "",
                 dist_mf: RANGES.map(([lo, hi]) => vals_mf.filter(v => v >= lo && v <= hi).length),
                 dist_f:  RANGES.map(([lo, hi]) => vals_f.filter(v => v >= lo && v <= hi).length),
             };
@@ -577,7 +583,7 @@ class PautaFrequencia {
         // Médias finais
         const final_avgs = subjects.map(subj => {
             const vals = d.students.map(s => s.annual_subject_avgs[subj.name]).filter(v => v !== null && v !== undefined);
-            return vals.length ? String(Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)) : "";
+            return vals.length ? String(_round_half_up(vals.reduce((a, b) => a + b, 0) / vals.length)) : "";
         });
         const final_row = _sr("Média Final por Disciplina", final_avgs);
 

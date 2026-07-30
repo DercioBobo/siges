@@ -341,8 +341,12 @@ function _ba_year_html(yr, filterTerm, viewMode) {
 	</div>`;
 }
 
+function _ba_round_half_up(v) {
+	return Math.round(Math.round(v * 100) / 100);
+}
+
 function _ba_fmt(v) {
-	return v == null ? "—" : String(Math.round(parseFloat(v)));
+	return v == null ? "—" : String(_ba_round_half_up(parseFloat(v)));
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────

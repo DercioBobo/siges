@@ -2,6 +2,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from escola.escola.grade_utils import round_half_up
+
 
 @frappe.whitelist()
 def get_current_academic_year():
@@ -215,18 +217,18 @@ class GradeEntry(Document):
 
             # MACSP — practical average
             acsp_vals = [v for v in [row.acsp_1, row.acsp_2] if v is not None]
-            macsp = round(sum(acsp_vals) / len(acsp_vals)) if acsp_vals else None
+            macsp = round(sum(acsp_vals) / len(acsp_vals), 2) if acsp_vals else None
             row.macsp = macsp
 
             # MACS — MACSP counts as ONE element alongside each written score
             acse_vals = [v for v in [row.acse_1, row.acse_2] if v is not None]
             macs_inputs = ([macsp] if macsp is not None else []) + acse_vals
-            macs = round(sum(macs_inputs) / len(macs_inputs)) if macs_inputs else None
+            macs = round(sum(macs_inputs) / len(macs_inputs), 2) if macs_inputs else None
             row.macs = macs
 
-            # MT
+            # MT — final grade, rounded to a whole number (13.5 -> 14, 13.45 -> 13)
             if macs is not None and row.acp is not None:
-                row.mt = round((2 * macs + row.acp) / 3)
+                row.mt = round_half_up((2 * macs + row.acp) / 3)
             else:
                 row.mt = None
 
