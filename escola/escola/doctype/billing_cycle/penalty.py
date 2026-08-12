@@ -255,6 +255,10 @@ def apply_penalty_to_invoice(invoice_name):
             title=_("Factura não editável"),
         )
 
+    # Prevent ERPNext's validate_posting_time() from silently resetting
+    # posting_date/posting_time to "now" on save.
+    inv.set_posting_time = 1
+
     pd = _compute_penalty(inv.due_date, settings)
 
     # Always remove old penalty lines first (keeps the operation idempotent)
