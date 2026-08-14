@@ -515,7 +515,24 @@ def save_attendance(class_group, academic_term, rows_json):
 
 
 def _missing_score_students(grade_entry):
-    """Students missing any score field (excluding is_absent rows)."""
+    """Students missing any score field (excluding is_absent rows and
+    students who have since been transferred out of this class — their
+    row is kept for history but no longer blocks finalisation)."""
+    ge = frappe.db.get_value(
+        "Grade Entry", grade_entry, ["class_group", "academic_year"], as_dict=True
+    )
+    active_students = None
+    if ge and ge.class_group and ge.academic_year:
+        active_students = set(frappe.get_all(
+            "Student Group Assignment",
+            filters={
+                "class_group": ge.class_group,
+                "academic_year": ge.academic_year,
+                "status": "Activa",
+            },
+            pluck="student",
+        ))
+
     rows = frappe.get_all(
         "Grade Entry Row",
         filters={"parent": grade_entry},
@@ -526,7 +543,9 @@ def _missing_score_students(grade_entry):
     return [
         r.student_name or r.student
         for r in rows
-        if not r.is_absent and any(r.get(f) is None for f in score_fields)
+        if not r.is_absent
+        and (active_students is None or r.student in active_students)
+        and any(r.get(f) is None for f in score_fields)
     ]
 
 
