@@ -1317,6 +1317,7 @@ async function _delete_duplicate_dialog(frm) {
 
 	const summary_html = `
 		<ul style="margin:0;padding-left:18px;">
+			${p.inscricoes ? `<li>${__("{0} Inscrição(ões) (canceladas e eliminadas)", [p.inscricoes])}</li>` : ""}
 			<li>${__("{0} factura(s) em rascunho", [p.draft_invoices])}</li>
 			<li>${__("{0} alocação(ões) de turma", [p.assignments])}</li>
 			${p.has_customer ? `<li>${__("O registo de Cliente (Customer) associado")}</li>` : ""}

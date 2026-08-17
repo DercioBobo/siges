@@ -252,11 +252,18 @@ def get_duplicate_removal_preview(student):
         if cnt:
             blockers.append(_("{0} {1} submetida(s)").format(cnt, dt))
 
+    # Inscricao is special: submission is what creates the Student in the
+    # first place (on_submit), so a duplicate almost always has one — it's
+    # not a blocker, delete_duplicate_student cancels it (safely unwinding
+    # its own SGA/invoice side-effects) rather than refusing outright.
+    inscricoes = frappe.db.count("Inscricao", {"student": student, "docstatus": ("!=", 2)})
+
     return {
         "blocked": bool(blockers),
         "blockers": blockers,
         "draft_invoices": frappe.db.count("Sales Invoice", {"escola_student": student, "docstatus": 0}),
         "assignments": frappe.db.count("Student Group Assignment", {"student": student}),
+        "inscricoes": inscricoes,
         "has_customer": bool(frappe.db.get_value("Customer", {"escola_student": student}, "name")),
     }
 
@@ -265,13 +272,13 @@ def get_duplicate_removal_preview(student):
 def delete_duplicate_student(student):
     """
     Permanently remove a Student created by mistake (e.g. a typo'd duplicate
-    registration), along with everything tied only to it in draft state:
-    draft invoices, Student Group Assignments (and their roster rows, via
-    on_trash), draft grade-entry/attendance rows, draft
-    Adiantamento/Renovação/Troca/Transfer docs, and its auto-created
-    Customer. Refuses if anything submitted references the student — see
-    get_duplicate_removal_preview. Not for merging two real students'
-    histories; use Rename > Merge with existing for that instead.
+    registration), along with everything tied only to it: its Inscricao(s)
+    (cancelled first, then deleted), draft invoices, Student Group
+    Assignments (and their roster rows, via on_trash), draft grade-entry/
+    attendance rows, draft Adiantamento/Renovação/Troca/Transfer docs, and
+    its auto-created Customer. Refuses if anything ELSE submitted references
+    the student — see get_duplicate_removal_preview. Not for merging two
+    real students' histories; use Rename > Merge with existing for that.
     """
     preview = get_duplicate_removal_preview(student)
     if preview["blocked"]:
@@ -284,7 +291,15 @@ def delete_duplicate_student(student):
             title=_("Eliminação bloqueada"),
         )
 
-    deleted = {"invoices": 0, "assignments": 0, "grade_rows": 0, "attendance_rows": 0, "related_docs": 0}
+    deleted = {"invoices": 0, "assignments": 0, "grade_rows": 0, "attendance_rows": 0, "related_docs": 0, "inscricoes": 0}
+
+    # Cancel first (safely unwinds its own SGA/invoice side-effects via
+    # on_cancel), then delete both the just-cancelled and any still-draft ones.
+    for name in frappe.get_all("Inscricao", filters={"student": student, "docstatus": 1}, pluck="name"):
+        frappe.get_doc("Inscricao", name).cancel()
+    for name in frappe.get_all("Inscricao", filters={"student": student, "docstatus": ("!=", 1)}, pluck="name"):
+        frappe.delete_doc("Inscricao", name, ignore_permissions=True)
+        deleted["inscricoes"] += 1
 
     for name in frappe.get_all("Sales Invoice", filters={"escola_student": student, "docstatus": 0}, pluck="name"):
         frappe.delete_doc("Sales Invoice", name, ignore_permissions=True)
