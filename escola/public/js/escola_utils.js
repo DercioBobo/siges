@@ -420,6 +420,15 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
 
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
+        // ERPNext toolbar noise not relevant to school billing — "Get Items
+        // From" (Sales Order/Delivery Note/etc.) and "Preview".
+        setTimeout(() => {
+            ["Get Items From", "Preview"].forEach((label) => {
+                const $btn = frm.page.get_inner_group_button(__(label));
+                if ($btn && $btn.length) $btn.remove();
+            });
+        }, 300);
+
         if (frm.doc.escola_student) {
             frm.add_custom_button(
                 frm.doc.escola_student,
