@@ -382,6 +382,12 @@ class Student(Document):
         self._sync_full_name()
         self._generate_student_code()
 
+    def before_rename(self, old, new, merge=False):
+        # autoname is "field:full_name" — the Rename dialog has no manual
+        # "New Name" input for that (Frappe expects the field to drive it),
+        # so the document's own current full_name IS the target name here.
+        return self.full_name
+
     def after_insert(self):
         try:
             ensure_customer_for_student(self.name)
