@@ -30,11 +30,10 @@ frappe.ui.form.on("Student", {
 		}
 	},
 
-	// Only auto-fill Nome Completo while creating a new record — once saved,
-	// full_name is independently editable (e.g. via "Corrigir Nome") and
-	// shouldn't be silently overwritten just because Nome/Apelido changed.
-	first_name(frm)    { if (frm.is_new()) update_full_name(frm); },
-	last_name(frm)     { if (frm.is_new()) update_full_name(frm); },
+	// full_name is the autoname field, so Frappe hides it from the form
+	// entirely — Nome/Apelido are the only editable path to it.
+	first_name(frm)    { update_full_name(frm); },
+	last_name(frm)     { update_full_name(frm); },
 	date_of_birth(frm) { update_age(frm); },
 });
 

@@ -411,10 +411,11 @@ class Student(Document):
             pass  # never block student creation
 
     def before_save(self):
-        # full_name is auto-filled from Nome/Apelido only at creation
-        # (before_insert) — after that it's independently editable, so a
-        # direct correction here (e.g. via "Corrigir Nome") actually sticks
-        # instead of being silently overwritten on every save.
+        # full_name is the autoname field, so Frappe hides it from the form
+        # entirely (core behavior, independent of read_only) — Nome/Apelido
+        # are the only editable path to it, so keep them synced on every
+        # save. Use "Corrigir Nome" afterwards to rename the document to match.
+        self._sync_full_name()
         self.idade = _calc_age(self.date_of_birth)
         if not self.current_status:
             self.current_status = "Activo"

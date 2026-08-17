@@ -73,6 +73,7 @@
    "fieldname": "full_name",
    "fieldtype": "Data",
    "label": "Nome Completo",
+   "read_only": 1,
    "in_list_view": 1,
    "search_index": 1
   },
