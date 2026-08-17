@@ -120,7 +120,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		this.$body.find("#ibd-cls").on("change", () => { this._filter_turmas(); this.search(); });
 		this.$body.find("#ibd-turma").on("change", () => this.search());
 		this.$body.find("#ibd-from, #ibd-to").on("change", () => this.search());
-		this.$body.find("#ibd-student").on("input", escola.utils.debounce(() => this.search(), 350));
+		this.$body.find("#ibd-student").on("input", _ibd_debounce(() => this.search(), 350));
 
 		this.$body.find("#ibd-status").on("click", ".ibd-pill", (e) => {
 			const $btn = $(e.currentTarget);
@@ -241,6 +241,14 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		this.$body.find("#ibd-tbody").html(html);
 	}
 };
+
+function _ibd_debounce(fn, wait) {
+	let t;
+	return function (...args) {
+		clearTimeout(t);
+		t = setTimeout(() => fn.apply(this, args), wait);
+	};
+}
 
 function _ibd_styles() {
 	if (document.getElementById("ibd-css")) return;

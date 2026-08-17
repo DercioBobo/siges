@@ -349,18 +349,6 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
 };
 
 // ---------------------------------------------------------------------------
-// debounce — generic helper, used by the invoice board's Aluno search input.
-// ---------------------------------------------------------------------------
-
-escola.utils.debounce = function (fn, wait = 350) {
-    let t;
-    return function (...args) {
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(this, args), wait);
-    };
-};
-
-// ---------------------------------------------------------------------------
 // Shared payment dialog — one-click "waive multa (if draft) → submit →
 // Payment Entry → print recibo", called from Payment Desk's row action and
 // from the Sales Invoice form button below. escola.escola.payment_actions.
