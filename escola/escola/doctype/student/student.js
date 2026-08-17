@@ -204,6 +204,7 @@ function _show_actions_modal(frm) {
 	];
 
 	const acoes = [
+		{ id: "corrigir-nome",     ico: "✎",  label: __("Corrigir Nome"),                color: "#1e40af", bg: "#eff6ff", show: true       },
 		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: !isConcluded },
 		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
@@ -258,6 +259,7 @@ function _show_actions_modal(frm) {
 			case "previsao":          _show_forecast_modal(frm); break;
 			case "servicos":          _show_services_modal(frm); break;
 			case "historial":         _show_timeline_modal(frm); break;
+			case "corrigir-nome":     _rename_student_dialog(frm); break;
 			case "atribuir-turma":    _assign_class_group_dialog(frm); break;
 			case "troca-turma":       frappe.new_doc("Troca De Turma", { student: frm.doc.name }); break;
 			case "transferencia":     frappe.new_doc("Student Transfer", { student: frm.doc.name }); break;
@@ -1289,6 +1291,59 @@ function _register_withdrawal_dialog(frm) {
 }
 
 // ---------------------------------------------------------------------------
+// Corrigir Nome — Student's autoname is "field:full_name", so the built-in
+// "..." > Rename dialog shows only a merge checkbox with no way to type a
+// target name, and (for the non-merge case) doesn't even call the server —
+// there's nothing for it to send. This calls frappe.client.rename_doc
+// directly instead, targeting the document's own current full_name.
+// ---------------------------------------------------------------------------
+
+function _rename_student_dialog(frm) {
+	const target = frm.doc.full_name;
+	if (target === frm.doc.name) {
+		frappe.msgprint(__("O nome do registo já corresponde a \"Nome Completo\". Nada a corrigir."));
+		return;
+	}
+
+	const d = new frappe.ui.Dialog({
+		title: __("Corrigir Nome do Aluno"),
+		fields: [
+			{
+				fieldname: "info", fieldtype: "HTML",
+				options: `
+					<div style="margin-bottom:6px;">
+						${__("Isto vai renomear o registo de <b>{0}</b> para <b>{1}</b>, actualizando automaticamente todas as facturas, notas, alocações de turma, etc. já ligadas a este aluno.", [frm.doc.name, target])}
+					</div>`,
+			},
+			{
+				fieldname: "merge", fieldtype: "Check",
+				label: __("Fundir com Registo Existente"),
+				description: __("Active apenas se já existir OUTRO registo de Aluno chamado \"{0}\" e quiser juntar os dois — tudo o que está neste registo passa para esse, e este é eliminado.", [target]),
+			},
+		],
+		primary_action_label: __("Renomear"),
+		async primary_action(values) {
+			d.hide();
+			const r = await frappe.call({
+				method: "frappe.client.rename_doc",
+				args: {
+					doctype: "Student",
+					old_name: frm.doc.name,
+					new_name: target,
+					merge: values.merge ? 1 : 0,
+				},
+				freeze: true,
+				freeze_message: __("A renomear…"),
+			});
+			if (r.exc) return;
+			frappe.show_alert({ message: __("Aluno renomeado."), indicator: "green" }, 5);
+			frappe.set_route("Form", "Student", target);
+		},
+	});
+	d.show();
+}
+
+// ---------------------------------------------------------------------------
 // Delete duplicate — only for a registration mistake with nothing submitted
 // yet against it (drafts only). Two real students' histories should be
 // combined via Rename > Merge with existing instead, never through this.
@@ -1310,7 +1365,7 @@ async function _delete_duplicate_dialog(frm) {
 			message:
 				__("Este aluno já tem registos submetidos e não pode ser eliminado directamente: {0}.", [p.blockers.join(", ")])
 				+ "<br><br>" +
-				__("Se este for mesmo um registo duplicado (ex: erro de digitação no nome), use <b>Renomear &gt; Juntar com Existente</b> no menu \"...\" para fundir os dois registos no correcto — não neste diálogo."),
+				__("Se este for mesmo um registo duplicado (ex: erro de digitação no nome), use a acção <b>Corrigir Nome</b> com \"Fundir com Registo Existente\" activo para fundir os dois registos no correcto — não neste diálogo."),
 		});
 		return;
 	}

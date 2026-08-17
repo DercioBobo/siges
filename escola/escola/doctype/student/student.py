@@ -217,7 +217,7 @@ def get_duplicate_removal_preview(student):
     blocked. Only ever safe for a pure registration duplicate with nothing
     officially recorded yet — refuses if anything submitted references the
     student (those must be cancelled manually, or the two students merged
-    via Rename > Merge with existing instead).
+    via the Student form's "Corrigir Nome" action with merge enabled instead).
     """
     blockers = []
 
@@ -278,7 +278,8 @@ def delete_duplicate_student(student):
     attendance rows, draft Adiantamento/Renovação/Troca/Transfer docs, and
     its auto-created Customer. Refuses if anything ELSE submitted references
     the student — see get_duplicate_removal_preview. Not for merging two
-    real students' histories; use Rename > Merge with existing for that.
+    real students' histories; use the Student form's "Corrigir Nome" action
+    with merge enabled for that instead.
     """
     preview = get_duplicate_removal_preview(student)
     if preview["blocked"]:
