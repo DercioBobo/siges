@@ -403,13 +403,13 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
 
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
-        if (!frm.doc.escola_student) return;
-
-        frm.add_custom_button(
-            frm.doc.escola_student,
-            () => frappe.set_route("Form", "Student", frm.doc.escola_student),
-            __("Aluno")
-        );
+        if (frm.doc.escola_student) {
+            frm.add_custom_button(
+                frm.doc.escola_student,
+                () => frappe.set_route("Form", "Student", frm.doc.escola_student),
+                __("Aluno")
+            );
+        }
 
         const payable = frm.doc.docstatus === 0
             ? flt(frm.doc.grand_total) > 0
