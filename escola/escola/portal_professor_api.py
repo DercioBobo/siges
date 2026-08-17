@@ -331,18 +331,16 @@ def get_grade_entries(turma, term):
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
 
-    # Subjects this teacher teaches in this turma (from active timetable)
-    subj_rows = frappe.db.sql("""
-        SELECT DISTINCT te.subject
-        FROM `tabTimetable Entry` te
-        JOIN `tabTimetable` t ON t.name = te.parent
-        WHERE te.teacher = %s AND t.class_group = %s AND t.status = 'Activo'
-          AND te.subject IS NOT NULL AND te.subject != ''
-        ORDER BY te.subject
-    """, (teacher.name, turma), as_dict=True)
-    subj_names = [r.subject for r in subj_rows]
+    # Subjects this teacher teaches in this turma, per the curriculum (not the
+    # timetable — a subject the teacher hasn't been scheduled for yet must
+    # still be gradeable).
+    academic_year = frappe.db.get_value("Class Group", turma, "academic_year")
+    subj_names = sorted({
+        subject for cg, subject in _get_teacher_subject_pairs(teacher.name, academic_year)
+        if cg == turma
+    })
 
-    # Fall back to School Class subjects when teacher has no timetable entries (e.g. class director)
+    # Fall back to School Class subjects when teacher has no curriculum assignment (e.g. class director)
     if not subj_names:
         school_class = frappe.db.get_value("Class Group", turma, "school_class")
         if school_class:
@@ -792,35 +790,30 @@ def get_terms():
 
 @frappe.whitelist()
 def get_teacher_subjects(turma):
-    """Return subjects the teacher teaches in the given turma (from active timetable)."""
+    """Return subjects the teacher teaches in the given turma, per the curriculum."""
     teacher = _get_teacher()
     _assert_teacher_owns_turma(teacher.name, turma)
 
-    # Subjects this teacher teaches in this specific turma
-    rows = frappe.db.sql("""
-        SELECT DISTINCT te.subject
-        FROM `tabTimetable Entry` te
-        JOIN `tabTimetable` t ON t.name = te.parent
-        WHERE te.teacher = %s AND t.class_group = %s AND t.status = 'Activo'
-          AND te.subject IS NOT NULL AND te.subject != ''
-        ORDER BY te.subject
-    """, (teacher.name, turma), as_dict=True)
+    academic_year = frappe.db.get_value("Class Group", turma, "academic_year")
+    subjects = sorted({
+        subject for cg, subject in _get_teacher_subject_pairs(teacher.name, academic_year)
+        if cg == turma
+    })
 
-    subjects = [r.subject for r in rows]
-
-    # If class director with no specific subject assignments, fall back to all subjects in turma timetable
+    # Class director with no specific subject assignment: show every subject
+    # in the turma's curriculum (School Class Subject), not just scheduled ones.
     if not subjects:
         cg_teacher = frappe.db.get_value("Class Group", turma, "class_teacher")
         if cg_teacher == teacher.name:
-            all_rows = frappe.db.sql("""
-                SELECT DISTINCT te.subject
-                FROM `tabTimetable Entry` te
-                JOIN `tabTimetable` t ON t.name = te.parent
-                WHERE t.class_group = %s AND t.status = 'Activo'
-                  AND te.subject IS NOT NULL AND te.subject != ''
-                ORDER BY te.subject
-            """, turma, as_dict=True)
-            subjects = [r.subject for r in all_rows]
+            school_class = frappe.db.get_value("Class Group", turma, "school_class")
+            if school_class:
+                lines = frappe.get_all(
+                    "School Class Subject",
+                    filters={"parent": school_class},
+                    fields=["subject"],
+                    order_by="sort_order asc, idx asc",
+                )
+                subjects = [l.subject for l in lines if l.subject]
 
     return {"subjects": subjects}
 
