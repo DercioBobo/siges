@@ -128,10 +128,10 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
             si.grand_total,
             si.outstanding_amount,
             bc.billing_mode,
-            EXISTS (
-                SELECT 1 FROM `tabSales Invoice Item` sii
+            (
+                SELECT COALESCE(SUM(sii.amount), 0) FROM `tabSales Invoice Item` sii
                 WHERE sii.parent = si.name AND sii.escola_is_penalty_line = 1
-            ) AS has_penalty_line
+            ) AS penalty_amount
         FROM `tabSales Invoice` si
         LEFT JOIN `tabBilling Cycle` bc
                ON bc.name = si.escola_billing_cycle

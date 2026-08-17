@@ -355,19 +355,36 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
 // register_payment is the single backend entry point for both.
 // ---------------------------------------------------------------------------
 
-escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amount, has_penalty_line, on_success }) {
+escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amount, penalty_amount, on_success }) {
+    default_amount = flt(default_amount);
+    penalty_amount = flt(penalty_amount);
+    const has_penalty_line = penalty_amount > 0;
+    const can_waive = docstatus === 0 && has_penalty_line;
+
     const fields = [
         { fieldname: "mode_of_payment", fieldtype: "Link", options: "Mode of Payment", label: __("Modo de Pagamento"), reqd: 1 },
-        { fieldname: "amount", fieldtype: "Currency", label: __("Valor"), default: default_amount, reqd: 1 },
-        { fieldname: "reference_no", fieldtype: "Data", label: __("Referência") },
-        { fieldname: "reference_date", fieldtype: "Date", label: __("Data de Referência"), default: frappe.datetime.get_today() },
     ];
-    if (docstatus === 0 && has_penalty_line) {
+    if (can_waive) {
         fields.push({
             fieldname: "waive_penalty", fieldtype: "Check", label: __("Dispensar multa"),
             description: __("Remove a linha de multa da factura antes de a submeter."),
+            onchange() {
+                const waived = d.get_value("waive_penalty");
+                d.set_value("amount", waived ? default_amount - penalty_amount : default_amount);
+            },
         });
     }
+    if (has_penalty_line) {
+        fields.push({
+            fieldname: "penalty_amount", fieldtype: "Currency", label: __("Multa"),
+            default: penalty_amount, read_only: 1,
+        });
+    }
+    fields.push(
+        { fieldname: "amount", fieldtype: "Currency", label: __("Valor"), default: default_amount, reqd: 1 },
+        { fieldname: "reference_no", fieldtype: "Data", label: __("Referência") },
+        { fieldname: "reference_date", fieldtype: "Date", label: __("Data de Referência"), default: frappe.datetime.get_today() },
+    );
 
     const d = new frappe.ui.Dialog({
         title: __("Registar Pagamento — {0}", [invoice]),
@@ -417,12 +434,14 @@ frappe.ui.form.on("Sales Invoice", {
         if (!payable) return;
 
         frm.add_custom_button(__("Registar Pagamento"), () => {
-            const has_penalty_line = (frm.doc.items || []).some((r) => r.escola_is_penalty_line);
+            const penalty_amount = (frm.doc.items || [])
+                .filter((r) => r.escola_is_penalty_line)
+                .reduce((sum, r) => sum + flt(r.amount), 0);
             escola.utils.open_payment_dialog({
                 invoice: frm.doc.name,
                 docstatus: frm.doc.docstatus,
                 default_amount: frm.doc.docstatus === 0 ? frm.doc.grand_total : frm.doc.outstanding_amount,
-                has_penalty_line,
+                penalty_amount,
                 on_success: () => frm.reload_doc(),
             });
         }).addClass("btn-primary");

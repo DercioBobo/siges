@@ -23,7 +23,7 @@ frappe.pages["payment-desk"].on_page_load = function (wrapper) {
 				invoice: row.invoice,
 				docstatus: row.docstatus,
 				default_amount: row.docstatus === 0 ? row.grand_total : row.outstanding_amount,
-				has_penalty_line: !!row.has_penalty_line,
+				penalty_amount: row.penalty_amount,
 				on_success: () => board.search(),
 			});
 		},
