@@ -186,6 +186,23 @@ def _roster_remove(assignment_name):
     frappe.db.delete("Class Group Student", {"assignment": assignment_name})
 
 
+def _remove_from_draft_pautas(sga):
+    """Strip this student's row from any DRAFT Grade Entry (pauta) still open for
+    the class_group they're leaving. A submitted pauta is an official record for
+    that term and is left untouched. Called alongside _roster_sync/
+    _sync_student_current_turma whenever an SGA moves away from 'Activa'
+    (Troca de Turma, Student Transfer) — not on reactivation."""
+    if sga.status == "Activa":
+        return
+    draft_names = frappe.get_all(
+        "Grade Entry",
+        filters={"class_group": sga.class_group, "academic_year": sga.academic_year, "docstatus": 0},
+        pluck="name",
+    )
+    for name in draft_names:
+        frappe.db.delete("Grade Entry Row", {"parent": name, "student": sga.student})
+
+
 def _update_student_count(class_group_name):
     if not class_group_name:
         return
@@ -231,3 +248,39 @@ def repair_stale_rosters():
 
     frappe.db.commit()
     return {"class_groups_rebuilt": len(class_groups), "students_checked": len(students)}
+
+
+def repair_stale_pauta_rows():
+    """One-off repair for pauta drift left by Student Transfer / Troca de Turma
+    docs submitted before _remove_from_draft_pautas was wired in: strips a
+    student's row from a DRAFT Grade Entry when they no longer have an active
+    Student Group Assignment for that pauta's class_group + academic_year.
+    Submitted pautas are left untouched (official record).
+
+    Run with:
+    bench --site <site> execute escola.escola.doctype.student_group_assignment.student_group_assignment.repair_stale_pauta_rows
+    """
+    draft_ges = frappe.get_all(
+        "Grade Entry",
+        filters={"docstatus": 0},
+        fields=["name", "class_group", "academic_year"],
+    )
+    removed = 0
+    for ge in draft_ges:
+        rows = frappe.get_all("Grade Entry Row", filters={"parent": ge.name}, fields=["name", "student"])
+        for row in rows:
+            active = frappe.db.exists(
+                "Student Group Assignment",
+                {
+                    "student": row.student,
+                    "class_group": ge.class_group,
+                    "academic_year": ge.academic_year,
+                    "status": "Activa",
+                },
+            )
+            if not active:
+                frappe.db.delete("Grade Entry Row", {"name": row.name})
+                removed += 1
+
+    frappe.db.commit()
+    return {"grade_entries_checked": len(draft_ges), "rows_removed": removed}

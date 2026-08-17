@@ -139,7 +139,7 @@ class TrocaDeTurma(Document):
 
     def _execute_transfer(self):
         from escola.escola.doctype.student_group_assignment.student_group_assignment import (
-            _roster_sync, _sync_student_current_turma,
+            _roster_sync, _sync_student_current_turma, _remove_from_draft_pautas,
         )
 
         old_sga = frappe.db.get_value(
@@ -165,6 +165,7 @@ class TrocaDeTurma(Document):
         old_sga_doc = frappe.get_doc("Student Group Assignment", old_sga)
         _roster_sync(old_sga_doc)
         _sync_student_current_turma(old_sga_doc)
+        _remove_from_draft_pautas(old_sga_doc)
         self.db_set("from_assignment", old_sga)
 
         to_sc = frappe.db.get_value("Class Group", self.to_class_group, "school_class")

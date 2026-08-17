@@ -67,7 +67,7 @@ class StudentTransfer(Document):
 
     def _handle_exit(self):
         from escola.escola.doctype.student_group_assignment.student_group_assignment import (
-            _roster_sync, _sync_student_current_turma,
+            _roster_sync, _sync_student_current_turma, _remove_from_draft_pautas,
         )
 
         assignments = frappe.get_all(
@@ -87,6 +87,7 @@ class StudentTransfer(Document):
             sga = frappe.get_doc("Student Group Assignment", a.name)
             _roster_sync(sga)
             _sync_student_current_turma(sga)
+            _remove_from_draft_pautas(sga)
 
         self.db_set("from_assignment", assignments[0].name)
         _safe_set_student_status(self.student, "Transferido")
