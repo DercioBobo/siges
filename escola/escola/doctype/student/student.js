@@ -210,6 +210,7 @@ function _show_actions_modal(frm) {
 		{ id: "desistencia",       ico: "✕",  label: __("Registar Desistência"),         color: "#dc2626", bg: "#fef2f2", show: isActive   },
 		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
 		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#166534", bg: "#f0fdf4", show: isInactive },
+		{ id: "eliminar-duplicado", ico: "🗑", label: __("Eliminar Registo Duplicado"),  color: "#991b1b", bg: "#fef2f2", show: true       },
 	].filter(b => b.show);
 
 	const cards = (items) => items.map(b => `
@@ -263,6 +264,7 @@ function _show_actions_modal(frm) {
 			case "desistencia":       _register_withdrawal_dialog(frm); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
 			case "reactivar":         reactivate_dialog(frm); break;
+			case "eliminar-duplicado": _delete_duplicate_dialog(frm); break;
 			case "nova-renovacao":
 				if (frm._renewal_status) _open_new_renewal(frm, frm._renewal_status);
 				break;
@@ -1283,6 +1285,88 @@ function _register_withdrawal_dialog(frm) {
 			frm.reload_doc();
 		},
 	});
+	d.show();
+}
+
+// ---------------------------------------------------------------------------
+// Delete duplicate — only for a registration mistake with nothing submitted
+// yet against it (drafts only). Two real students' histories should be
+// combined via Rename > Merge with existing instead, never through this.
+// ---------------------------------------------------------------------------
+
+async function _delete_duplicate_dialog(frm) {
+	const r = await frappe.call({
+		method: "escola.escola.doctype.student.student.get_duplicate_removal_preview",
+		args:   { student: frm.doc.name },
+		freeze: true,
+	});
+	if (r.exc || !r.message) return;
+	const p = r.message;
+
+	if (p.blocked) {
+		frappe.msgprint({
+			title:     __("Eliminação bloqueada"),
+			indicator: "red",
+			message:
+				__("Este aluno já tem registos submetidos e não pode ser eliminado directamente: {0}.", [p.blockers.join(", ")])
+				+ "<br><br>" +
+				__("Se este for mesmo um registo duplicado (ex: erro de digitação no nome), use <b>Renomear &gt; Juntar com Existente</b> no menu \"...\" para fundir os dois registos no correcto — não neste diálogo."),
+		});
+		return;
+	}
+
+	const summary_html = `
+		<ul style="margin:0;padding-left:18px;">
+			<li>${__("{0} factura(s) em rascunho", [p.draft_invoices])}</li>
+			<li>${__("{0} alocação(ões) de turma", [p.assignments])}</li>
+			${p.has_customer ? `<li>${__("O registo de Cliente (Customer) associado")}</li>` : ""}
+			<li>${__("O próprio registo do Aluno")}</li>
+		</ul>`;
+
+	const d = new frappe.ui.Dialog({
+		title: __("Eliminar Registo Duplicado — {0}", [frm.doc.full_name]),
+		fields: [
+			{
+				fieldname: "summary", fieldtype: "HTML",
+				options: `
+					<div style="margin-bottom:10px;color:var(--text-color);">
+						${__("Isto vai eliminar <b>permanentemente</b> e sem possibilidade de recuperação:")}
+					</div>
+					${summary_html}
+					<div style="margin-top:12px;color:var(--red-600,#dc2626);font-weight:600;">
+						${__("Só use isto para um registo criado por engano (ex: nome duplicado por erro). Não é reversível.")}
+					</div>`,
+			},
+			{
+				fieldname: "confirm_name", fieldtype: "Data", reqd: 1,
+				label: __("Escreva o nome completo do aluno para confirmar"),
+				description: __("Deve corresponder exactamente a: {0}", [frm.doc.full_name]),
+			},
+		],
+		primary_action_label: __("Eliminar Definitivamente"),
+		async primary_action(values) {
+			if ((values.confirm_name || "").trim() !== frm.doc.full_name) {
+				frappe.msgprint(__("O nome escrito não corresponde. Nada foi eliminado."));
+				return;
+			}
+			d.hide();
+
+			const del = await frappe.call({
+				method: "escola.escola.doctype.student.student.delete_duplicate_student",
+				args:   { student: frm.doc.name },
+				freeze: true,
+				freeze_message: __("A eliminar…"),
+			});
+			if (del.exc) return;
+
+			frappe.show_alert({
+				message:   __("Registo duplicado eliminado."),
+				indicator: "green",
+			}, 5);
+			frappe.set_route("List", "Student");
+		},
+	});
+	d.get_primary_btn().removeClass("btn-primary").addClass("btn-danger");
 	d.show();
 }
 

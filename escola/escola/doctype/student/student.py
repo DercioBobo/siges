@@ -176,37 +176,159 @@ def register_withdrawal(student, withdrawal_date, withdrawal_reason):
     """
     Mark a student as Desistente:
     1. Set current_status, withdrawal_date, withdrawal_reason on Student
-    2. Close their active Student Group Assignment
-    3. Recalculate student_count on the affected turma
-    4. Clear current_class_group / current_school_class
+    2. Close their active Student Group Assignment — roster removal,
+       current-turma clearing, and draft-pauta cleanup are handled by the
+       shared Student Group Assignment sync helpers (same as Troca de Turma
+       and Student Transfer use).
     """
+    from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+        _roster_sync, _sync_student_current_turma, _remove_from_draft_pautas,
+    )
+
     frappe.db.set_value("Student", student, {
         "current_status":    "Desistente",
         "withdrawal_date":   frappe.utils.getdate(withdrawal_date),
         "withdrawal_reason": withdrawal_reason or "",
-        "current_class_group":  None,
-        "current_school_class": None,
     })
 
-    sga = frappe.db.get_value(
+    sga_name = frappe.db.get_value(
         "Student Group Assignment",
         {"student": student, "status": "Activa"},
-        ["name", "class_group"],
-        as_dict=True,
+        "name",
     )
 
     class_group = None
-    if sga:
-        frappe.db.set_value("Student Group Assignment", sga.name, "status", "Encerrada")
+    if sga_name:
+        frappe.db.set_value("Student Group Assignment", sga_name, "status", "Encerrada")
+        sga = frappe.get_doc("Student Group Assignment", sga_name)
         class_group = sga.class_group
-        cnt = frappe.db.count(
-            "Student Group Assignment",
-            {"class_group": class_group, "status": "Activa"},
-        )
-        frappe.db.set_value("Class Group", class_group, "student_count", cnt)
+        _roster_sync(sga)
+        _sync_student_current_turma(sga)
+        _remove_from_draft_pautas(sga)
 
     frappe.db.commit()
     return {"class_group": class_group}
+
+
+@frappe.whitelist()
+def get_duplicate_removal_preview(student):
+    """
+    Summarize what deleting this student would remove, and whether it's
+    blocked. Only ever safe for a pure registration duplicate with nothing
+    officially recorded yet — refuses if anything submitted references the
+    student (those must be cancelled manually, or the two students merged
+    via Rename > Merge with existing instead).
+    """
+    blockers = []
+
+    submitted_invoices = frappe.db.count("Sales Invoice", {"escola_student": student, "docstatus": 1})
+    if submitted_invoices:
+        blockers.append(_("{0} factura(s) submetida(s)").format(submitted_invoices))
+
+    submitted_grades = frappe.db.sql(
+        """
+        SELECT COUNT(*) FROM `tabGrade Entry Row` ger
+        JOIN `tabGrade Entry` ge ON ge.name = ger.parent
+        WHERE ger.student = %s AND ge.docstatus = 1
+        """,
+        student,
+    )[0][0]
+    if submitted_grades:
+        blockers.append(_("{0} nota(s) submetida(s) em pauta").format(submitted_grades))
+
+    submitted_attendance = frappe.db.sql(
+        """
+        SELECT COUNT(*) FROM `tabTerm Attendance Row` tar
+        JOIN `tabTerm Attendance` ta ON ta.name = tar.parent
+        WHERE tar.student = %s AND ta.docstatus = 1
+        """,
+        student,
+    )[0][0]
+    if submitted_attendance:
+        blockers.append(_("{0} registo(s) de frequência submetido(s)").format(submitted_attendance))
+
+    for dt in ("Adiantamento De Pagamento", "Renovacao De Matricula", "Troca De Turma", "Student Transfer"):
+        cnt = frappe.db.count(dt, {"student": student, "docstatus": 1})
+        if cnt:
+            blockers.append(_("{0} {1} submetida(s)").format(cnt, dt))
+
+    return {
+        "blocked": bool(blockers),
+        "blockers": blockers,
+        "draft_invoices": frappe.db.count("Sales Invoice", {"escola_student": student, "docstatus": 0}),
+        "assignments": frappe.db.count("Student Group Assignment", {"student": student}),
+        "has_customer": bool(frappe.db.get_value("Customer", {"escola_student": student}, "name")),
+    }
+
+
+@frappe.whitelist()
+def delete_duplicate_student(student):
+    """
+    Permanently remove a Student created by mistake (e.g. a typo'd duplicate
+    registration), along with everything tied only to it in draft state:
+    draft invoices, Student Group Assignments (and their roster rows, via
+    on_trash), draft grade-entry/attendance rows, draft
+    Adiantamento/Renovação/Troca/Transfer docs, and its auto-created
+    Customer. Refuses if anything submitted references the student — see
+    get_duplicate_removal_preview. Not for merging two real students'
+    histories; use Rename > Merge with existing for that instead.
+    """
+    preview = get_duplicate_removal_preview(student)
+    if preview["blocked"]:
+        frappe.throw(
+            _("Não é possível eliminar: existem registos submetidos ligados a este aluno "
+              "({0}). Cancele-os manualmente primeiro, ou utilize Renomear > "
+              "Juntar com Existente para fundir com o registo correcto.").format(
+                ", ".join(preview["blockers"])
+            ),
+            title=_("Eliminação bloqueada"),
+        )
+
+    deleted = {"invoices": 0, "assignments": 0, "grade_rows": 0, "attendance_rows": 0, "related_docs": 0}
+
+    for name in frappe.get_all("Sales Invoice", filters={"escola_student": student, "docstatus": 0}, pluck="name"):
+        frappe.delete_doc("Sales Invoice", name, ignore_permissions=True)
+        deleted["invoices"] += 1
+
+    for dt in ("Adiantamento De Pagamento", "Renovacao De Matricula", "Troca De Turma", "Student Transfer"):
+        for name in frappe.get_all(dt, filters={"student": student, "docstatus": 0}, pluck="name"):
+            frappe.delete_doc(dt, name, ignore_permissions=True)
+            deleted["related_docs"] += 1
+
+    for name in frappe.get_all("Student Group Assignment", filters={"student": student}, pluck="name"):
+        frappe.delete_doc("Student Group Assignment", name, ignore_permissions=True)
+        deleted["assignments"] += 1
+
+    for row in frappe.db.sql(
+        """
+        SELECT ger.name FROM `tabGrade Entry Row` ger
+        JOIN `tabGrade Entry` ge ON ge.name = ger.parent
+        WHERE ger.student = %s AND ge.docstatus = 0
+        """,
+        student, as_dict=True,
+    ):
+        frappe.db.delete("Grade Entry Row", {"name": row.name})
+        deleted["grade_rows"] += 1
+
+    for row in frappe.db.sql(
+        """
+        SELECT tar.name FROM `tabTerm Attendance Row` tar
+        JOIN `tabTerm Attendance` ta ON ta.name = tar.parent
+        WHERE tar.student = %s AND ta.docstatus = 0
+        """,
+        student, as_dict=True,
+    ):
+        frappe.db.delete("Term Attendance Row", {"name": row.name})
+        deleted["attendance_rows"] += 1
+
+    customer = frappe.db.get_value("Customer", {"escola_student": student}, "name")
+    if customer:
+        frappe.delete_doc("Customer", customer, ignore_permissions=True)
+
+    frappe.delete_doc("Student", student, ignore_permissions=True)
+    frappe.db.commit()
+
+    return deleted
 
 
 def _calc_age(date_of_birth):
