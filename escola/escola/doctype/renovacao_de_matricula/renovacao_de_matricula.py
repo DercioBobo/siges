@@ -3,6 +3,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, getdate, today
 
+from escola.escola.payment_actions import get_payment_account as _get_payment_account
+
 
 # ---------------------------------------------------------------------------
 # Document class
@@ -199,16 +201,6 @@ def _create_renewal_invoice(doc):
         si.submit()
 
     return si
-
-
-def _get_payment_account(mode_of_payment, company):
-    """Resolve the default account for a Mode of Payment within a company."""
-    account = frappe.db.get_value(
-        "Mode of Payment Account",
-        {"parent": mode_of_payment, "company": company},
-        "default_account",
-    )
-    return account
 
 
 # ---------------------------------------------------------------------------

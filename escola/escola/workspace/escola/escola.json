@@ -50,6 +50,7 @@
   {"hidden": 0, "is_query_report": 0, "label": "Plano de Propinas",        "link_count": 0, "link_to": "Fee Structure",     "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Agendamento de Cobrança",  "link_count": 0, "link_to": "Billing Schedule",  "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Monitor de Facturas",      "link_count": 0, "link_to": "invoice-monitor",   "link_type": "Page",    "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Central de Pagamentos",    "link_count": 0, "link_to": "payment-desk",      "link_type": "Page",    "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Ciclo de Facturação",      "link_count": 0, "link_to": "Billing Cycle",     "link_type": "DocType", "onboard": 0, "type": "Link"},
 
   {"hidden": 0, "is_query_report": 0, "label": "Relatórios Académicos", "link_count": 0, "onboard": 0, "type": "Card Break"},

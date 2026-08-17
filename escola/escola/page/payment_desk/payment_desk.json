@@ -1,0 +1,18 @@
+{
+ "content": "1",
+ "creation": "2026-08-17 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2026-08-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "payment-desk",
+ "owner": "Administrator",
+ "page_name": "payment-desk",
+ "restrict_to_domain": "",
+ "roles": [
+  {"role": "Diretor Escolar"},
+  {"role": "Secretaria Escolar"}
+ ],
+ "system_page": 0,
+ "title": "Central de Pagamentos"
+}

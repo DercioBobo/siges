@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, flt, getdate, today
 
+from escola.escola.payment_actions import get_payment_account as _get_payment_account
+
 
 # Discount tiers
 _DISCOUNT_FULL_YEAR = 10.0   # pay ALL periods of the year in one shot
@@ -371,14 +373,6 @@ def _resolve_item_code(school_class, periods):
 
     # Fallback to default item
     return frappe.db.get_single_value("School Settings", "enrollment_fee_item_code") or "Propina"
-
-
-def _get_payment_account(mode_of_payment, company):
-    return frappe.db.get_value(
-        "Mode of Payment Account",
-        {"parent": mode_of_payment, "company": company},
-        "default_account",
-    )
 
 
 # ---------------------------------------------------------------------------

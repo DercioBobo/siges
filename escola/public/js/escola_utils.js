@@ -349,7 +349,68 @@ escola.utils.make_filter_select = function (parent_el, { label, placeholder, opt
 };
 
 // ---------------------------------------------------------------------------
-// Sales Invoice — quick link to Student
+// debounce — generic helper, used by the invoice board's Aluno search input.
+// ---------------------------------------------------------------------------
+
+escola.utils.debounce = function (fn, wait = 350) {
+    let t;
+    return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), wait);
+    };
+};
+
+// ---------------------------------------------------------------------------
+// Shared payment dialog — one-click "waive multa (if draft) → submit →
+// Payment Entry → print recibo", called from Payment Desk's row action and
+// from the Sales Invoice form button below. escola.escola.payment_actions.
+// register_payment is the single backend entry point for both.
+// ---------------------------------------------------------------------------
+
+escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amount, has_penalty_line, on_success }) {
+    const fields = [
+        { fieldname: "mode_of_payment", fieldtype: "Link", options: "Mode of Payment", label: __("Modo de Pagamento"), reqd: 1 },
+        { fieldname: "amount", fieldtype: "Currency", label: __("Valor"), default: default_amount, reqd: 1 },
+        { fieldname: "reference_no", fieldtype: "Data", label: __("Referência") },
+        { fieldname: "reference_date", fieldtype: "Date", label: __("Data de Referência"), default: frappe.datetime.get_today() },
+    ];
+    if (docstatus === 0 && has_penalty_line) {
+        fields.push({
+            fieldname: "waive_penalty", fieldtype: "Check", label: __("Dispensar multa"),
+            description: __("Remove a linha de multa da factura antes de a submeter."),
+        });
+    }
+
+    const d = new frappe.ui.Dialog({
+        title: __("Registar Pagamento — {0}", [invoice]),
+        fields,
+        primary_action_label: __("Registar"),
+        primary_action(values) {
+            frappe.call({
+                method: "escola.escola.payment_actions.register_payment",
+                args: {
+                    invoice_name: invoice,
+                    mode_of_payment: values.mode_of_payment,
+                    amount: values.amount,
+                    reference_no: values.reference_no,
+                    reference_date: values.reference_date,
+                    waive_penalty: values.waive_penalty ? 1 : 0,
+                },
+                freeze: true,
+                freeze_message: __("A registar pagamento…"),
+            }).then((r) => {
+                if (!r.message) return;
+                d.hide();
+                window.open(r.message.print_url, "_blank");
+                if (on_success) on_success(r.message);
+            });
+        },
+    });
+    d.show();
+};
+
+// ---------------------------------------------------------------------------
+// Sales Invoice — quick link to Student + one-click "Registar Pagamento"
 // ---------------------------------------------------------------------------
 
 frappe.ui.form.on("Sales Invoice", {
@@ -361,5 +422,21 @@ frappe.ui.form.on("Sales Invoice", {
             () => frappe.set_route("Form", "Student", frm.doc.escola_student),
             __("Aluno")
         );
+
+        const payable = frm.doc.docstatus === 0
+            ? flt(frm.doc.grand_total) > 0
+            : (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0);
+        if (!payable) return;
+
+        frm.add_custom_button(__("Registar Pagamento"), () => {
+            const has_penalty_line = (frm.doc.items || []).some((r) => r.escola_is_penalty_line);
+            escola.utils.open_payment_dialog({
+                invoice: frm.doc.name,
+                docstatus: frm.doc.docstatus,
+                default_amount: frm.doc.docstatus === 0 ? frm.doc.grand_total : frm.doc.outstanding_amount,
+                has_penalty_line,
+                on_success: () => frm.reload_doc(),
+            });
+        }).addClass("btn-primary");
     },
 });
