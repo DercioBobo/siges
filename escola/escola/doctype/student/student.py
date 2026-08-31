@@ -409,14 +409,31 @@ def find_similar_students(name, exclude=None, limit=6):
     token-based fuzzy match. Purely advisory — the caller never enforces it.
     """
     query_norm = _normalize_name(name)
-    if len(query_norm.replace(" ", "")) < 3:
+    q_tokens = query_norm.split()
+
+    # Stay quiet until a second name word is being typed — a lone first name
+    # is far too common to flag against ~1000 students.
+    if len(q_tokens) < 2 or len(query_norm.replace(" ", "")) < 4:
         return []
 
-    q_tokens = query_norm.split()
     try:
         limit = max(1, min(int(limit or 6), 20))
     except (TypeError, ValueError):
         limit = 6
+
+    last_idx = len(q_tokens) - 1
+
+    def _token_score(i, qt, cand_tokens):
+        best = max(
+            (difflib.SequenceMatcher(None, qt, ct).ratio() for ct in cand_tokens),
+            default=0.0,
+        )
+        # The last query token is usually still being typed — reward a
+        # candidate word that starts with it ("ans" -> "anselmo").
+        if i == last_idx and len(qt) >= 2:
+            if any(ct.startswith(qt) for ct in cand_tokens):
+                best = max(best, 0.9)
+        return best
 
     results = []
     for cand in _get_student_name_index():
@@ -430,17 +447,12 @@ def find_similar_students(name, exclude=None, limit=6):
         elif query_norm in cand["norm"] or cand["norm"] in query_norm:
             score = 0.93
         else:
-            per_token = []
-            for qt in q_tokens:
-                per_token.append(max(
-                    (difflib.SequenceMatcher(None, qt, ct).ratio() for ct in cand["tokens"]),
-                    default=0.0,
-                ))
+            per_token = [_token_score(i, qt, cand["tokens"]) for i, qt in enumerate(q_tokens)]
             whole = difflib.SequenceMatcher(None, query_norm, cand["norm"]).ratio()
             score = max(sum(per_token) / len(per_token), whole)
 
-            # Guard against common-first-name false positives: with a
-            # multi-word query we want at least two tokens to line up well.
+            # Guard against common-first-name false positives: at least two
+            # query words must line up well (or one, for a 2-word query).
             strong = sum(1 for r in per_token if r >= 0.85)
             if score < 0.9 and strong < min(2, len(q_tokens)):
                 continue

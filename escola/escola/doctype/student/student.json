@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "similar_students_html",
   "section_break_personal",
   "first_name",
   "column_break_1",
@@ -48,6 +49,10 @@
   "notes"
  ],
  "fields": [
+  {
+   "fieldname": "similar_students_html",
+   "fieldtype": "HTML"
+  },
   {
    "fieldname": "section_break_personal",
    "fieldtype": "Section Break",

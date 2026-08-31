@@ -30,6 +30,7 @@ frappe.ui.form.on("Student", {
 			return;
 		}
 
+		_clear_similar_panel(frm);
 		_set_financial_indicator(frm);
 		_load_financial_summary(frm);
 		_load_academic_history(frm);
@@ -48,16 +49,32 @@ frappe.ui.form.on("Student", {
 });
 
 // ---------------------------------------------------------------------------
-// Similar-name suggestion (new Student only) — a soft dashboard notice,
-// dismissed automatically as the typed name stops matching anyone.
+// Similar-name suggestion (new Student only) — a soft inline panel rendered
+// into the `similar_students_html` field, cleared automatically as the typed
+// name stops matching anyone. Never blocks saving.
 // ---------------------------------------------------------------------------
+
+const _SIMILAR_STATUS_COLOR = {
+	"Transferido":  { bg: "#dbeafe", fg: "#1d4ed8" },
+	"Desistente":   { bg: "#fee2e2", fg: "#dc2626" },
+	"Concluiu":     { bg: "#f3f4f6", fg: "#374151" },
+};
+
+function _clear_similar_panel(frm) {
+	const fd = frm.fields_dict.similar_students_html;
+	if (fd) fd.$wrapper.empty();
+}
 
 function _suggest_similar_students(frm) {
 	if (!frm.is_new()) return;
 
 	const name = [frm.doc.first_name, frm.doc.last_name].filter(Boolean).join(" ").trim();
-	if (name.replace(/\s+/g, "").length < 3) {
-		frm.dashboard.clear_headline();
+
+	// Stay quiet until a second name word is being typed — a lone first
+	// name is far too common to be worth flagging.
+	const words = name.split(/\s+/).filter(Boolean);
+	if (words.length < 2 || words[words.length - 1].length < 2) {
+		_clear_similar_panel(frm);
 		return;
 	}
 
@@ -65,34 +82,47 @@ function _suggest_similar_students(frm) {
 		method: "escola.escola.doctype.student.student.find_similar_students",
 		args:   { name },
 		callback(r) {
-			// The form may have been saved/left in the meantime.
 			if (!frm.is_new()) return;
+
+			const fd = frm.fields_dict.similar_students_html;
+			if (!fd) return;
 
 			const rows = r.message || [];
 			if (!rows.length) {
-				frm.dashboard.clear_headline();
+				fd.$wrapper.empty();
 				return;
 			}
 
-			const items = rows.map(s => {
+			const cards = rows.map(s => {
+				const sc = _SIMILAR_STATUS_COLOR[s.current_status];
+				const badge = sc
+					? `<span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;background:${sc.bg};color:${sc.fg};">${frappe.utils.escape_html(__(s.current_status))}</span>`
+					: "";
 				const code = s.student_code
-					? ` <span style="font-family:monospace;font-size:11px;opacity:.75;">${frappe.utils.escape_html(s.student_code)}</span>`
+					? `<span style="font-family:var(--font-stack-monospace,monospace);font-size:11px;color:var(--text-muted);">${frappe.utils.escape_html(s.student_code)}</span>`
 					: "";
-				const st = (s.current_status && s.current_status !== "Activo")
-					? ` <span style="font-size:11px;opacity:.7;">(${frappe.utils.escape_html(__(s.current_status))})</span>`
-					: "";
-				return `<a href="/app/student/${encodeURIComponent(s.name)}" target="_blank"
-					style="font-weight:600;">${frappe.utils.escape_html(s.full_name)}</a>${code}${st}`;
-			}).join(' <span style="opacity:.4;">·</span> ');
+				return `
+					<a href="/app/student/${encodeURIComponent(s.name)}" target="_blank"
+					   style="display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:8px;
+					          background:var(--fg-color);border:1px solid var(--border-color);text-decoration:none;
+					          color:var(--text-color);font-size:12.5px;line-height:1.3;">
+						<span style="font-weight:600;">${frappe.utils.escape_html(s.full_name)}</span>
+						${code}${badge}
+					</a>`;
+			}).join("");
 
-			frm.dashboard.clear_headline();
-			frm.dashboard.set_headline(
-				`<span style="font-weight:600;">${__("Nomes parecidos já registados")}:</span> ${items}
-				<span style="display:block;font-size:11px;opacity:.7;margin-top:2px;">
-					${__("Apenas um aviso — pode continuar se for mesmo um novo aluno.")}
-				</span>`,
-				"yellow"
-			);
+			fd.$wrapper.html(`
+				<div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;padding:10px 12px;margin-bottom:4px;">
+					<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+					            text-transform:uppercase;letter-spacing:.5px;color:#92400e;margin-bottom:8px;">
+						<span>⚠</span> ${__("Já existem alunos com nome parecido")}
+					</div>
+					<div style="display:flex;flex-wrap:wrap;gap:6px;">${cards}</div>
+					<div style="font-size:11px;color:#92400e;opacity:.8;margin-top:8px;">
+						${__("Apenas um aviso — pode continuar se for mesmo um novo aluno.")}
+					</div>
+				</div>
+			`);
 		},
 	});
 }
