@@ -18,24 +18,84 @@ const _ALERT_MESSAGES = {
 
 frappe.ui.form.on("Student", {
 	refresh(frm) {
-		if (!frm.is_new()) {
-			_set_financial_indicator(frm);
-			_load_financial_summary(frm);
-			_load_academic_history(frm);
-			_load_renewal_status(frm);
-			_load_documents(frm);
-
-			const $btn = frm.add_custom_button(__("Acções"), () => _show_actions_modal(frm));
-			$btn.removeClass("btn-default").addClass("btn-primary");
+		if (frm.is_new()) {
+			// Advisory-only: as the name is typed, quietly surface already
+			// registered students with a similar name. Never blocks saving.
+			if (!frm._suggest_similar) {
+				frm._suggest_similar = frappe.utils.debounce(
+					() => _suggest_similar_students(frm), 450
+				);
+			}
+			_suggest_similar_students(frm);
+			return;
 		}
+
+		_set_financial_indicator(frm);
+		_load_financial_summary(frm);
+		_load_academic_history(frm);
+		_load_renewal_status(frm);
+		_load_documents(frm);
+
+		const $btn = frm.add_custom_button(__("Acções"), () => _show_actions_modal(frm));
+		$btn.removeClass("btn-default").addClass("btn-primary");
 	},
 
 	// full_name is the autoname field, so Frappe hides it from the form
 	// entirely — Nome/Apelido are the only editable path to it.
-	first_name(frm)    { update_full_name(frm); },
-	last_name(frm)     { update_full_name(frm); },
+	first_name(frm)    { update_full_name(frm); if (frm._suggest_similar) frm._suggest_similar(); },
+	last_name(frm)     { update_full_name(frm); if (frm._suggest_similar) frm._suggest_similar(); },
 	date_of_birth(frm) { update_age(frm); },
 });
+
+// ---------------------------------------------------------------------------
+// Similar-name suggestion (new Student only) — a soft dashboard notice,
+// dismissed automatically as the typed name stops matching anyone.
+// ---------------------------------------------------------------------------
+
+function _suggest_similar_students(frm) {
+	if (!frm.is_new()) return;
+
+	const name = [frm.doc.first_name, frm.doc.last_name].filter(Boolean).join(" ").trim();
+	if (name.replace(/\s+/g, "").length < 3) {
+		frm.dashboard.clear_headline();
+		return;
+	}
+
+	frappe.call({
+		method: "escola.escola.doctype.student.student.find_similar_students",
+		args:   { name },
+		callback(r) {
+			// The form may have been saved/left in the meantime.
+			if (!frm.is_new()) return;
+
+			const rows = r.message || [];
+			if (!rows.length) {
+				frm.dashboard.clear_headline();
+				return;
+			}
+
+			const items = rows.map(s => {
+				const code = s.student_code
+					? ` <span style="font-family:monospace;font-size:11px;opacity:.75;">${frappe.utils.escape_html(s.student_code)}</span>`
+					: "";
+				const st = (s.current_status && s.current_status !== "Activo")
+					? ` <span style="font-size:11px;opacity:.7;">(${frappe.utils.escape_html(__(s.current_status))})</span>`
+					: "";
+				return `<a href="/app/student/${encodeURIComponent(s.name)}" target="_blank"
+					style="font-weight:600;">${frappe.utils.escape_html(s.full_name)}</a>${code}${st}`;
+			}).join(' <span style="opacity:.4;">·</span> ');
+
+			frm.dashboard.clear_headline();
+			frm.dashboard.set_headline(
+				`<span style="font-weight:600;">${__("Nomes parecidos já registados")}:</span> ${items}
+				<span style="display:block;font-size:11px;opacity:.7;margin-top:2px;">
+					${__("Apenas um aviso — pode continuar se for mesmo um novo aluno.")}
+				</span>`,
+				"yellow"
+			);
+		},
+	});
+}
 
 // ---------------------------------------------------------------------------
 // Actions modal (single toolbar button → modal with card grid)

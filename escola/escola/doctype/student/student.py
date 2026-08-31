@@ -1,3 +1,6 @@
+import difflib
+import unicodedata
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -347,6 +350,117 @@ def delete_duplicate_student(student):
     return deleted
 
 
+# ---------------------------------------------------------------------------
+# Similar-name suggestion (advisory only — never blocks student creation)
+# ---------------------------------------------------------------------------
+
+_SIMILAR_INDEX_CACHE_KEY = "escola_student_name_index"
+
+
+def _normalize_name(value):
+    """Lower-case, strip accents, collapse whitespace — for fuzzy comparison."""
+    if not value:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", value)
+    stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return " ".join(stripped.lower().split())
+
+
+def _get_student_name_index():
+    """
+    Cached list of every student's normalized name + tokens. ~1000 rows, so a
+    full in-memory scan per lookup is cheap. Cache is short-lived and also
+    cleared explicitly whenever a Student is inserted or removed.
+    """
+    index = frappe.cache().get_value(_SIMILAR_INDEX_CACHE_KEY)
+    if index is not None:
+        return index
+
+    rows = frappe.get_all(
+        "Student",
+        fields=["name", "full_name", "student_code", "current_status"],
+    )
+    index = []
+    for r in rows:
+        norm = _normalize_name(r.full_name or r.name)
+        if not norm:
+            continue
+        index.append({
+            "name": r.name,
+            "full_name": r.full_name or r.name,
+            "student_code": r.student_code,
+            "current_status": r.current_status,
+            "norm": norm,
+            "tokens": norm.split(),
+        })
+    frappe.cache().set_value(_SIMILAR_INDEX_CACHE_KEY, index, expires_in_sec=120)
+    return index
+
+
+def _clear_student_name_index():
+    frappe.cache().delete_value(_SIMILAR_INDEX_CACHE_KEY)
+
+
+@frappe.whitelist()
+def find_similar_students(name, exclude=None, limit=6):
+    """
+    Return existing students whose name resembles ``name`` (the text being
+    typed on a new Student form). Accent- and word-order-insensitive,
+    token-based fuzzy match. Purely advisory — the caller never enforces it.
+    """
+    query_norm = _normalize_name(name)
+    if len(query_norm.replace(" ", "")) < 3:
+        return []
+
+    q_tokens = query_norm.split()
+    try:
+        limit = max(1, min(int(limit or 6), 20))
+    except (TypeError, ValueError):
+        limit = 6
+
+    results = []
+    for cand in _get_student_name_index():
+        if exclude and cand["name"] == exclude:
+            continue
+        if not cand["tokens"]:
+            continue
+
+        if query_norm == cand["norm"]:
+            score = 1.0
+        elif query_norm in cand["norm"] or cand["norm"] in query_norm:
+            score = 0.93
+        else:
+            per_token = []
+            for qt in q_tokens:
+                per_token.append(max(
+                    (difflib.SequenceMatcher(None, qt, ct).ratio() for ct in cand["tokens"]),
+                    default=0.0,
+                ))
+            whole = difflib.SequenceMatcher(None, query_norm, cand["norm"]).ratio()
+            score = max(sum(per_token) / len(per_token), whole)
+
+            # Guard against common-first-name false positives: with a
+            # multi-word query we want at least two tokens to line up well.
+            strong = sum(1 for r in per_token if r >= 0.85)
+            if score < 0.9 and strong < min(2, len(q_tokens)):
+                continue
+
+        if score >= 0.74:
+            results.append((score, cand))
+
+    results.sort(key=lambda x: (-x[0], x[1]["full_name"]))
+    return [
+        {
+            "name": c["name"],
+            "full_name": c["full_name"],
+            "student_code": c["student_code"],
+            "current_status": c["current_status"],
+            "score": round(s, 3),
+        }
+        for s, c in results[:limit]
+    ]
+
+
 def _calc_age(date_of_birth):
     if not date_of_birth:
         return None
@@ -405,10 +519,17 @@ class Student(Document):
         return self.full_name
 
     def after_insert(self):
+        _clear_student_name_index()
         try:
             ensure_customer_for_student(self.name)
         except Exception:
             pass  # never block student creation
+
+    def on_trash(self):
+        _clear_student_name_index()
+
+    def after_rename(self, *args, **kwargs):
+        _clear_student_name_index()
 
     def before_save(self):
         # full_name is the autoname field, so Frappe hides it from the form
