@@ -118,12 +118,18 @@ def generate_invoices(doc_name):
             o["status"] = "Ignorado"
             o["reason"] = _("Aluno bolsista — isento de propinas.")
             continue
-        if _invoice_exists(cycle, sga.student, force):
+        blocking_dt, blocking_name = (None, None) if force else _find_blocking_doc(cycle, sga.student)
+        if blocking_dt:
             o["status"] = "Ignorado"
-            o["reason"] = _(
-                "Já existe uma factura não cancelada (ou um adiantamento activo) para este "
-                "aluno no período {0} / {1}."
-            ).format(cycle.billing_mode, period_label)
+            if blocking_dt == "Sales Invoice":
+                o["sales_invoice"] = blocking_name
+                o["reason"] = _(
+                    "Já existe a factura {0} (não cancelada) para este aluno no período {1} / {2}."
+                ).format(blocking_name, cycle.billing_mode, period_label)
+            else:
+                o["reason"] = _(
+                    "Coberto pelo adiantamento {0} no período {1} / {2}."
+                ).format(blocking_name, cycle.billing_mode, period_label)
             continue
         try:
             customer_map[sga.student] = ensure_customer_for_student(sga.student)
@@ -447,15 +453,22 @@ def _invoice_exists(cycle, student_name, force=False):
     """
     Check whether a non-cancelled invoice already exists for this student
     in the same billing period, across any cycle OR via an advance payment.
-    Uses period-based matching (month/quarter/year).
 
-    When force=True (Billing Cycle's "Forçar Geração" checkbox), this check
-    is bypassed entirely — used to recover from a mis-dated invoice that
-    incorrectly occupies a billing period.
+    When force=True this check is bypassed entirely.
     """
     if force:
         return False
+    doctype, _name = _find_blocking_doc(cycle, student_name)
+    return bool(doctype)
 
+
+def _find_blocking_doc(cycle, student_name):
+    """
+    Return ``(doctype, name)`` of the document that already covers this student
+    for the cycle's billing period — a Sales Invoice or an Adiantamento De
+    Pagamento — or ``(None, None)`` if nothing blocks generation.
+    Uses period-based matching (month/quarter/year).
+    """
     mode = cycle.billing_mode
     date = cycle.posting_date
 
@@ -481,7 +494,7 @@ def _invoice_exists(cycle, student_name, force=False):
         adv_params = (student_name, mode, date)
 
     try:
-        if frappe.db.sql(
+        si_hit = frappe.db.sql(
             f"""
             SELECT si.name
             FROM `tabSales Invoice` si
@@ -494,13 +507,14 @@ def _invoice_exists(cycle, student_name, force=False):
             LIMIT 1
             """,
             params,
-        ):
-            return True
+        )
+        if si_hit:
+            return ("Sales Invoice", si_hit[0][0])
 
         # Also block if an active advance payment already covers this period
-        if frappe.db.sql(
+        adv_hit = frappe.db.sql(
             f"""
-            SELECT 1
+            SELECT adp.name
             FROM `tabAdiantamento Period Line` apl
             JOIN `tabAdiantamento De Pagamento` adp ON adp.name = apl.parent
             WHERE adp.student = %s
@@ -510,12 +524,13 @@ def _invoice_exists(cycle, student_name, force=False):
             LIMIT 1
             """,
             adv_params,
-        ):
-            return True
+        )
+        if adv_hit:
+            return ("Adiantamento De Pagamento", adv_hit[0][0])
 
-        return False
+        return (None, None)
     except Exception:
-        return False
+        return (None, None)
 
 
 def _apply_sales_tax(si, tax_template):
