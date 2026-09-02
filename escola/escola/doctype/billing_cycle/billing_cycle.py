@@ -97,7 +97,7 @@ def generate_invoices(doc_name):
         if o is None:
             o = {
                 "student": sga.student,
-                "student_name": frappe.db.get_value("Student", sga.student, "student_name"),
+                "student_name": frappe.db.get_value("Student", sga.student, "full_name") or sga.student,
                 "class_group": sga.class_group,
                 "status": "Ignorado",
                 "reason": "",
