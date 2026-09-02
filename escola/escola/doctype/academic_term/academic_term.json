@@ -35,6 +35,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -43,6 +44,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Activo",
    "default": "1",

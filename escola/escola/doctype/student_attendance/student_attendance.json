@@ -36,6 +36,7 @@
   },
   {
    "fieldname": "attendance_date",
+   "in_standard_filter": 1,
    "fieldtype": "Date",
    "label": "Data",
    "reqd": 1,
@@ -45,6 +46,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -59,6 +61,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Classe",
    "options": "School Class",
@@ -69,6 +72,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma",
    "options": "Class Group",
@@ -81,6 +85,7 @@
   },
   {
    "fieldname": "teacher",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Professor",
    "options": "Teacher",

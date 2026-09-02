@@ -34,6 +34,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Ano Actual",
    "in_list_view": 1,

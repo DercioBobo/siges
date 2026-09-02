@@ -67,6 +67,7 @@
   },
   {
    "fieldname": "relationship",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Parentesco",
    "options": "\nPai\nMãe\nAvô\nAvó\nTio\nTia\nTutor\nOutro",
@@ -136,6 +137,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Activo",
    "default": "1",
@@ -143,6 +145,7 @@
   },
   {
    "fieldname": "portal_access",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Acesso ao Portal",
    "default": "1",

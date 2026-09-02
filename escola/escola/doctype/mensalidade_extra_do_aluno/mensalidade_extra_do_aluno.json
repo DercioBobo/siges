@@ -25,6 +25,7 @@
   },
   {
    "fieldname": "student",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Aluno",
    "options": "Student",

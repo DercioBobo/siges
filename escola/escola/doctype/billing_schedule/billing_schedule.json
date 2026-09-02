@@ -47,6 +47,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "default": "1",
    "in_list_view": 1,
@@ -59,6 +60,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
@@ -68,6 +70,7 @@
   },
   {
    "fieldname": "billing_mode",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Modo de Cobrança",

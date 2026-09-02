@@ -45,6 +45,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "default": "1",
    "in_list_view": 1,
@@ -57,6 +58,7 @@
   },
   {
    "fieldname": "billing_date",
+   "in_standard_filter": 1,
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Data de Facturação",

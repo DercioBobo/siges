@@ -73,6 +73,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -85,6 +86,7 @@
   },
   {
    "fieldname": "enrollment_type",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Tipo de Matrícula",
    "options": "\nNovo\nTransferido",
@@ -214,6 +216,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Classe",
    "options": "School Class",
@@ -226,6 +229,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma",
    "options": "Class Group",
@@ -258,6 +262,7 @@
   },
   {
    "fieldname": "is_bolsista",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Bolsista (Isento de Propina)",
    "default": "0",

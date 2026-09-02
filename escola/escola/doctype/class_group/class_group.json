@@ -60,6 +60,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -68,6 +69,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Classe",
    "options": "School Class",
@@ -86,6 +88,7 @@
   },
   {
    "fieldname": "shift",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Turno",
    "options": "\nManhã\nTarde\nNoite"
@@ -102,6 +105,7 @@
   },
   {
    "fieldname": "class_teacher",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Director de Turma",
    "options": "Teacher",
@@ -118,6 +122,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Turma Activa",
    "default": "1",

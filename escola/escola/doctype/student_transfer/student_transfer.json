@@ -49,6 +49,7 @@
   },
   {
    "fieldname": "student",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Aluno",
    "options": "Student",
@@ -62,6 +63,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -78,6 +80,7 @@
   },
   {
    "fieldname": "status",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Estado",
    "reqd": 1,
@@ -93,6 +96,7 @@
   },
   {
    "fieldname": "from_class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma de Origem",
    "options": "Class Group",
@@ -131,6 +135,7 @@
   },
   {
    "fieldname": "exit_reason",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Motivo de Saída",
    "options": "\nMudança de Residência\nMotivos Familiares\nMotivos Económicos\nReprovação\nOutro",

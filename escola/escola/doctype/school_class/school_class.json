@@ -42,6 +42,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Activa",
    "default": "1",
@@ -66,6 +67,7 @@
   },
   {
    "fieldname": "education_level",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Nível de Ensino",
    "reqd": 1,
@@ -90,6 +92,7 @@
   },
   {
    "fieldname": "teaching_model",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Modelo de Ensino",
    "options": "\nProfessor Único\nProfessores por Disciplina",

@@ -29,6 +29,7 @@
   },
   {
    "fieldname": "applies_to",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Aplica-se a",
    "options": "Ambos\nNovo\nTransferido",
@@ -39,6 +40,7 @@
   },
   {
    "fieldname": "is_required",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Obrigatório",
    "default": "1",
@@ -47,6 +49,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Activo",
    "default": "1",

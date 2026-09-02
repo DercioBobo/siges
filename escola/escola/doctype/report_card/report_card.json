@@ -43,6 +43,7 @@
   },
   {
    "fieldname": "student",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Aluno",
@@ -51,6 +52,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Ano Lectivo",
@@ -59,6 +61,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
@@ -71,6 +74,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Turma",
@@ -123,6 +127,7 @@
   },
   {
    "fieldname": "final_decision",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Decisão Final",

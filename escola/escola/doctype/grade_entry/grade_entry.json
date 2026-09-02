@@ -42,6 +42,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma",
    "options": "Class Group",
@@ -50,6 +51,7 @@
   },
   {
    "fieldname": "academic_term",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Período",
    "options": "Academic Term",
@@ -62,6 +64,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Classe",
    "options": "School Class",
@@ -72,6 +75,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -86,6 +90,7 @@
   },
   {
    "fieldname": "subject",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Disciplina",
    "options": "Subject",
@@ -94,6 +99,7 @@
   },
   {
    "fieldname": "teacher",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Professor",
    "options": "Teacher"

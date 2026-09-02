@@ -48,6 +48,7 @@
   },
   {
    "fieldname": "billing_schedule",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Agendamento",
    "options": "Billing Schedule",
@@ -73,6 +74,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Ano Lectivo",
@@ -81,6 +83,7 @@
   },
   {
    "fieldname": "posting_date",
+   "in_standard_filter": 1,
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Data de Facturação",
@@ -92,6 +95,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
@@ -100,6 +104,7 @@
   },
   {
    "fieldname": "due_date",
+   "in_standard_filter": 1,
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Data de Vencimento",
@@ -133,6 +138,7 @@
   },
   {
    "fieldname": "billing_mode",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Modo de Cobrança",
@@ -145,6 +151,7 @@
   },
   {
    "fieldname": "status",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Estado",
    "options": "\nRascunho\nGerado\nSem Facturas\nCancelado",

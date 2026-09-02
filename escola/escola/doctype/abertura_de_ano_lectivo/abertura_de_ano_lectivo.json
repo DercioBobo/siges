@@ -37,6 +37,7 @@
   },
   {
    "fieldname": "source_academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo Actual",
    "options": "Academic Year",
@@ -50,6 +51,7 @@
   },
   {
    "fieldname": "target_academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Novo Ano Lectivo",
    "options": "Academic Year",
@@ -73,6 +75,7 @@
   },
   {
    "fieldname": "status",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Estado",
    "options": "Rascunho\nConcluída",

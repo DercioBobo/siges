@@ -45,6 +45,7 @@
   },
   {
    "fieldname": "student",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Aluno",
    "options": "Student",
@@ -58,6 +59,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -74,6 +76,7 @@
   },
   {
    "fieldname": "status",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Estado",
    "options": "\nRascunho\nConcluída\nCancelada",
@@ -88,6 +91,7 @@
   },
   {
    "fieldname": "from_class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma de Origem",
    "options": "Class Group",
@@ -109,6 +113,7 @@
   },
   {
    "fieldname": "to_class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma de Destino",
    "options": "Class Group",
@@ -131,6 +136,7 @@
   },
   {
    "fieldname": "reason",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Motivo da Troca",
    "options": "\nPedido do Encarregado\nReorganização da Turma\nConflito entre Alunos\nProblemas de Adaptação\nDecisão Pedagógica\nOutro",

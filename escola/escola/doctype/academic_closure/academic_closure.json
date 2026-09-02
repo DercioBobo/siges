@@ -38,6 +38,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Turma",
@@ -50,6 +51,7 @@
   },
   {
    "fieldname": "school_class",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Classe",
@@ -63,6 +65,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Ano Lectivo",

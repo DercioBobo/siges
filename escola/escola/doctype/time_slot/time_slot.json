@@ -30,6 +30,7 @@
   },
   {
    "fieldname": "slot_type",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Tipo",
    "options": "Aula\nIntervalo\nBorla",
@@ -39,6 +40,7 @@
   },
   {
    "fieldname": "shift",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Turno",
    "options": "Manhã\nTarde",
@@ -51,6 +53,7 @@
   },
   {
    "fieldname": "is_active",
+   "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Activo",
    "default": "1"

@@ -37,6 +37,7 @@
   },
   {
    "fieldname": "class_group",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Turma",
    "options": "Class Group",
@@ -50,6 +51,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo",
    "options": "Academic Year",
@@ -63,6 +65,7 @@
   },
   {
    "fieldname": "shift",
+   "in_standard_filter": 1,
    "fieldtype": "Data",
    "label": "Turno",
    "read_only": 1,
@@ -87,6 +90,7 @@
   },
   {
    "fieldname": "status",
+   "in_standard_filter": 1,
    "fieldtype": "Select",
    "label": "Estado",
    "options": "Rascunho\nActivo\nArquivado",

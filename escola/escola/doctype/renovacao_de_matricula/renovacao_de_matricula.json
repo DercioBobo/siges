@@ -38,6 +38,7 @@
   },
   {
    "fieldname": "academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo de Origem",
    "options": "Academic Year",
@@ -47,6 +48,7 @@
   },
   {
    "fieldname": "target_academic_year",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Ano Lectivo de Renovação",
    "options": "Academic Year",
@@ -68,6 +70,7 @@
   },
   {
    "fieldname": "student",
+   "in_standard_filter": 1,
    "fieldtype": "Link",
    "label": "Aluno",
    "options": "Student",
