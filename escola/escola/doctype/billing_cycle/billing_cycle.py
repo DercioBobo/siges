@@ -164,6 +164,9 @@ def generate_invoices(doc_name):
         si = frappe.new_doc("Sales Invoice")
         si.customer = customer
         si.company = default_company
+        # set_posting_time = 1 keeps our posting_date — ERPNext otherwise resets
+        # it to today() during validate whenever this flag is falsy.
+        si.set_posting_time = 1
         si.posting_date = cycle.posting_date
         si.due_date = cycle.due_date
         si.remarks = "{mode} | Aluno: {student} | Ano: {year}".format(
@@ -257,6 +260,7 @@ def generate_invoices(doc_name):
         si = frappe.new_doc("Sales Invoice")
         si.customer = customer
         si.company = default_company
+        si.set_posting_time = 1  # keep our posting_date (see phase 2)
         si.posting_date = cycle.posting_date
         si.due_date = cycle.due_date
         si.remarks = "Extras Mensais | Aluno: {student} | Ano: {year}".format(

@@ -200,6 +200,7 @@ class AdiantamentoDePagamento(Document):
         si = frappe.new_doc("Sales Invoice")
         si.customer      = customer
         si.company       = company
+        si.set_posting_time = 1  # keep payment_date — ERPNext otherwise resets posting_date to today()
         si.posting_date  = self.payment_date
         si.due_date      = due_date
         si.remarks       = _("Adiantamento de Pagamento — {0} — {1} período(s)").format(
