@@ -305,19 +305,27 @@ def _count_year_periods(student, academic_year):
 
 
 def _period_already_covered(student, billing_mode, posting_date, exclude_adiantamento=None):
-    """Return True if this period already has a non-cancelled invoice or an active adiantamento."""
+    """Return True if this period already has a non-cancelled invoice or an active adiantamento.
+
+    ``posting_date`` is the period line's reference date (the billing month, from
+    ``_billing_periods``). An existing invoice's period is matched against the
+    ``due_date`` of the Billing Cycle that produced it — NOT the invoice's own
+    posting_date — because a cycle posts in the month before the one it bills
+    (September propinas posted on 25 August).
+    """
     # Check billing-cycle invoices
+    inv_ref = "COALESCE(bc.due_date, bc.posting_date)"
     if billing_mode == "Mensal":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND MONTH({inv_ref}) = MONTH(%s)"
         params = (student, billing_mode, posting_date, posting_date)
     elif billing_mode == "Trimestral":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND QUARTER({inv_ref}) = QUARTER(%s)"
         params = (student, billing_mode, posting_date, posting_date)
     elif billing_mode == "Anual":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s)"
         params = (student, billing_mode, posting_date)
     else:
-        period_sql = "si.posting_date = %s"
+        period_sql = f"{inv_ref} = %s"
         params = (student, billing_mode, posting_date)
 
     inv_exists = frappe.db.sql(f"""

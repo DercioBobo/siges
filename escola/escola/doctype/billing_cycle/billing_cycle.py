@@ -241,7 +241,7 @@ def generate_invoices(doc_name):
         if not extras:
             continue
 
-        if _addon_invoice_exists(sga.student, cycle.posting_date, force):
+        if _addon_invoice_exists(sga.student, cycle.due_date or cycle.posting_date, force):
             continue
 
         # Re-use customer from Phase 1 or look it up
@@ -465,33 +465,45 @@ def _invoice_exists(cycle, student_name, force=False):
 def _find_blocking_doc(cycle, student_name):
     """
     Return ``(doctype, name)`` of the document that already covers this student
-    for the cycle's billing period — a Sales Invoice or an Adiantamento De
+    for the cycle's billing *period* — a Sales Invoice or an Adiantamento De
     Pagamento — or ``(None, None)`` if nothing blocks generation.
-    Uses period-based matching (month/quarter/year).
+
+    The period is identified by the cycle's **reference date** (``due_date``, the
+    end of the billing period), NOT the posting date. A cycle routinely posts in
+    the month before the one it bills — September propinas are posted on 25
+    August — so matching on ``posting_date`` made a September cycle collide with
+    the student's August invoice (which also carried an August posting date).
+
+    An existing invoice's own period is taken from the ``due_date`` of the
+    Billing Cycle that produced it; an Adiantamento period line's ``posting_date``
+    is already the billing month itself.
     """
     mode = cycle.billing_mode
-    date = cycle.posting_date
+    ref = cycle.due_date or cycle.posting_date
+
+    inv_ref = "COALESCE(bc.due_date, bc.posting_date)"
+    adv_ref = "apl.posting_date"
 
     if mode == "Mensal":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
-        params = (student_name, mode, date, date)
-        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND MONTH(apl.posting_date) = MONTH(%s)"
-        adv_params = (student_name, mode, date, date)
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND MONTH({inv_ref}) = MONTH(%s)"
+        params = (student_name, mode, ref, ref)
+        adv_sql = f"YEAR({adv_ref}) = YEAR(%s) AND MONTH({adv_ref}) = MONTH(%s)"
+        adv_params = (student_name, mode, ref, ref)
     elif mode == "Trimestral":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
-        params = (student_name, mode, date, date)
-        adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND QUARTER(apl.posting_date) = QUARTER(%s)"
-        adv_params = (student_name, mode, date, date)
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND QUARTER({inv_ref}) = QUARTER(%s)"
+        params = (student_name, mode, ref, ref)
+        adv_sql = f"YEAR({adv_ref}) = YEAR(%s) AND QUARTER({adv_ref}) = QUARTER(%s)"
+        adv_params = (student_name, mode, ref, ref)
     elif mode == "Anual":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s)"
-        params = (student_name, mode, date)
-        adv_sql = "YEAR(apl.posting_date) = YEAR(%s)"
-        adv_params = (student_name, mode, date)
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s)"
+        params = (student_name, mode, ref)
+        adv_sql = f"YEAR({adv_ref}) = YEAR(%s)"
+        adv_params = (student_name, mode, ref)
     else:
-        period_sql = "si.posting_date = %s"
-        params = (student_name, mode, date)
-        adv_sql = "apl.posting_date = %s"
-        adv_params = (student_name, mode, date)
+        period_sql = f"{inv_ref} = %s"
+        params = (student_name, mode, ref)
+        adv_sql = f"{adv_ref} = %s"
+        adv_params = (student_name, mode, ref)
 
     try:
         si_hit = frappe.db.sql(
@@ -530,6 +542,9 @@ def _find_blocking_doc(cycle, student_name):
 
         return (None, None)
     except Exception:
+        # A broken duplicate check must not silently create duplicate invoices
+        # nor silently block everyone — log it so it can be traced.
+        frappe.log_error(frappe.get_traceback(), _("Billing Cycle: _find_blocking_doc falhou"))
         return (None, None)
 
 
@@ -613,12 +628,16 @@ def _get_active_extras(student, posting_date):
         return []
 
 
-def _addon_invoice_exists(student, posting_date, force=False):
-    """Check if a non-cancelled addon invoice already exists for this student/month."""
+def _addon_invoice_exists(student, ref_date, force=False):
+    """Check if a non-cancelled addon invoice already covers this student's billing period.
+
+    Addon invoices are created with ``due_date = cycle.due_date``, so the period
+    is matched on ``due_date`` — not ``posting_date`` — because a cycle posts in
+    the month before the one it bills (September propinas posted on 25 August).
+    """
     if force:
         return False
 
-    date = posting_date
     try:
         result = frappe.db.sql(
             """
@@ -627,11 +646,11 @@ def _addon_invoice_exists(student, posting_date, force=False):
             WHERE si.escola_student = %s
               AND si.escola_is_addon_invoice = 1
               AND si.docstatus != 2
-              AND YEAR(si.posting_date) = YEAR(%s)
-              AND MONTH(si.posting_date) = MONTH(%s)
+              AND YEAR(COALESCE(si.due_date, si.posting_date)) = YEAR(%s)
+              AND MONTH(COALESCE(si.due_date, si.posting_date)) = MONTH(%s)
             LIMIT 1
             """,
-            (student, date, date),
+            (student, ref_date, ref_date),
         )
         return bool(result)
     except Exception:

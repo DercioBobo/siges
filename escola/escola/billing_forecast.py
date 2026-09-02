@@ -106,24 +106,31 @@ def _billing_periods(sched, ay_start, ay_end, invoice_day):
 
 def _find_invoice(student_name, school_class, billing_mode, posting_date):
     """Return invoice row dict for this student+period, or None.
-    Also checks advance payment (Adiantamento) coverage."""
+    Also checks advance payment (Adiantamento) coverage.
+
+    ``posting_date`` is the forecast period's reference date (the billing month).
+    An existing invoice is matched against the ``due_date`` of the Billing Cycle
+    that produced it — NOT the invoice's own posting_date — because a cycle posts
+    in the month before the one it bills (September propinas posted on 25 August).
+    """
+    inv_ref = "COALESCE(bc.due_date, bc.posting_date)"
     if billing_mode == "Mensal":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND MONTH(si.posting_date) = MONTH(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND MONTH({inv_ref}) = MONTH(%s)"
         params = (student_name, school_class, billing_mode, posting_date, posting_date)
         adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND MONTH(apl.posting_date) = MONTH(%s)"
         adv_params = (student_name, billing_mode, posting_date, posting_date)
     elif billing_mode == "Trimestral":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s) AND QUARTER(si.posting_date) = QUARTER(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s) AND QUARTER({inv_ref}) = QUARTER(%s)"
         params = (student_name, school_class, billing_mode, posting_date, posting_date)
         adv_sql = "YEAR(apl.posting_date) = YEAR(%s) AND QUARTER(apl.posting_date) = QUARTER(%s)"
         adv_params = (student_name, billing_mode, posting_date, posting_date)
     elif billing_mode == "Anual":
-        period_sql = "YEAR(si.posting_date) = YEAR(%s)"
+        period_sql = f"YEAR({inv_ref}) = YEAR(%s)"
         params = (student_name, school_class, billing_mode, posting_date)
         adv_sql = "YEAR(apl.posting_date) = YEAR(%s)"
         adv_params = (student_name, billing_mode, posting_date)
     else:
-        period_sql = "si.posting_date = %s"
+        period_sql = f"{inv_ref} = %s"
         params = (student_name, school_class, billing_mode, posting_date)
         adv_sql = "apl.posting_date = %s"
         adv_params = (student_name, billing_mode, posting_date)
