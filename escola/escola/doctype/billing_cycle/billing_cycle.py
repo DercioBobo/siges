@@ -86,19 +86,51 @@ def generate_invoices(doc_name):
     reference_date = cycle.due_date or cycle.posting_date
     mes_referencia = _MESES[getdate(reference_date).month - 1] if reference_date else ""
 
+    # --- Per-student generation log ---
+    # One entry per student in the turma, updated as we walk through the phases
+    # below. Written to the `generation_log` child table at the end so the user
+    # can trace exactly why each student did or did not get an invoice.
+    outcomes = {}
+
+    def _outcome(sga):
+        o = outcomes.get(sga.student)
+        if o is None:
+            o = {
+                "student": sga.student,
+                "student_name": frappe.db.get_value("Student", sga.student, "student_name"),
+                "class_group": sga.class_group,
+                "status": "Ignorado",
+                "reason": "",
+                "sales_invoice": None,
+            }
+            outcomes[sga.student] = o
+        return o
+
+    period_label = mes_referencia or str(cycle.posting_date)
+
     # --- Phase 1: pre-create all customers before touching invoices ---
     # A customer failure skips that student but never leaves invoices in a partial state.
     customer_map = {}
     pre_errors = []
     for sga in sgAs:
+        o = _outcome(sga)
         if sga.student in bolsista_students:
+            o["status"] = "Ignorado"
+            o["reason"] = _("Aluno bolsista — isento de propinas.")
             continue
         if _invoice_exists(cycle, sga.student, force):
+            o["status"] = "Ignorado"
+            o["reason"] = _(
+                "Já existe uma factura não cancelada (ou um adiantamento activo) para este "
+                "aluno no período {0} / {1}."
+            ).format(cycle.billing_mode, period_label)
             continue
         try:
             customer_map[sga.student] = ensure_customer_for_student(sga.student)
         except Exception as e:
             pre_errors.append(_("Cliente não criado para {0}: {1}").format(sga.student, str(e)))
+            o["status"] = "Erro"
+            o["reason"] = _("Falha ao criar/obter o Cliente ERPNext: {0}").format(str(e))
 
     # --- Phase 2: create invoices only for students with a valid customer ---
     created = 0
@@ -114,9 +146,13 @@ def generate_invoices(doc_name):
             skipped += 1
             continue
 
+        o = _outcome(sga)
         customer = customer_map.get(sga.student)
         if not customer:
             skipped += 1
+            if o["status"] != "Erro":
+                o["status"] = "Ignorado"
+                o["reason"] = _("Cliente ERPNext não disponível para este aluno.")
             continue
 
         si = frappe.new_doc("Sales Invoice")
@@ -158,11 +194,31 @@ def generate_invoices(doc_name):
 
         _apply_sales_tax(si, tax_template)
 
-        si.insert(ignore_permissions=True)
-        if auto_submit:
-            si.submit()
+        # Wrap each invoice in its own savepoint: one bad invoice (e.g. a
+        # validation error, a frozen accounting period, a missing item) then
+        # skips only that student instead of aborting the whole run and
+        # leaving the rest of the turma unbilled.
+        savepoint = "si_" + frappe.generate_hash(length=10)
+        frappe.db.savepoint(savepoint)
+        try:
+            si.insert(ignore_permissions=True)
+            if auto_submit:
+                si.submit()
+        except Exception as e:
+            frappe.db.rollback(save_point=savepoint)
+            skipped += 1
+            pre_errors.append(_("Factura não criada para {0}: {1}").format(sga.student, str(e)))
+            o["status"] = "Erro"
+            o["reason"] = _("Falha ao criar a factura: {0}").format(str(e))
+            continue
+        else:
+            frappe.db.release_savepoint(savepoint)
+
         created += 1
         total_amount += si.grand_total
+        o["status"] = "Factura Criada"
+        o["reason"] = _("Factura criada.")
+        o["sales_invoice"] = si.name
 
     # --- Phase 3: create addon invoices for students with active extras ---
     sibling_discount_addon = int(settings.get("sibling_discount_applies_to_addons") or 0)
@@ -189,6 +245,7 @@ def generate_invoices(doc_name):
                 customer = ensure_customer_for_student(sga.student)
             except Exception as e:
                 addon_errors.append(_("Extras — cliente não criado para {0}: {1}").format(sga.student, str(e)))
+                _append_outcome_note(_outcome(sga), _("Extras: cliente não criado — {0}").format(str(e)))
                 continue
 
         si = frappe.new_doc("Sales Invoice")
@@ -228,15 +285,23 @@ def generate_invoices(doc_name):
 
         _apply_sales_tax(si, tax_template)
 
+        savepoint = "addon_" + frappe.generate_hash(length=10)
+        frappe.db.savepoint(savepoint)
         try:
             si.insert(ignore_permissions=True)
             if auto_submit:
                 si.submit()
+        except Exception as e:
+            frappe.db.rollback(save_point=savepoint)
+            addon_errors.append("Extras {0}: {1}".format(sga.student, str(e)))
+            _append_outcome_note(_outcome(sga), _("Falha na factura de extras: {0}").format(str(e)))
+        else:
+            frappe.db.release_savepoint(savepoint)
             addon_created += 1
             addon_amount += si.grand_total
-        except Exception as e:
-            addon_errors.append("Extras {0}: {1}".format(sga.student, str(e)))
+            _append_outcome_note(_outcome(sga), _("Factura de extras criada: {0}").format(si.name))
 
+    _write_generation_log(cycle, list(outcomes.values()))
     _refresh_cycle_summary(cycle)
 
     if created > 0 or addon_created > 0:
@@ -556,6 +621,33 @@ def _addon_invoice_exists(student, posting_date, force=False):
         return bool(result)
     except Exception:
         return False
+
+
+def _append_outcome_note(outcome, note):
+    """Append a secondary note (e.g. an addon result) to an outcome's reason."""
+    outcome["reason"] = (outcome["reason"] + " " + note).strip() if outcome["reason"] else note
+
+
+def _write_generation_log(cycle, entries):
+    """Replace the per-student generation log child table on the cycle.
+
+    Runs before the db_set() summary block so the parent .save() here does not
+    clobber those direct writes.
+    """
+    try:
+        cycle.set("generation_log", [])
+        for e in sorted(entries, key=lambda x: (x.get("status") != "Erro", x.get("student_name") or "")):
+            cycle.append("generation_log", {
+                "student": e["student"],
+                "student_name": e.get("student_name"),
+                "class_group": e.get("class_group"),
+                "status": e.get("status") or "Ignorado",
+                "reason": e.get("reason") or "",
+                "sales_invoice": e.get("sales_invoice"),
+            })
+        cycle.save(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), _("Billing Cycle: falha ao gravar o detalhe por aluno"))
 
 
 def _refresh_cycle_summary(cycle):

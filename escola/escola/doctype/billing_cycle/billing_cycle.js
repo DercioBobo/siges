@@ -45,8 +45,9 @@ frappe.ui.form.on("Billing Cycle", {
                             } else {
                                 let msg = __("{0} factura(s) criada(s), {1} ignorada(s). Total: {2}.",
                                     [created, skipped, format_currency(total_amount)]);
+                                msg += "<br>" + __("Consulte a secção <b>Detalhe por Aluno</b> para ver o estado e o motivo de cada aluno.");
                                 if (errors && errors.length)
-                                    msg += "<br><br><b>" + __("Erros de cliente ({0}):", [errors.length])
+                                    msg += "<br><br><b>" + __("Erros ({0}):", [errors.length])
                                         + "</b><br>" + errors.join("<br>");
                                 frappe.msgprint({
                                     message: msg,
