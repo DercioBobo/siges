@@ -42,6 +42,14 @@ frappe.ui.form.on("Renovacao De Matricula", {
 	target_academic_year(frm) {
 		_set_queries(frm);
 	},
+
+	async payments_add(frm, cdt, cdn) {
+		// New rows default to POS; the mode_of_payment handler then fills the amount
+		const mop = await _default_mode_of_payment();
+		if (mop && !locals[cdt][cdn].mode_of_payment) {
+			frappe.model.set_value(cdt, cdn, "mode_of_payment", mop);
+		}
+	},
 });
 
 // ---------------------------------------------------------------------------
@@ -101,15 +109,7 @@ async function _prefill_payments_from_pos(frm) {
 		frappe.db.get_single_value("School Settings", "renewal_fee_amount"),
 	]);
 	const fee = flt(fee_raw);
-
-	let mode_of_payment = null;
-	if (pos_profile) {
-		const doc = await frappe.db.get_doc("POS Profile", pos_profile);
-		const payments = (doc && doc.payments) || [];
-		// Use the profile's default method, else the first one
-		const def = payments.find(p => p.default) || payments[0];
-		mode_of_payment = def ? def.mode_of_payment : null;
-	}
+	const mode_of_payment = await _default_mode_of_payment(pos_profile);
 
 	// Guard against a duplicate row if refresh fired twice while awaiting
 	if (frm.doc.payments && frm.doc.payments.length) return;
@@ -118,6 +118,24 @@ async function _prefill_payments_from_pos(frm) {
 	row.mode_of_payment = mode_of_payment;
 	row.amount = fee;
 	frm.refresh_field("payments");
+}
+
+const DEFAULT_MODE_OF_PAYMENT = "POS";
+
+// "POS" when that Mode of Payment exists; otherwise the renewal POS Profile's
+// default method (or its first one).
+async function _default_mode_of_payment(pos_profile) {
+	if (await frappe.db.exists("Mode of Payment", DEFAULT_MODE_OF_PAYMENT)) {
+		return DEFAULT_MODE_OF_PAYMENT;
+	}
+	if (pos_profile === undefined) {
+		pos_profile = await frappe.db.get_single_value("School Settings", "renewal_pos_profile");
+	}
+	if (!pos_profile) return null;
+	const doc = await frappe.db.get_doc("POS Profile", pos_profile);
+	const payments = (doc && doc.payments) || [];
+	const def = payments.find(p => p.default) || payments[0];
+	return def ? def.mode_of_payment : null;
 }
 
 async function _load_fee_info(frm, settings_field, label) {
