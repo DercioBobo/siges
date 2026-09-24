@@ -16,7 +16,7 @@
    "options": "Mode of Payment",
    "reqd": 1,
    "in_list_view": 1,
-   "columns": 7,
+   "columns": 6,
    "in_editable_grid": 1
   },
   {
@@ -25,7 +25,7 @@
    "label": "Valor",
    "reqd": 1,
    "in_list_view": 1,
-   "columns": 5,
+   "columns": 4,
    "in_editable_grid": 1
   }
  ],
