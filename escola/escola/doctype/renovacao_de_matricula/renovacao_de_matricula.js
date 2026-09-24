@@ -51,8 +51,14 @@ frappe.ui.form.on("Renovacao De Matricula", {
 frappe.ui.form.on("Renovacao Payment", {
 	async mode_of_payment(frm, cdt, cdn) {
 		if (frm.doc.docstatus !== 0) return;
-		const fee = await frappe.db.get_single_value("School Settings", "renewal_fee_amount");
-		frappe.model.set_value(cdt, cdn, "amount", parseFloat(fee) || 0);
+		const row = locals[cdt][cdn];
+		if (!row.mode_of_payment || flt(row.amount) > 0) return;
+		// Fill with whatever is still missing to cover the renewal fee
+		const fee = flt(await frappe.db.get_single_value("School Settings", "renewal_fee_amount"));
+		const others = (frm.doc.payments || [])
+			.filter(p => p.name !== cdn)
+			.reduce((s, p) => s + flt(p.amount), 0);
+		frappe.model.set_value(cdt, cdn, "amount", Math.max(fee - others, 0));
 	},
 });
 
@@ -79,32 +85,38 @@ function _set_status_indicator(frm) {
 function _toggle_payments_grid(frm) {
 	const editable = frm.doc.docstatus === 0;
 	const grid = frm.get_field("payments").grid;
-	grid.toggle_enable(editable);
+	grid.df.in_editable_grid = 1;
+	["mode_of_payment", "amount"].forEach(f => grid.toggle_enable(f, editable));
 	grid.toggle_add_delete_rows(editable);
-	grid.editable_grid = true;
 
-	// Pre-load payment methods from School Settings POS profile on new docs
+	// Pre-fill the POS payment method + renewal fee on new docs
 	if (frm.doc.__islocal && !(frm.doc.payments && frm.doc.payments.length)) {
 		_prefill_payments_from_pos(frm);
 	}
 }
 
 async function _prefill_payments_from_pos(frm) {
-	const pos_profile = await frappe.db.get_single_value("School Settings", "renewal_pos_profile");
-	if (!pos_profile) return;
+	const [pos_profile, fee_raw] = await Promise.all([
+		frappe.db.get_single_value("School Settings", "renewal_pos_profile"),
+		frappe.db.get_single_value("School Settings", "renewal_fee_amount"),
+	]);
+	const fee = flt(fee_raw);
 
-	const doc = await frappe.db.get_doc("POS Profile", pos_profile);
-	if (!doc || !doc.payments || !doc.payments.length) return;
+	let mode_of_payment = null;
+	if (pos_profile) {
+		const doc = await frappe.db.get_doc("POS Profile", pos_profile);
+		const payments = (doc && doc.payments) || [];
+		// Use the profile's default method, else the first one
+		const def = payments.find(p => p.default) || payments[0];
+		mode_of_payment = def ? def.mode_of_payment : null;
+	}
 
-	const fee = parseFloat(await frappe.db.get_single_value("School Settings", "renewal_fee_amount")) || 0;
-	const count = doc.payments.length;
+	// Guard against a duplicate row if refresh fired twice while awaiting
+	if (frm.doc.payments && frm.doc.payments.length) return;
 
-	(doc.payments || []).forEach((p, i) => {
-		const row = frm.add_child("payments");
-		row.mode_of_payment = p.mode_of_payment;
-		// Distribute fee evenly across payment methods; last row gets remainder
-		row.amount = count === 1 ? fee : (i < count - 1 ? Math.floor(fee / count * 100) / 100 : 0);
-	});
+	const row = frm.add_child("payments");
+	row.mode_of_payment = mode_of_payment;
+	row.amount = fee;
 	frm.refresh_field("payments");
 }
 

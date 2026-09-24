@@ -93,7 +93,9 @@
    "fieldtype": "Table",
    "label": "Métodos de Pagamento",
    "options": "Renovacao Payment",
-   "description": "Preencha para gerar a factura como POS com os métodos indicados."
+   "description": "Obrigatório. O modo de pagamento POS e o valor da taxa são preenchidos automaticamente.",
+   "reqd": 1,
+   "in_editable_grid": 1
   },
   {
    "fieldname": "section_break_invoice",
@@ -122,7 +124,7 @@
   }
  ],
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2026-09-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Renovacao De Matricula",

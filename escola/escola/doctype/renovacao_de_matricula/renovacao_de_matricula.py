@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, flt, getdate, today
 
 from escola.escola.payment_actions import get_payment_account as _get_payment_account
 
@@ -16,6 +16,7 @@ class RenovacaoDeMatricula(Document):
         self._validate_student_status()
         self._validate_years()
         self._validate_not_duplicate()
+        self._validate_payments()
 
     def on_submit(self):
         from escola.escola.invoice_utils import invoice_success_msg
@@ -100,6 +101,35 @@ class RenovacaoDeMatricula(Document):
                     _("O Ano Lectivo de Renovação deve ser diferente do Ano Lectivo de Origem."),
                     title=_("Anos lectivos inválidos"),
                 )
+
+    def _validate_payments(self):
+        if not self.payments:
+            frappe.throw(
+                _("Preencha a tabela <b>Métodos de Pagamento</b>."),
+                title=_("Pagamento obrigatório"),
+            )
+
+        for p in self.payments:
+            if not p.mode_of_payment or flt(p.amount) <= 0:
+                frappe.throw(
+                    _("Linha {0} dos Métodos de Pagamento: indique o modo de pagamento e um valor maior que zero.").format(p.idx),
+                    title=_("Pagamento inválido"),
+                )
+
+        # Bolsistas are not invoiced, so the total doesn't need to match the fee
+        if frappe.db.get_value("Student", self.student, "is_bolsista"):
+            return
+
+        fee = flt(frappe.db.get_single_value("School Settings", "renewal_fee_amount"))
+        total = sum(flt(p.amount) for p in self.payments)
+        if fee and abs(total - fee) > 0.009:
+            frappe.throw(
+                _("O total dos pagamentos ({0}) deve ser igual ao valor da taxa de renovação ({1}).").format(
+                    frappe.format_value(total, {"fieldtype": "Currency"}),
+                    frappe.format_value(fee, {"fieldtype": "Currency"}),
+                ),
+                title=_("Valor incorrecto"),
+            )
 
     def _validate_not_duplicate(self):
         existing = frappe.db.get_value(
