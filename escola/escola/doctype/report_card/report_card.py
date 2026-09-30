@@ -25,7 +25,7 @@ class ReportCard(Document):
         if existing:
             frappe.throw(
                 _("Já existe um Boletim ({0}) para o aluno {1} no ano lectivo {2}.").format(
-                    existing, self.student, self.academic_year
+                    existing, student_label(self.student), self.academic_year
                 )
             )
 
@@ -209,7 +209,7 @@ def generate_for_assessment(annual_name):
 
         except Exception:
             frappe.log_error(
-                title=f"Escola — falha ao gerar Boletim para {student}",
+                title=f"Escola — falha ao gerar Boletim para {student_label(student)}",
                 message=frappe.get_traceback(),
             )
             skipped += 1

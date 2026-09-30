@@ -262,6 +262,7 @@ async function _load_grade_rows(frm) {
             const row = frappe.model.add_child(frm.doc, "Grade Entry Row", "grade_rows");
             row.student = s.student;
             row.student_name = s.student_name;
+            frappe.utils.add_link_title("Student", s.student, s.student_name);
             added++;
         }
     }

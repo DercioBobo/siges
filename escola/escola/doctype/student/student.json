@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:full_name",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -142,6 +141,7 @@
    "fieldname": "student_code",
    "fieldtype": "Data",
    "label": "Número do Aluno",
+   "no_copy": 1,
    "read_only": 1,
    "unique": 1,
    "search_index": 1,
@@ -314,8 +314,8 @@
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Student",
- "naming_rule": "By fieldname",
- "search_fields": "student_code,bi_number",
+ "naming_rule": "By script",
+ "search_fields": "full_name,student_code,bi_number",
  "owner": "Administrator",
  "permissions": [
   {
@@ -350,6 +350,7 @@
   }
  ],
  "sort_field": "student_code",
+ "show_title_field_in_link": 1,
  "sort_order": "DESC",
  "title_field": "full_name",
  "track_changes": 1

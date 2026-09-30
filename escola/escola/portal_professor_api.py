@@ -680,7 +680,7 @@ def get_attendance(turma, term):
         "Term Attendance Row",
         filters={"parent": att_name},
         fields=["student", "justified_absences", "unjustified_absences", "total_absences", "at_risk", "comportamento"],
-        order_by="student",
+        order_by="student_name",
     )
     student_names = {r.student: frappe.db.get_value("Student", r.student, "full_name") or r.student for r in rows}
     for r in rows:

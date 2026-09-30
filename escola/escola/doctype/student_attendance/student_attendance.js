@@ -94,6 +94,8 @@ async function load_students(frm) {
 				"attendance_entries"
 			);
 			row.student = s.student;
+			row.student_name = s.full_name;
+			frappe.utils.add_link_title("Student", s.student, s.full_name);
 			row.attendance_status = "Presente";
 			added++;
 		}

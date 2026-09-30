@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "student",
+  "student_name",
   "column_break_1",
   "attendance_status",
   "column_break_2",
@@ -20,6 +21,13 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1
+  },
+  {
+   "fetch_from": "student.full_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome do Aluno",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_1",

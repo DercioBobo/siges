@@ -173,7 +173,7 @@ class GradeEntry(Document):
         for row in self.grade_rows:
             if row.student in seen:
                 frappe.throw(
-                    _("O aluno <b>{0}</b> aparece mais de uma vez na tabela.").format(row.student),
+                    _("O aluno <b>{0}</b> aparece mais de uma vez na tabela.").format(student_label(row.student)),
                     title=_("Aluno duplicado"),
                 )
             seen.add(row.student)
@@ -194,7 +194,7 @@ class GradeEntry(Document):
                 if not (0 <= val <= 20):
                     frappe.throw(
                         _("{0} do aluno <b>{1}</b> está fora do intervalo (0–20): <b>{2}</b>.").format(
-                            label, row.student, val
+                            label, student_label(row.student), val
                         ),
                         title=_("Nota fora do intervalo"),
                     )

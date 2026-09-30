@@ -4,6 +4,7 @@ from frappe.model.document import Document
 from frappe.utils import add_days, flt, getdate, today
 
 from escola.escola.payment_actions import get_payment_account as _get_payment_account
+from escola.escola.doctype.student.student import student_label
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +90,7 @@ class RenovacaoDeMatricula(Document):
         if status == "Concluiu":
             frappe.throw(
                 _("O aluno <b>{0}</b> concluiu todos os anos de escolaridade e não pode efectuar renovações.").format(
-                    self.student
+                    student_label(self.student)
                 ),
                 title=_("Aluno já concluiu"),
             )
@@ -148,7 +149,7 @@ class RenovacaoDeMatricula(Document):
                 _(
                     "Já existe uma Renovação de Matrícula para o aluno <b>{0}</b> "
                     "neste percurso de anos: <b><a href='/app/renovacao-de-matricula/{1}'>{1}</a></b>."
-                ).format(self.student, existing),
+                ).format(student_label(self.student), existing),
                 title=_("Renovação duplicada"),
             )
 

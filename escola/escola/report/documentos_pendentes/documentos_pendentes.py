@@ -8,15 +8,15 @@ def execute(filters=None):
     columns = [
         {
             "label": _("Nº Aluno"),
-            "fieldname": "student_code",
-            "fieldtype": "Data",
-            "width": 100,
+            "fieldname": "student",
+            "fieldtype": "Link",
+            "options": "Student",
+            "width": 110,
         },
         {
             "label": _("Aluno"),
             "fieldname": "full_name",
-            "fieldtype": "Link",
-            "options": "Student",
+            "fieldtype": "Data",
             "width": 200,
         },
         {
@@ -73,7 +73,7 @@ def execute(filters=None):
     data = frappe.db.sql(
         f"""
         SELECT
-            s.student_code,
+            s.name AS student,
             s.full_name,
             s.current_school_class  AS school_class,
             s.current_class_group   AS class_group,

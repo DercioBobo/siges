@@ -167,6 +167,8 @@ function _apply_promotion_data(frm, data, silent) {
 	(data.rows || []).forEach(row => {
 		const child = frm.add_child("closure_rows");
 		child.student              = row.student;
+		child.student_name         = row.student_name;
+		frappe.utils.add_link_title("Student", row.student, row.student_name);
 		child.final_decision       = row.final_decision;
 		child.total_failed_subjects = row.total_failed_subjects;
 		child.overall_average      = row.overall_average;

@@ -165,6 +165,8 @@ async function _load_students(frm) {
         if (!existing.has(s.student)) {
             const row = frappe.model.add_child(frm.doc, "Term Attendance Row", "attendance_rows");
             row.student = s.student;
+            row.student_name = s.student_name;
+            frappe.utils.add_link_title("Student", s.student, s.student_name);
             row.justified_absences = 0;
             row.unjustified_absences = 0;
             added++;

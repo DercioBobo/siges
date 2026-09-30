@@ -62,7 +62,7 @@ def execute(filters=None):
         "Student Group Assignment",
         filters=assignment_filters,
         fields=["student", "class_group"],
-        order_by="class_group asc, student asc",
+        order_by="class_group asc, student_name asc",
     )
 
     data = []

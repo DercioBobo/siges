@@ -20,6 +20,7 @@ New enrolments via Inscricao are excluded — they pay at registration.
 import frappe
 from frappe import _
 from frappe.utils import getdate, today
+from escola.escola.doctype.student.student import student_label
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +193,7 @@ def reactivate_student(student, class_group, academic_year):
     if current_status != "Pendente de Renovação":
         frappe.throw(
             _("O aluno {0} não está em estado Pendente de Renovação (estado actual: {1}).").format(
-                student, current_status
+                student_label(student), current_status
             )
         )
 

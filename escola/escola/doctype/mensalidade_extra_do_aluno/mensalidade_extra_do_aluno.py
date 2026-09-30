@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import formatdate, get_last_day, getdate
+from escola.escola.doctype.student.student import student_label
 
 
 class MensalidadeExtradoAluno(Document):
@@ -16,7 +17,7 @@ class MensalidadeExtradoAluno(Document):
         if existing:
             frappe.throw(
                 _("Já existe um registo de Mensalidade Extra para o aluno {0}: {1}").format(
-                    self.student, existing
+                    student_label(self.student), existing
                 ),
                 title=_("Registo duplicado"),
             )

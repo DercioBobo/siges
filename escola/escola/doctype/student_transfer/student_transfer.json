@@ -9,6 +9,7 @@
   "naming_series",
   "section_break_identification",
   "student",
+  "student_name",
   "column_break_1",
   "academic_year",
   "transfer_date",
@@ -56,6 +57,14 @@
    "reqd": 1,
    "in_list_view": 1,
    "search_index": 1
+  },
+  {
+   "fetch_from": "student.full_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome do Aluno",
+   "read_only": 1,
+   "in_standard_filter": 1
   },
   {
    "fieldname": "column_break_1",
@@ -243,6 +252,7 @@
  ],
  "sort_field": "transfer_date",
  "sort_order": "DESC",
- "title_field": "student",
- "track_changes": 1
+ "title_field": "student_name",
+ "track_changes": 1,
+ "search_fields": "student_name"
 }

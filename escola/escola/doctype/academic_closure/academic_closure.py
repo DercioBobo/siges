@@ -3,6 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from escola.escola.grade_utils import round_half_up
+from escola.escola.doctype.student.student import student_label
 
 
 class AcademicClosure(Document):
@@ -34,7 +35,7 @@ class AcademicClosure(Document):
         for row in self.closure_rows:
             if row.student in seen:
                 frappe.throw(
-                    _("O aluno {0} está duplicado no Fecho Académico.").format(row.student)
+                    _("O aluno {0} está duplicado no Fecho Académico.").format(student_label(row.student))
                 )
             seen.add(row.student)
 
@@ -43,7 +44,7 @@ class AcademicClosure(Document):
             if row.overall_average and (row.overall_average < 0 or row.overall_average > 20):
                 frappe.throw(
                     _("A média do aluno {0} deve estar entre 0 e 20. Valor: {1}.").format(
-                        row.student, row.overall_average
+                        student_label(row.student), row.overall_average
                     )
                 )
 
@@ -111,8 +112,8 @@ def load_promotions_by_params(class_group, academic_year):
     promo_rows = frappe.get_all(
         "Student Promotion Row",
         filters={"parent": promotion},
-        fields=["student", "decision", "remarks"],
-        order_by="student asc",
+        fields=["student", "student_name", "decision", "remarks"],
+        order_by="student_name asc",
     )
     if not promo_rows:
         return {"error": "no_rows"}
@@ -140,6 +141,7 @@ def load_promotions_by_params(class_group, academic_year):
         "rows": [
             {
                 "student":        r.student,
+                "student_name":   r.student_name,
                 "final_decision": r.decision,
                 "overall_average": avg_map.get(r.student, 0),
                 "remarks":        r.remarks or "",
@@ -159,8 +161,8 @@ def load_students_for_closure(class_group, academic_year):
     sgas = frappe.get_all(
         "Student Group Assignment",
         filters={"class_group": class_group, "academic_year": academic_year, "status": "Activa"},
-        fields=["student"],
-        order_by="student asc",
+        fields=["student", "student_name"],
+        order_by="student_name asc",
     )
     if not sgas:
         return {"error": "no_students"}
@@ -188,6 +190,7 @@ def load_students_for_closure(class_group, academic_year):
         "rows": [
             {
                 "student":               s.student,
+                "student_name":          s.student_name,
                 "final_decision":        "",
                 "total_failed_subjects": 0,
                 "overall_average":       avg_map.get(s.student, 0),
@@ -266,7 +269,7 @@ def create_report_cards(doc_name):
 
         except Exception:
             frappe.log_error(
-                title=f"Escola — falha ao criar/actualizar Boletim para {row.student}",
+                title=f"Escola — falha ao criar/actualizar Boletim para {student_label(row.student)}",
                 message=frappe.get_traceback(),
             )
             errors.append(row.student)

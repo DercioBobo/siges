@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.student.student import student_label
 
 
 def _safe_set_student_status(student, status):
@@ -39,7 +40,7 @@ class StudentTransfer(Document):
         if not has:
             frappe.throw(
                 _("O aluno <b>{0}</b> não tem alocações activas no Ano Lectivo <b>{1}</b>. "
-                  "Não é possível registar uma saída.").format(self.student, self.academic_year),
+                  "Não é possível registar uma saída.").format(student_label(self.student), self.academic_year),
                 title=_("Sem alocação activa"),
             )
 

@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import add_days, flt, getdate, today
 
 from escola.escola.payment_actions import get_payment_account as _get_payment_account
+from escola.escola.doctype.student.student import student_label
 
 
 # Discount tiers
@@ -55,7 +56,7 @@ class AdiantamentoDePagamento(Document):
         if frappe.db.get_value("Student", self.student, "is_bolsista"):
             frappe.throw(
                 _("O aluno <b>{0}</b> é Bolsista e está isento de facturação. "
-                  "Não é possível criar um adiantamento de pagamento para este aluno.").format(self.student),
+                  "Não é possível criar um adiantamento de pagamento para este aluno.").format(student_label(self.student)),
                 title=_("Adiantamento bloqueado"),
             )
 
@@ -67,7 +68,7 @@ class AdiantamentoDePagamento(Document):
             frappe.throw(
                 _("O aluno <b>{0}</b> tem dívidas em atraso (<b>{1}</b>). "
                   "Regularize os pagamentos em atraso antes de criar um adiantamento.").format(
-                    self.student, _(status)
+                    student_label(self.student), _(status)
                 ),
                 title=_("Adiantamento bloqueado"),
             )

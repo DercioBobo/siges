@@ -13,8 +13,8 @@ def get_attendance_students(class_group, academic_year):
             "academic_year": academic_year,
             "status": "Activa",
         },
-        fields=["student"],
-        order_by="student asc",
+        fields=["student", "student_name"],
+        order_by="student_name asc",
     )
 
 

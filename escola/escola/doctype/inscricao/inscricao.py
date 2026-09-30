@@ -107,8 +107,10 @@ class Inscricao(Document):
         if existing:
             frappe.msgprint(
                 _("Atenção: já existe um aluno com o mesmo nome e data de nascimento: "
-                  "<b><a href='/app/student/{0}'>{0}</a></b>. "
-                  "Verifique se não é um registo duplicado antes de continuar.").format(existing),
+                  "<b><a href='/app/student/{0}'>{1} ({0})</a></b>. "
+                  "Verifique se não é um registo duplicado antes de continuar.").format(
+                    existing, frappe.utils.escape_html(self.first_name + " " + self.last_name)
+                ),
                 title=_("Possível duplicado"),
                 indicator="orange",
             )

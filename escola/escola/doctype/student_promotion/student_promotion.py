@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.student.student import student_label
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +43,8 @@ def get_students_for_promotion(class_group):
     return frappe.db.get_all(
         "Student Group Assignment",
         filters={"class_group": class_group, "status": "Activa"},
-        pluck="student",
-        order_by="student asc",
+        fields=["student", "student_name"],
+        order_by="student_name asc",
     )
 
 
@@ -132,7 +133,7 @@ def generate_promotion(doc_name):
         "Annual Assessment Row",
         filters={"parent": ann_name},
         fields=["student", "final_grade", "result"],
-        order_by="student asc",
+        order_by="student_name asc",
     )
     if not ann_rows:
         return {"error": "no_rows"}
@@ -294,11 +295,11 @@ def execute_promotion_plan(promotion_name, plan):
 
     aprovados  = sorted(
         [r for r in doc.promotion_rows if r.decision == "Promovido"],
-        key=lambda r: r.student,
+        key=lambda r: r.student_name or r.student,
     )
     reprovados = sorted(
         [r for r in doc.promotion_rows if r.decision == "Retido"],
-        key=lambda r: r.student,
+        key=lambda r: r.student_name or r.student,
     )
 
     assign_to_buckets(aprovados,  plan.get("aprovados",  []))
@@ -340,7 +341,7 @@ def execute_promotion_plan(promotion_name, plan):
             }).insert(ignore_permissions=True)
             created += 1
         except Exception as e:
-            errors.append(f"{row.student}: {e}")
+            errors.append(f"{student_label(row.student)}: {e}")
 
     # ── Step 4: Refresh student_count on affected turmas ────────────────────
     for cg_name in affected_cgs:

@@ -191,9 +191,11 @@ async function _auto_load_students(frm) {
 	});
 	if (!r.message || !r.message.length) return;
 	frm.clear_table("promotion_rows");
-	r.message.forEach(student => {
+	r.message.forEach(s => {
 		const row = frappe.model.add_child(frm.doc, "Student Promotion Row", "promotion_rows");
-		row.student = student;
+		row.student = s.student;
+		row.student_name = s.student_name;
+		frappe.utils.add_link_title("Student", s.student, s.student_name);
 	});
 	frm.refresh_field("promotion_rows");
 	frappe.show_alert({

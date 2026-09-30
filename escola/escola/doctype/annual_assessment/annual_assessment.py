@@ -12,10 +12,10 @@ def get_students_for_assessment(class_group):
     sgas = frappe.db.get_all(
         "Student Group Assignment",
         filters={"class_group": class_group, "status": "Activa"},
-        fields=["student"],
-        order_by="student asc",
+        fields=["student", "student_name"],
+        order_by="student_name asc",
     )
-    return [s.student for s in sgas]
+    return sgas
 
 
 @frappe.whitelist()
@@ -97,7 +97,14 @@ def calculate_assessment(doc_name):
     result_rows = []
     details = {}
 
-    for student in sorted(data):
+    names = {
+        s.name: s.full_name
+        for s in frappe.get_all(
+            "Student", filters={"name": ("in", list(data))}, fields=["name", "full_name"]
+        )
+    }
+
+    for student in sorted(data, key=lambda st: names.get(st) or st):
         student_abs = absences.get(student, {})
         total_abs   = student_abs.get("total", 0)
 
@@ -126,6 +133,7 @@ def calculate_assessment(doc_name):
 
         result_rows.append({
             "student":            student,
+            "student_name":       names.get(student) or student,
             "term_1_average":     term_avgs.get(1),
             "term_2_average":     term_avgs.get(2) if max_terms >= 2 else None,
             "term_3_average":     term_avgs.get(3) if max_terms >= 3 else None,
@@ -243,14 +251,14 @@ class AnnualAssessment(Document):
                 frappe.throw(
                     _("A média geral <b>{0}</b> para o aluno <b>{1}</b> "
                       "está fora do intervalo 0–{2}.").format(
-                        row.final_grade, row.student, max_grade
+                        row.final_grade, student_label(row.student), max_grade
                     ),
                     title=_("Nota fora do intervalo"),
                 )
             if row.student in seen:
                 frappe.throw(
                     _("O aluno <b>{0}</b> aparece mais de uma vez na tabela.").format(
-                        row.student
+                        student_label(row.student)
                     ),
                     title=_("Aluno duplicado"),
                 )

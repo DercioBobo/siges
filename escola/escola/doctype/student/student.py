@@ -4,7 +4,19 @@ import unicodedata
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.naming import getseries
 from frappe.utils import getdate, today
+
+
+def student_label(student):
+    """
+    Human-facing name for a Student ID (ALU-xxxxx) — its full_name, falling
+    back to the ID itself. Use this whenever a student goes into a message
+    shown to users; the ID is the student code, not the name.
+    """
+    if not student:
+        return ""
+    return frappe.db.get_value("Student", student, "full_name") or student
 
 
 @frappe.whitelist()
@@ -220,7 +232,7 @@ def get_duplicate_removal_preview(student):
     blocked. Only ever safe for a pure registration duplicate with nothing
     officially recorded yet — refuses if anything submitted references the
     student (those must be cancelled manually, or the two students merged
-    via the Student form's "Corrigir Nome" action with merge enabled instead).
+    via the Student form's "Fundir com Outro Registo" action instead).
     """
     blockers = []
 
@@ -281,15 +293,15 @@ def delete_duplicate_student(student):
     attendance rows, draft Adiantamento/Renovação/Troca/Transfer docs, and
     its auto-created Customer. Refuses if anything ELSE submitted references
     the student — see get_duplicate_removal_preview. Not for merging two
-    real students' histories; use the Student form's "Corrigir Nome" action
-    with merge enabled for that instead.
+    real students' histories; use the Student form's "Fundir com Outro
+    Registo" action for that instead.
     """
     preview = get_duplicate_removal_preview(student)
     if preview["blocked"]:
         frappe.throw(
             _("Não é possível eliminar: existem registos submetidos ligados a este aluno "
-              "({0}). Cancele-os manualmente primeiro, ou utilize Renomear > "
-              "Juntar com Existente para fundir com o registo correcto.").format(
+              "({0}). Cancele-os manualmente primeiro, ou utilize a acção "
+              "<b>Fundir com Outro Registo</b> para fundir com o registo correcto.").format(
                 ", ".join(preview["blockers"])
             ),
             title=_("Eliminação bloqueada"),
@@ -506,7 +518,7 @@ class Student(Document):
         if active:
             frappe.throw(
                 _("Não é possível eliminar o aluno <b>{0}</b> porque tem <b>{1}</b> alocação(ões) activa(s). "
-                  "Encerre todas as alocações antes de eliminar.").format(self.name, active),
+                  "Encerre todas as alocações antes de eliminar.").format(self.full_name, active),
                 title=_("Aluno com alocações activas"),
             )
         invoices = frappe.db.count(
@@ -516,19 +528,32 @@ class Student(Document):
         if invoices:
             frappe.throw(
                 _("Não é possível eliminar o aluno <b>{0}</b> porque tem <b>{1}</b> factura(s) submetida(s). "
-                  "Cancele as facturas antes de eliminar.").format(self.name, invoices),
+                  "Cancele as facturas antes de eliminar.").format(self.full_name, invoices),
                 title=_("Aluno com facturas"),
             )
 
     def before_insert(self):
         self._sync_full_name()
+
+    def autoname(self):
+        # The document ID is the student code (ALU-00001), so correcting a
+        # name is just editing Nome/Apelido — no rename needed.
         self._generate_student_code()
+        self.name = self.student_code
 
     def before_rename(self, old, new, merge=False):
-        # autoname is "field:full_name" — the Rename dialog has no manual
-        # "New Name" input for that (Frappe expects the field to drive it),
-        # so the document's own current full_name IS the target name here.
-        return self.full_name
+        # The ID is the student code and must stay equal to student_code.
+        # Renaming is only allowed to merge a duplicate into an existing
+        # student (or by the one-off migration patch).
+        if frappe.flags.escola_student_id_migration:
+            return
+        if not merge:
+            frappe.throw(
+                _("O Número do Aluno não pode ser alterado. Para corrigir o nome, edite "
+                  "os campos Nome/Apelido e guarde. Para juntar dois registos do mesmo "
+                  "aluno, use a acção <b>Fundir com Outro Registo</b>."),
+                title=_("Operação não permitida"),
+            )
 
     def after_insert(self):
         _clear_student_name_index()
@@ -544,10 +569,8 @@ class Student(Document):
         _clear_student_name_index()
 
     def before_save(self):
-        # full_name is the autoname field, so Frappe hides it from the form
-        # entirely (core behavior, independent of read_only) — Nome/Apelido
-        # are the only editable path to it, so keep them synced on every
-        # save. Use "Corrigir Nome" afterwards to rename the document to match.
+        # full_name is read-only and derived from Nome/Apelido — keep it
+        # synced on every save.
         self._sync_full_name()
         self.idade = _calc_age(self.date_of_birth)
         if not self.current_status:
@@ -564,19 +587,16 @@ class Student(Document):
     def _generate_student_code(self):
         if self.student_code:
             return
-        last = frappe.db.sql(
-            "SELECT student_code FROM `tabStudent` "
-            "WHERE student_code LIKE 'ALU-%' "
-            "ORDER BY student_code DESC LIMIT 1"
-        )
-        if last and last[0][0]:
-            try:
-                seq = int(last[0][0].split("-")[1]) + 1
-            except (IndexError, ValueError):
-                seq = 1
-        else:
-            seq = 1
-        self.student_code = "ALU-{:05d}".format(seq)
+        # tabSeries is a locked, atomic counter (safe under concurrent
+        # inserts). The loop only matters if the counter ever falls behind
+        # codes that already exist.
+        while True:
+            code = "ALU-" + getseries("ALU-", 5)
+            if not frappe.db.exists("Student", code) and not frappe.db.exists(
+                "Student", {"student_code": code}
+            ):
+                break
+        self.student_code = code
 
 
 # ---------------------------------------------------------------------------

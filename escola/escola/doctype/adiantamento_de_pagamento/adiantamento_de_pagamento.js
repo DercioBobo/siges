@@ -55,7 +55,7 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 				title:     __("Adiantamento bloqueado"),
 				message:   __("O aluno <b>{0}</b> tem dívidas em atraso (<b>{1}</b>). "
 				             + "Regularize os pagamentos em atraso antes de criar um adiantamento.",
-				             [frm.doc.student, __(status)]),
+				             [frappe.utils.escape_html(r.message.full_name || frm.doc.student), __(status)]),
 				indicator: "red",
 			});
 			frm.set_value("student", "");

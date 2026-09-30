@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "student",
+  "student_name",
   "column_break_avgs",
   "term_1_average",
   "term_2_average",
@@ -27,6 +28,13 @@
    "in_list_view": 1,
    "search_index": 1,
    "columns": 4
+  },
+  {
+   "fetch_from": "student.full_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome do Aluno",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_avgs",

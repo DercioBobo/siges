@@ -8,6 +8,7 @@
   "naming_series",
   "section_break_identification",
   "student",
+  "student_name",
   "class_group",
   "column_break_1",
   "academic_year",
@@ -43,6 +44,14 @@
    "in_list_view": 1,
    "search_index": 1,
    "read_only_depends_on": "eval:!doc.__islocal"
+  },
+  {
+   "fetch_from": "student.full_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Nome do Aluno",
+   "read_only": 1,
+   "in_standard_filter": 1
   },
   {
    "fieldname": "class_group",
@@ -158,5 +167,7 @@
  ],
  "sort_field": "assignment_date",
  "sort_order": "DESC",
- "track_changes": 1
+ "track_changes": 1,
+ "title_field": "student_name",
+ "search_fields": "student_name"
 }

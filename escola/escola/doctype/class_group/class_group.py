@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.student.student import student_label
 
 
 class ClassGroup(Document):
@@ -384,7 +385,7 @@ def add_students_to_group(class_group_name, students):
             }).insert()
             created.append(student)
         except frappe.ValidationError as e:
-            errors.append({"student": student, "error": str(e)})
+            errors.append({"student": student_label(student), "error": str(e)})
 
     frappe.db.commit()
     return {"created": len(created), "skipped": len(skipped), "errors": errors}
@@ -429,7 +430,7 @@ def rebuild_roster(class_group_name):
         "Student Group Assignment",
         filters={"class_group": class_group_name, "status": "Activa"},
         fields=["name", "student"],
-        order_by="student asc",
+        order_by="student_name asc",
     )
 
     for idx, sga in enumerate(assignments, start=1):
@@ -487,16 +488,42 @@ def sync_class_group_students(class_group_name):
     return {"removed": removed, "updated": updated, "kept": len(kept)}
 
 
+# (doctype, field) pairs holding a copy of Student.full_name next to a
+# `student` link — kept in sync when a student's name is corrected.
+_STUDENT_NAME_COPIES = (
+    ("Class Group Student", "student_name"),
+    ("Grade Entry Row", "student_name"),
+    ("Academic Closure Row", "student_name"),
+    ("Annual Assessment Row", "student_name"),
+    ("Student Attendance Entry", "student_name"),
+    ("Student Promotion Row", "student_name"),
+    ("Term Attendance Row", "student_name"),
+    ("Billing Cycle Student Log", "student_name"),
+    ("Renewal Student Row", "full_name"),
+    ("Student Group Assignment", "student_name"),
+    ("Renovacao De Matricula", "student_name"),
+    ("Report Card", "student_name"),
+    ("Student Transfer", "student_name"),
+    ("Troca De Turma", "student_name"),
+    ("Mensalidade Extra do Aluno", "student_full_name"),
+    ("Adiantamento De Pagamento", "student_full_name"),
+)
+
+
 def sync_student_in_rosters(doc, method=None):
     """
     Called via doc_events when a Student record is saved.
-    Updates student_name in every Class Group Student row for this student.
+    When full_name changes, updates every stored copy of the student's name
+    (rosters, grade/attendance rows, assignments, ...) and the display name of
+    the linked ERPNext Customer, so the corrected name shows up everywhere.
     """
-    if not doc.full_name:
+    if not doc.full_name or not doc.has_value_changed("full_name"):
         return
-    frappe.db.sql(
-        """UPDATE `tabClass Group Student`
-           SET student_name = %s
-           WHERE student = %s""",
-        (doc.full_name, doc.name),
-    )
+    for dt, field in _STUDENT_NAME_COPIES:
+        frappe.db.sql(
+            f"UPDATE `tab{dt}` SET `{field}` = %s WHERE student = %s",
+            (doc.full_name, doc.name),
+        )
+    customer = frappe.db.get_value("Customer", {"escola_student": doc.name}, "name")
+    if customer:
+        frappe.db.set_value("Customer", customer, "customer_name", doc.full_name)

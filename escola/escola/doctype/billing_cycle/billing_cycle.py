@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
-from escola.escola.doctype.student.student import ensure_customer_for_student
+from escola.escola.doctype.student.student import ensure_customer_for_student, student_label
 
 
 class BillingCycle(Document):
@@ -97,7 +97,7 @@ def generate_invoices(doc_name):
         if o is None:
             o = {
                 "student": sga.student,
-                "student_name": frappe.db.get_value("Student", sga.student, "full_name") or sga.student,
+                "student_name": student_label(sga.student),
                 "class_group": sga.class_group,
                 "status": "Ignorado",
                 "reason": "",
@@ -134,7 +134,7 @@ def generate_invoices(doc_name):
         try:
             customer_map[sga.student] = ensure_customer_for_student(sga.student)
         except Exception as e:
-            pre_errors.append(_("Cliente não criado para {0}: {1}").format(sga.student, str(e)))
+            pre_errors.append(_("Cliente não criado para {0}: {1}").format(student_label(sga.student), str(e)))
             o["status"] = "Erro"
             o["reason"] = _("Falha ao criar/obter o Cliente ERPNext: {0}").format(str(e))
 
@@ -171,7 +171,7 @@ def generate_invoices(doc_name):
         si.due_date = cycle.due_date
         si.remarks = "{mode} | Aluno: {student} | Ano: {year}".format(
             mode=cycle.billing_mode or "",
-            student=sga.student,
+            student=student_label(sga.student),
             year=cycle.academic_year or "",
         )
 
@@ -216,7 +216,7 @@ def generate_invoices(doc_name):
         except Exception as e:
             frappe.db.rollback(save_point=savepoint)
             skipped += 1
-            pre_errors.append(_("Factura não criada para {0}: {1}").format(sga.student, str(e)))
+            pre_errors.append(_("Factura não criada para {0}: {1}").format(student_label(sga.student), str(e)))
             o["status"] = "Erro"
             o["reason"] = _("Falha ao criar a factura: {0}").format(str(e))
             continue
@@ -253,7 +253,7 @@ def generate_invoices(doc_name):
             try:
                 customer = ensure_customer_for_student(sga.student)
             except Exception as e:
-                addon_errors.append(_("Extras — cliente não criado para {0}: {1}").format(sga.student, str(e)))
+                addon_errors.append(_("Extras — cliente não criado para {0}: {1}").format(student_label(sga.student), str(e)))
                 _append_outcome_note(_outcome(sga), _("Extras: cliente não criado — {0}").format(str(e)))
                 continue
 
@@ -264,7 +264,7 @@ def generate_invoices(doc_name):
         si.posting_date = cycle.posting_date
         si.due_date = cycle.due_date
         si.remarks = "Extras Mensais | Aluno: {student} | Ano: {year}".format(
-            student=sga.student,
+            student=student_label(sga.student),
             year=cycle.academic_year or "",
         )
 
@@ -303,7 +303,7 @@ def generate_invoices(doc_name):
                 si.submit()
         except Exception as e:
             frappe.db.rollback(save_point=savepoint)
-            addon_errors.append("Extras {0}: {1}".format(sga.student, str(e)))
+            addon_errors.append("Extras {0}: {1}".format(student_label(sga.student), str(e)))
             _append_outcome_note(_outcome(sga), _("Falha na factura de extras: {0}").format(str(e)))
         else:
             frappe.db.release_savepoint(savepoint)

@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from escola.escola.doctype.student.student import student_label
 
 
 @frappe.whitelist()
@@ -17,7 +18,7 @@ def get_students_for_attendance(class_group, academic_year):
             "status": "Activa",
         },
         fields=["student"],
-        order_by="student asc",
+        order_by="student_name asc",
     )
     if not assignments:
         return []
@@ -139,7 +140,7 @@ class StudentAttendance(Document):
             if row.student in seen:
                 frappe.throw(
                     _("O aluno <b>{0}</b> aparece mais de uma vez na "
-                      "Lista de Presença.").format(row.student),
+                      "Lista de Presença.").format(student_label(row.student)),
                     title=_("Aluno duplicado"),
                 )
             seen.add(row.student)

@@ -74,9 +74,11 @@ async function _auto_load_students(frm) {
 	});
 	if (!r.message || !r.message.length) return;
 	frm.clear_table("assessment_rows");
-	r.message.forEach(student => {
+	r.message.forEach(s => {
 		const row = frappe.model.add_child(frm.doc, "Annual Assessment Row", "assessment_rows");
-		row.student = student;
+		row.student = s.student;
+		row.student_name = s.student_name;
+		frappe.utils.add_link_title("Student", s.student, s.student_name);
 	});
 	frm.refresh_field("assessment_rows");
 	frappe.show_alert({
@@ -155,9 +157,11 @@ function load_students(frm) {
 					return;
 				}
 				frm.clear_table("assessment_rows");
-				r.message.forEach(student => {
+				r.message.forEach(s => {
 					const row = frappe.model.add_child(frm.doc, "Annual Assessment Row", "assessment_rows");
-					row.student = student;
+					row.student = s.student;
+					row.student_name = s.student_name;
+					frappe.utils.add_link_title("Student", s.student, s.student_name);
 				});
 				frm.refresh_field("assessment_rows");
 				frm.dirty();
@@ -236,6 +240,7 @@ async function do_calculate(frm) {
 	for (const row_data of msg.rows) {
 		const row = frappe.model.add_child(frm.doc, "Annual Assessment Row", "assessment_rows");
 		Object.assign(row, row_data);
+		frappe.utils.add_link_title("Student", row_data.student, row_data.student_name);
 	}
 	frm.refresh_field("assessment_rows");
 
@@ -277,9 +282,9 @@ function _render_summary_html(frm, rows) {
 			: "—";
 		return `<tr>
 			<td style="padding:7px 12px;">
-				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
+				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-student-name="${frappe.utils.escape_html(r.student_name || r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
 					style="background:none;border:none;padding:0;font-weight:600;color:#2563eb;cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:2px;">
-					${frappe.utils.escape_html(r.student)}
+					${frappe.utils.escape_html(r.student_name || r.student)}
 				</button>
 			</td>
 			<td style="padding:7px 12px;text-align:center;">${t1}</td>
@@ -335,9 +340,9 @@ function _render_grades_html(frm, rows, details, terms) {
 			: "—";
 		return `<tr>
 			<td style="padding:7px 12px;">
-				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
+				<button class="btn-student-detail" data-student="${frappe.utils.escape_html(r.student)}" data-student-name="${frappe.utils.escape_html(r.student_name || r.student)}" data-doc="${frappe.utils.escape_html(frm.doc.name)}"
 					style="background:none;border:none;padding:0;font-weight:600;color:#2563eb;cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:2px;">
-					${frappe.utils.escape_html(r.student)}
+					${frappe.utils.escape_html(r.student_name || r.student)}
 				</button>
 			</td>
 			<td style="padding:7px 12px;text-align:center;">${t1}</td>
@@ -385,15 +390,15 @@ function _bind_student_clicks(frm) {
 	fd.$wrapper.find(".btn-student-detail").off("click").on("click", function () {
 		const student = $(this).data("student");
 		const doc_name = $(this).data("doc");
-		_open_student_modal(student, doc_name);
+		_open_student_modal(student, doc_name, $(this).data("student-name") || student);
 	});
 }
 
-function _open_student_modal(student, doc_name) {
+function _open_student_modal(student, doc_name, student_name) {
 	// Use cached details if available (after Calcular), otherwise fetch from server
 	if (_cached_details[student]) {
 		const row = null; // row data not needed separately since detail has everything
-		_show_student_dialog(student, _cached_details[student], _cached_terms, null);
+		_show_student_dialog(student, _cached_details[student], _cached_terms, null, student_name);
 	} else {
 		frappe.call({
 			method: "escola.escola.doctype.annual_assessment.annual_assessment.get_student_assessment_detail",
@@ -407,13 +412,13 @@ function _open_student_modal(student, doc_name) {
 				}
 				_cached_details[student] = r.message.detail;
 				_cached_terms = r.message.terms || [];
-				_show_student_dialog(student, r.message.detail, r.message.terms, r.message.row);
+				_show_student_dialog(student, r.message.detail, r.message.terms, r.message.row, student_name);
 			},
 		});
 	}
 }
 
-function _show_student_dialog(student, detail, terms, row_data) {
+function _show_student_dialog(student, detail, terms, row_data, student_name) {
 	const t_labels = terms && terms.length ? terms : ["T1", "T2", "T3"];
 	const subjects = detail ? Object.keys(detail).sort() : [];
 	const fmt = v => (v != null ? String(round_half_up(parseFloat(v))) : "—");
@@ -490,7 +495,7 @@ function _show_student_dialog(student, detail, terms, row_data) {
   <div style="background:linear-gradient(135deg,#1e40af 0%,#3b82f6 100%);border-radius:12px;padding:20px 24px;margin-bottom:20px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
     <div>
       <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;margin-bottom:4px;">${__("Aluno")}</div>
-      <div style="font-size:20px;font-weight:700;line-height:1.2;">${frappe.utils.escape_html(student)}</div>
+      <div style="font-size:20px;font-weight:700;line-height:1.2;">${frappe.utils.escape_html(student_name || student)}</div>
     </div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;">
       <div style="text-align:center;">
