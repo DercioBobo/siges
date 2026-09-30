@@ -295,7 +295,7 @@ function _show_actions_modal(frm) {
 	];
 
 	const acoes = [
-		{ id: "fundir",            ico: "⇉",  label: __("Fundir com Outro Registo"),     color: "#1e40af", bg: "#eff6ff", show: true       },
+		{ id: "fundir",            ico: "⇉",  label: __("Fundir com Outro Registo"),     color: "#1e40af", bg: "#eff6ff", show: frappe.model.can_delete("Student") },
 		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: !isConcluded },
 		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
