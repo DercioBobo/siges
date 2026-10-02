@@ -12,6 +12,7 @@ frappe.ui.form.on("Inscricao", {
 		_toggle_payments_grid(frm);
 		_load_fee_info(frm);
 		_setup_doc_previews_grid(frm);
+		escola.utils.advance_months.render(frm, _advance_cfg(frm));
 		if (frm.doc.docstatus === 0) {
 			render_turma_picker(frm);
 			_populate_doc_previews(frm);
@@ -22,6 +23,15 @@ frappe.ui.form.on("Inscricao", {
 				() => frappe.set_route("Form", "Student", frm.doc.student)
 			);
 		}
+		if (frm.doc.docstatus === 1 && frm.doc.student && !frm.doc.class_group) {
+			frm.add_custom_button(__("Alocar Turma"), () => {
+				frappe.route_options = {
+					academic_year: frm.doc.academic_year,
+					school_class: frm.doc.school_class,
+				};
+				frappe.set_route("alocacao-turmas");
+			});
+		}
 	},
 
 	first_name(frm) { update_full_name(frm); },
@@ -30,8 +40,10 @@ frappe.ui.form.on("Inscricao", {
 	academic_year(frm) {
 		frm.set_value("school_class", null);
 		frm.set_value("class_group", null);
+		frm.set_value("skip_turma", 0);
 		set_queries(frm);
 		clear_turma_picker(frm);
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
 	},
 
 	enrollment_type(frm) {
@@ -41,15 +53,25 @@ frappe.ui.form.on("Inscricao", {
 
 	school_class(frm) {
 		frm.set_value("class_group", null);
+		frm.set_value("skip_turma", 0);
 		set_queries(frm);
 		render_turma_picker(frm);
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
 	},
 
 	class_group(frm) {
+		if (frm.doc.class_group && frm.doc.skip_turma) frm.set_value("skip_turma", 0);
 		highlight_selected_card(frm);
 	},
 
-	is_bolsista(frm) { _load_fee_info(frm); },
+	skip_turma(frm) {
+		highlight_selected_card(frm);
+	},
+
+	is_bolsista(frm) {
+		_load_fee_info(frm);
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+	},
 
 	guardian(frm) {
 		// When an existing guardian is selected, clear the inline fields
@@ -70,8 +92,12 @@ frappe.ui.form.on("Inscricao", {
 frappe.ui.form.on("Renovacao Payment", {
 	async mode_of_payment(frm, cdt, cdn) {
 		if (frm.doctype !== "Inscricao" || frm.doc.docstatus !== 0) return;
-		const fee = await frappe.db.get_single_value("School Settings", "enrollment_fee_amount");
-		frappe.model.set_value(cdt, cdn, "amount", parseFloat(fee) || 0);
+		const others = (frm.doc.payments || [])
+			.filter(p => p.name !== cdn)
+			.reduce((sum, p) => sum + (flt(p.amount) || 0), 0);
+		const total = frm.doc.total_to_pay
+			|| parseFloat(await frappe.db.get_single_value("School Settings", "enrollment_fee_amount")) || 0;
+		frappe.model.set_value(cdt, cdn, "amount", Math.max(0, total - others));
 	},
 });
 
@@ -119,6 +145,7 @@ async function _prefill_payments_from_pos(frm) {
 		row.amount = count === 1 ? fee : (i < count - 1 ? Math.floor(fee / count * 100) / 100 : 0);
 	});
 	frm.refresh_field("payments");
+	escola.utils.advance_months.sync_payments(frm);
 }
 
 async function _load_fee_info(frm) {
@@ -217,14 +244,15 @@ function render_turma_picker(frm) {
 
 function _render_cards(frm, groups) {
 	const wrapper = frm.fields_dict.turma_picker_html.$wrapper;
+	const all_full = groups.length > 0 && groups.every(
+		(g) => g.max_students > 0 && (g.student_count || 0) >= g.max_students
+	);
 
+	let hint = "";
 	if (!groups.length) {
-		wrapper.html(
-			`<p class="text-muted" style="padding:8px 0;">
-				${__("Não existem turmas activas para esta Classe e Ano Lectivo.")}
-			</p>`
-		);
-		return;
+		hint = __("Ainda não existem turmas para esta Classe e Ano Lectivo. Crie uma Nova Turma ou escolha Não alocar.");
+	} else if (all_full) {
+		hint = __("Todas as turmas estão lotadas. Crie uma Nova Turma ou escolha Não alocar.");
 	}
 
 	const cards_html = groups.map((g) => {
@@ -247,7 +275,16 @@ function _render_cards(frm, groups) {
 				</div>
 				${full ? `<div class="turma-card-badge">${__("Lotada")}</div>` : ""}
 			</div>`;
-	}).join("");
+	}).join("") + `
+		<div class="turma-card turma-card-action turma-card-new" title="${__("Criar uma nova turma sem sair da inscrição")}">
+			<div class="turma-card-name">+ ${__("Nova Turma")}</div>
+			<div class="turma-card-shift">${__("Criar aqui")}</div>
+		</div>
+		<div class="turma-card turma-card-action turma-card-skip${frm.doc.skip_turma ? " selected" : ""}"
+			 title="${__("O aluno ficará como Pendente de Turma")}">
+			<div class="turma-card-name">${__("Não alocar")}</div>
+			<div class="turma-card-shift">${__("Pendente de Turma")}</div>
+		</div>`;
 
 	wrapper.html(`
 		<style>
@@ -260,25 +297,46 @@ function _render_cards(frm, groups) {
 			.turma-card-shift{font-size:11px;color:var(--text-muted);margin-top:2px;}
 			.turma-card-count{font-size:13px;font-weight:500;margin-top:6px;}
 			.turma-card-badge{display:inline-block;margin-top:4px;font-size:10px;background:var(--red-light);color:var(--red);padding:1px 6px;border-radius:4px;}
+			.turma-card-action{border-style:dashed;}
+			.turma-card-new .turma-card-name{color:var(--primary);}
+			.turma-picker-hint{margin:8px 0 0;font-size:13px;color:var(--yellow-600, var(--text-color));}
 		</style>
+		${hint ? `<p class="turma-picker-hint"><i class="fa fa-exclamation-circle"></i> ${hint}</p>` : ""}
 		<div class="turma-picker">${cards_html}</div>
 		<p style="margin:6px 0 0;font-size:12px;color:var(--text-muted);">
 			<i class="fa fa-info-circle"></i>
-			${__("Turma opcional — se não seleccionar, o aluno ficará como <b>Pendente de Turma</b> até ser alocado.")}
+			${__("Seleccione uma turma, crie uma nova, ou escolha <b>Não alocar</b> — o aluno ficará como <b>Pendente de Turma</b> até ser alocado.")}
 		</p>
 	`);
 
-	wrapper.find(".turma-card:not(.full)").on("click", function () {
+	wrapper.find(".turma-card[data-name]:not(.full)").on("click", function () {
 		frm.set_value("class_group", $(this).data("name"));
+	});
+	wrapper.find(".turma-card-new").on("click", () => open_new_turma_dialog(frm));
+	wrapper.find(".turma-card-skip").on("click", () => {
+		frm.set_value("class_group", null);
+		frm.set_value("skip_turma", 1);
+	});
+}
+
+function open_new_turma_dialog(frm) {
+	escola.utils.new_turma_dialog({
+		academic_year: frm.doc.academic_year,
+		school_class: frm.doc.school_class,
+		async on_created(name) {
+			await frm.set_value("class_group", name);
+			render_turma_picker(frm);
+		},
 	});
 }
 
 function highlight_selected_card(frm) {
 	const wrapper = frm.fields_dict.turma_picker_html?.$wrapper;
 	if (!wrapper) return;
-	wrapper.find(".turma-card").each(function () {
+	wrapper.find(".turma-card[data-name]").each(function () {
 		$(this).toggleClass("selected", $(this).data("name") === frm.doc.class_group);
 	});
+	wrapper.find(".turma-card-skip").toggleClass("selected", !!frm.doc.skip_turma && !frm.doc.class_group);
 }
 
 function clear_turma_picker(frm) {
@@ -313,4 +371,21 @@ async function _apply_novo_class_filter(frm) {
 	if (!frm.doc.school_class) {
 		frm.set_value("school_class", rows[0].name);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Mensalidades antecipadas — months paid together with the enrolment
+// (picker lives in escola.utils.advance_months, shared with Renovação)
+// ---------------------------------------------------------------------------
+
+function _advance_cfg(frm) {
+	return {
+		academic_year: frm.doc.academic_year,
+		school_class: frm.doc.school_class,
+		exempt: frm.doc.is_bolsista,
+		method: "escola.escola.doctype.inscricao.inscricao.get_advance_period_options",
+		// Parents usually pay the first month of the year when enrolling.
+		prefill_first: true,
+		hint: __("As mensalidades seleccionadas entram na mesma factura da inscrição e não serão facturadas de novo pelo ciclo de cobrança."),
+	};
 }

@@ -37,15 +37,26 @@
   "cb_turma",
   "class_group",
   "turma_picker_html",
+  "skip_turma",
   "section_break_docs_preview",
   "doc_previews",
   "section_break_payment",
   "is_bolsista",
   "fee_info_html",
+  "section_break_advance",
+  "advance_periods_html",
+  "advance_periods",
+  "cb_advance",
+  "advance_gross_total",
+  "advance_discount_percent",
+  "advance_total",
+  "section_break_pay_methods",
+  "total_to_pay",
   "payments",
   "section_break_system",
   "student",
   "sales_invoice",
+  "adiantamento",
   "guardian_created"
  ],
  "fields": [
@@ -241,6 +252,14 @@
    "label": "Turma Picker"
   },
   {
+   "fieldname": "skip_turma",
+   "fieldtype": "Check",
+   "label": "Não alocar Turma",
+   "default": "0",
+   "hidden": 1,
+   "description": "Escolha explícita de deixar o aluno como Pendente de Turma."
+  },
+  {
    "fieldname": "section_break_docs_preview",
    "fieldtype": "Section Break",
    "label": "Documentos Necessários",
@@ -274,6 +293,64 @@
    "label": "Info de Taxa"
   },
   {
+   "fieldname": "section_break_advance",
+   "fieldtype": "Section Break",
+   "label": "Mensalidades Antecipadas",
+   "depends_on": "eval:!doc.is_bolsista && doc.school_class"
+  },
+  {
+   "fieldname": "advance_periods_html",
+   "fieldtype": "HTML",
+   "label": "Seleccionar Mensalidades"
+  },
+  {
+   "fieldname": "advance_periods",
+   "fieldtype": "Table",
+   "label": "Mensalidades a Pagar",
+   "options": "Adiantamento Period Line",
+   "hidden": 1
+  },
+  {
+   "fieldname": "cb_advance",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "advance_gross_total",
+   "fieldtype": "Currency",
+   "label": "Valor das Mensalidades",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "advance_discount_percent",
+   "fieldtype": "Percent",
+   "label": "Desconto (%)",
+   "read_only": 1,
+   "default": "0",
+   "depends_on": "eval:doc.advance_discount_percent"
+  },
+  {
+   "fieldname": "advance_total",
+   "fieldtype": "Currency",
+   "label": "Mensalidades (líquido)",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "section_break_pay_methods",
+   "fieldtype": "Section Break",
+   "label": "Total e Pagamento"
+  },
+  {
+   "fieldname": "total_to_pay",
+   "fieldtype": "Currency",
+   "label": "Total a Pagar",
+   "read_only": 1,
+   "default": "0",
+   "bold": 1,
+   "description": "Taxa de Inscrição + Mensalidades seleccionadas."
+  },
+  {
    "fieldname": "payments",
    "fieldtype": "Table",
    "label": "Métodos de Pagamento",
@@ -305,6 +382,15 @@
    "description": "Preenchido automaticamente após submissão, se configurado."
   },
   {
+   "fieldname": "adiantamento",
+   "fieldtype": "Link",
+   "label": "Adiantamento de Mensalidades",
+   "options": "Adiantamento De Pagamento",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Criado automaticamente na submissão quando há mensalidades seleccionadas."
+  },
+  {
    "fieldname": "guardian_created",
    "fieldtype": "Link",
    "label": "Encarregado Criado",
@@ -314,7 +400,7 @@
   }
  ],
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Inscricao",

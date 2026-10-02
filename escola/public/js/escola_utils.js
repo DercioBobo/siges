@@ -456,3 +456,240 @@ frappe.ui.form.on("Sales Invoice", {
         }).addClass("btn-primary");
     },
 });
+
+/**
+ * "Nova Turma" dialog — creates a Class Group for academic_year + school_class
+ * without leaving the current form/page. Used by Inscrição and Alocação de Turmas.
+ *
+ * @param {Object} cfg
+ *   academic_year {string}
+ *   school_class  {string}
+ *   on_created    {Function} - receives the new Class Group name
+ */
+escola.utils.new_turma_dialog = async function ({ academic_year, school_class, on_created }) {
+    const r = await frappe.call({
+        method: "escola.escola.doctype.inscricao.inscricao.get_new_turma_defaults",
+        args: { academic_year, school_class },
+    });
+    const defaults = r.message || {};
+
+    const d = new frappe.ui.Dialog({
+        title: __("Nova Turma — {0} ({1})", [school_class, academic_year]),
+        fields: [
+            { fieldname: "group_name", fieldtype: "Data", label: __("Nome da Turma"), reqd: 1, default: defaults.group_name },
+            { fieldname: "shift", fieldtype: "Select", label: __("Turno"), options: ["", "Manhã", "Tarde", "Noite"] },
+            { fieldname: "cb", fieldtype: "Column Break" },
+            {
+                fieldname: "max_students", fieldtype: "Int", label: __("Capacidade Máxima"),
+                default: defaults.max_students || 0, description: __("0 = sem limite"),
+            },
+            { fieldname: "classroom", fieldtype: "Data", label: __("Sala") },
+        ],
+        primary_action_label: __("Criar Turma"),
+        async primary_action(values) {
+            d.disable_primary_action();
+            try {
+                const res = await frappe.call({
+                    method: "escola.escola.doctype.inscricao.inscricao.create_turma",
+                    args: { academic_year, school_class, ...values },
+                    freeze: true,
+                });
+                d.hide();
+                frappe.show_alert({ message: __("Turma {0} criada.", [values.group_name]), indicator: "green" });
+                if (on_created) await on_created(res.message);
+            } finally {
+                d.enable_primary_action();
+            }
+        },
+    });
+    d.show();
+    return d;
+};
+
+
+/**
+ * Mensalidades antecipadas — month picker shared by Inscrição and Renovação.
+ * Both doctypes have the fields advance_periods_html, advance_periods,
+ * advance_gross_total, advance_discount_percent, advance_total, total_to_pay
+ * and payments. Server side: escola/escola/advance_months.py.
+ *
+ * cfg: { academic_year, school_class, exempt, disabled, base_fee, method, prefill_first, hint }
+ *   exempt   - bolsista: no fee, no months
+ *   disabled - months not offered (e.g. Renovação opt-in unticked); fee still due
+ *   base_fee - fee to use before/without the server options (fee_amount)
+ */
+escola.utils.advance_months = (() => {
+    const key_of = (p) => `${p.posting_date}|${p.billing_mode}`;
+    const fmt = (v) => format_currency(v, frappe.defaults.get_default("currency"));
+
+    function reset(frm, cfg) {
+        if (frm.doc.docstatus !== 0) return;
+        frm.clear_table("advance_periods");
+        frm.refresh_field("advance_periods");
+        frm._advance_opts = null;
+        frm._advance_opts_key = null;
+        render(frm, cfg);
+    }
+
+    async function render(frm, cfg) {
+        const wrapper = frm.fields_dict.advance_periods_html?.$wrapper;
+        if (!wrapper) return;
+
+        if (frm.doc.docstatus !== 0) {
+            render_paid(frm, wrapper);
+            return;
+        }
+        if (cfg.exempt || cfg.disabled || !cfg.academic_year || !cfg.school_class) {
+            wrapper.html("");
+            if ((frm.doc.advance_periods || []).length) {
+                frm.clear_table("advance_periods");
+                frm.refresh_field("advance_periods");
+            }
+            update_totals(frm, cfg);
+            return;
+        }
+
+        const key = `${cfg.academic_year}|${cfg.school_class}`;
+        if (frm._advance_opts_key !== key) {
+            const r = await frappe.call({
+                method: cfg.method,
+                args: { academic_year: cfg.academic_year, school_class: cfg.school_class },
+            });
+            frm._advance_opts = r.message || { periods: [] };
+            frm._advance_opts_key = key;
+
+            const periods = frm._advance_opts.periods || [];
+            if (cfg.prefill_first && frm.doc.__islocal && !frm._advance_prefilled
+                && !(frm.doc.advance_periods || []).length && periods.length) {
+                frm._advance_prefilled = true;
+                set_rows(frm, [periods[0]]);
+            }
+        }
+        render_cards(frm, cfg, wrapper);
+        update_totals(frm, cfg);
+    }
+
+    function render_cards(frm, cfg, wrapper) {
+        const periods = frm._advance_opts?.periods || [];
+        if (!periods.length) {
+            wrapper.html(`<p class="text-muted" style="font-size:13px;margin:4px 0 8px;">
+                ${__("Não há plano de cobrança (Agendamento de Cobrança / Plano de Propinas) activo para esta Classe.")}</p>`);
+            return;
+        }
+        const selected = new Set((frm.doc.advance_periods || []).map(key_of));
+
+        const cards = periods.map((p) => {
+            const on = selected.has(key_of(p));
+            return `
+                <label class="adv-month${on ? " on" : ""}" data-key="${frappe.utils.escape_html(key_of(p))}">
+                    <span class="adv-month-label">${frappe.utils.escape_html(p.period_label)}</span>
+                    <span class="adv-month-amount">${fmt(p.gross_amount)}</span>
+                </label>`;
+        }).join("");
+
+        wrapper.html(`
+            <style>
+                .adv-months{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px;}
+                .adv-month{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:2px solid var(--border-color);
+                    border-radius:8px;padding:8px 12px;min-width:120px;cursor:pointer;background:var(--card-bg);margin:0;
+                    font-weight:400;user-select:none;transition:border-color .15s,background .15s;}
+                .adv-month:hover{border-color:var(--primary);}
+                .adv-month.on{border-color:var(--primary);background:var(--primary-light);}
+                .adv-month-label{font-weight:600;font-size:13px;}
+                .adv-month-amount{font-size:12px;color:var(--text-muted);}
+                .adv-tools{font-size:12px;margin-bottom:4px;}
+                .adv-tools a{margin-right:12px;}
+            </style>
+            <div class="adv-tools">
+                <a class="adv-none">${__("Nenhuma")}</a>
+                <a class="adv-all">${__("Ano completo")}</a>
+            </div>
+            <div class="adv-months">${cards}</div>
+            ${cfg.hint ? `<p style="margin:0;font-size:12px;color:var(--text-muted);">
+                <i class="fa fa-info-circle"></i> ${cfg.hint}</p>` : ""}`);
+
+        const apply = (next) => {
+            set_rows(frm, next);
+            render_cards(frm, cfg, wrapper);
+            update_totals(frm, cfg);
+        };
+        wrapper.find(".adv-month").on("click", function (e) {
+            e.preventDefault();
+            const key = $(this).data("key");
+            const current = (frm.doc.advance_periods || [])
+                .map((r) => periods.find((p) => key_of(p) === key_of(r)))
+                .filter(Boolean);
+            apply(current.some((p) => key_of(p) === key)
+                ? current.filter((p) => key_of(p) !== key)
+                : [...current, periods.find((p) => key_of(p) === key)]);
+        });
+        wrapper.find(".adv-none").on("click", () => apply([]));
+        wrapper.find(".adv-all").on("click", () => apply(periods));
+    }
+
+    function set_rows(frm, periods) {
+        frm.clear_table("advance_periods");
+        [...periods]
+            .sort((a, b) => String(a.posting_date).localeCompare(String(b.posting_date)))
+            .forEach((p) => {
+                const row = frm.add_child("advance_periods");
+                row.period_label = p.period_label;
+                row.posting_date = p.posting_date;
+                row.billing_mode = p.billing_mode;
+                row.gross_amount = p.gross_amount;
+            });
+        frm.refresh_field("advance_periods");
+        frm.dirty();
+    }
+
+    // Mirrors advance_months.compute_totals (the server recomputes on save).
+    function update_totals(frm, cfg) {
+        if (frm.doc.docstatus !== 0) return;
+        const opts = frm._advance_opts || {};
+        const rows = frm.doc.advance_periods || [];
+        const n = rows.length;
+        const gross = rows.reduce((s, r) => s + (flt(r.gross_amount) || 0), 0);
+
+        let pct = 0;
+        const d = opts.discount;
+        if (d && n) {
+            if (n === opts.full_year_periods) pct = d.full_year;
+            else if (n >= d.min_periods) pct = d.six_plus;
+        }
+        const net = gross * (1 - pct / 100);
+        const fee = cfg.exempt ? 0 : flt(opts.fee_amount ?? cfg.base_fee) || 0;
+
+        frm.doc.advance_gross_total = gross;
+        frm.doc.advance_discount_percent = pct;
+        frm.doc.advance_total = net;
+        frm.doc.total_to_pay = fee + net;
+        frm.refresh_fields(["advance_gross_total", "advance_discount_percent", "advance_total", "total_to_pay"]);
+        sync_payments(frm);
+    }
+
+    // Keep payments in step with the total: the first row absorbs the difference,
+    // so amounts typed on other rows are preserved.
+    function sync_payments(frm) {
+        const rows = frm.doc.payments || [];
+        if (!rows.length || !frm.doc.total_to_pay) return;
+        const others = rows.slice(1).reduce((s, p) => s + (flt(p.amount) || 0), 0);
+        const first_amount = Math.max(0, frm.doc.total_to_pay - others);
+        if (Math.abs((flt(rows[0].amount) || 0) - first_amount) > 0.001) {
+            frappe.model.set_value(rows[0].doctype, rows[0].name, "amount", first_amount);
+        }
+    }
+
+    function render_paid(frm, wrapper) {
+        const rows = frm.doc.advance_periods || [];
+        if (!rows.length) {
+            wrapper.html(`<p class="text-muted" style="font-size:13px;">${__("Nenhuma mensalidade paga antecipadamente.")}</p>`);
+            return;
+        }
+        wrapper.html(`
+            <ul style="margin:4px 0 8px;padding-left:18px;font-size:13px;">
+                ${rows.map((r) => `<li><b>${frappe.utils.escape_html(r.period_label)}</b> — ${fmt(r.gross_amount)}</li>`).join("")}
+            </ul>`);
+    }
+
+    return { render, reset, sync_payments };
+})();

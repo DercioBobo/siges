@@ -3,6 +3,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, flt, getdate, today
 
+from escola.escola import advance_months
 from escola.escola.payment_actions import get_payment_account as _get_payment_account
 from escola.escola.doctype.student.student import student_label
 
@@ -17,11 +18,17 @@ class RenovacaoDeMatricula(Document):
         self._validate_student_status()
         self._validate_years()
         self._validate_not_duplicate()
+        self._compute_advance_months()
         self._validate_payments()
 
     def on_submit(self):
         from escola.escola.invoice_utils import invoice_success_msg
-        inv = _create_renewal_invoice(self)
+        adp = advance_months.create_adiantamento(
+            self, self.student, self.target_academic_year, self.target_school_class
+        )
+        inv = _create_renewal_invoice(self, adp)
+        if adp:
+            advance_months.submit_adiantamento(self, adp, inv)
         if inv:
             self.db_set("sales_invoice", inv.name)
             frappe.msgprint(
@@ -38,6 +45,7 @@ class RenovacaoDeMatricula(Document):
 
     def on_cancel(self):
         self._revert_sga()
+        advance_months.cancel_adiantamento(self)
         if self.sales_invoice:
             inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
             if inv_status == 0:
@@ -85,6 +93,22 @@ class RenovacaoDeMatricula(Document):
 
     # ------------------------------------------------------------------
 
+    def _compute_advance_months(self):
+        """Months of the target year paid together with the renewal — opt-in only,
+        since next year's class isn't certain until promotion."""
+        if not self.pay_advance_months:
+            self.set("advance_periods", [])
+        elif not self.target_school_class:
+            frappe.throw(
+                _("Indique a <b>Classe no Próximo Ano</b> para calcular o valor das mensalidades."),
+                title=_("Classe em falta"),
+            )
+        advance_months.compute_totals(
+            self, self.target_academic_year, self.target_school_class,
+            _renewal_fee_amount(self), exempt=self.is_bolsista,
+        )
+        advance_months.validate_not_in_debt(self, self.student)
+
     def _validate_student_status(self):
         status = frappe.db.get_value("Student", self.student, "current_status")
         if status == "Concluiu":
@@ -121,13 +145,14 @@ class RenovacaoDeMatricula(Document):
         if frappe.db.get_value("Student", self.student, "is_bolsista"):
             return
 
-        fee = flt(frappe.db.get_single_value("School Settings", "renewal_fee_amount"))
+        # total_to_pay = renewal fee + months paid in advance (see _compute_advance_months)
+        expected = flt(self.total_to_pay)
         total = sum(flt(p.amount) for p in self.payments)
-        if fee and abs(total - fee) > 0.009:
+        if expected and abs(total - expected) > 0.009:
             frappe.throw(
-                _("O total dos pagamentos ({0}) deve ser igual ao valor da taxa de renovação ({1}).").format(
+                _("O total dos pagamentos ({0}) deve ser igual ao Total a Pagar ({1}).").format(
                     frappe.format_value(total, {"fieldtype": "Currency"}),
-                    frappe.format_value(fee, {"fieldtype": "Currency"}),
+                    frappe.format_value(expected, {"fieldtype": "Currency"}),
                 ),
                 title=_("Valor incorrecto"),
             )
@@ -158,16 +183,32 @@ class RenovacaoDeMatricula(Document):
 # Invoice creation helper
 # ---------------------------------------------------------------------------
 
-def _create_renewal_invoice(doc):
-    """Create a POS Sales Invoice for the renewal fee. Returns the invoice or None."""
+def _renewal_fee_amount(doc):
+    """Renewal fee charged on this Renovação (0 for bolsistas)."""
+    if doc.is_bolsista or frappe.db.get_value("Student", doc.student, "is_bolsista"):
+        return 0.0
+    return flt(frappe.db.get_single_value("School Settings", "renewal_fee_amount"))
+
+
+def predict_target_school_class(student, target_academic_year):
+    """Next year's class, only when it is certain: the turma already assigned for
+    that year (promotion done). No guessing — a student may repeat the year."""
+    return frappe.db.get_value(
+        "Student Group Assignment",
+        {"student": student, "academic_year": target_academic_year, "status": "Activa"},
+        "school_class",
+    )
+
+
+def _create_renewal_invoice(doc, adp=None):
+    """Create a POS Sales Invoice for the renewal fee plus any months paid in advance
+    (``adp``, the Adiantamento recording them). Returns the invoice or None."""
     from escola.escola.doctype.student.student import ensure_customer_for_student
 
     settings = frappe.get_single("School Settings")
     item_code = settings.get("renewal_fee_item_code")
-    if not item_code:
-        return None
-
-    if frappe.db.get_value("Student", doc.student, "is_bolsista"):
+    bill_fee = bool(item_code) and not frappe.db.get_value("Student", doc.student, "is_bolsista")
+    if not bill_fee and not adp:
         return None
 
     try:
@@ -185,7 +226,8 @@ def _create_renewal_invoice(doc):
     due_days    = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
     today_date  = today()
     due_date    = add_days(today_date, due_days)
-    auto_submit = int(settings.get("auto_submit_renewal_invoice") or 0)
+    # Months paid in advance are paid by definition — always submit those invoices.
+    auto_submit = int(settings.get("auto_submit_renewal_invoice") or 0) or bool(adp)
     fee_amount  = float(settings.get("renewal_fee_amount") or 0)
     is_pos      = int(settings.get("renewal_is_pos") or 0)
     pos_profile = settings.get("renewal_pos_profile") or ""
@@ -198,6 +240,8 @@ def _create_renewal_invoice(doc):
     si.posting_date  = today_date
     si.due_date      = due_date
     si.remarks       = description
+    if adp:
+        si.remarks = _("{0} — {1} mensalidade(s)").format(description, adp.total_periods)
 
     if use_pos:
         si.is_pos      = 1
@@ -208,13 +252,17 @@ def _create_renewal_invoice(doc):
     except Exception:
         pass
 
-    si.append("items", {
-        "item_code":   item_code,
-        "item_name":   description,
-        "description": description,
-        "qty":         1,
-        "rate":        fee_amount,
-    })
+    if bill_fee:
+        si.append("items", {
+            "item_code":   item_code,
+            "item_name":   description,
+            "description": description,
+            "qty":         1,
+            "rate":        fee_amount,
+        })
+
+    if adp:
+        advance_months.append_month_lines(si, adp)
 
     # Copy payment methods from the Renovação doc (only relevant when POS)
     if use_pos:
@@ -237,6 +285,20 @@ def _create_renewal_invoice(doc):
 # ---------------------------------------------------------------------------
 # Whitelisted helpers (called from JS)
 # ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_target_school_class(student, target_academic_year):
+    return predict_target_school_class(student, target_academic_year)
+
+
+@frappe.whitelist()
+def get_advance_period_options(academic_year, school_class, student=None):
+    """Months of the target year the parent can pay with the renewal."""
+    fee = 0.0
+    if not (student and frappe.db.get_value("Student", student, "is_bolsista")):
+        fee = flt(frappe.db.get_single_value("School Settings", "renewal_fee_amount"))
+    return advance_months.get_options(academic_year, school_class, fee)
+
 
 @frappe.whitelist()
 def get_next_academic_year(academic_year):

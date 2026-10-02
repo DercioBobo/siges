@@ -1,7 +1,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, flt, getdate, today
+
+from escola.escola import advance_months
 
 
 class Inscricao(Document):
@@ -13,13 +15,24 @@ class Inscricao(Document):
         self._validate_guardian_requirement()
         self._validate_class_group()
         self._warn_possible_duplicate()
+        advance_months.compute_totals(
+            self, self.academic_year, self.school_class,
+            _enrollment_fee_amount(self), exempt=self.is_bolsista,
+        )
+        self._validate_payment_total()
+
+    def before_submit(self):
+        self._require_turma_decision()
 
     def on_submit(self):
         guardian_name = self._get_or_create_guardian()
         self._create_student(guardian_name)
         self._create_sga()
         self._seed_student_documents()
-        inv = _create_enrollment_invoice(self)
+        adp = advance_months.create_adiantamento(self, self.student, self.academic_year, self.school_class)
+        inv = _create_enrollment_invoice(self, adp)
+        if adp:
+            advance_months.submit_adiantamento(self, adp, inv)
         if inv:
             self.db_set("sales_invoice", inv.name)
             from escola.escola.invoice_utils import invoice_success_msg
@@ -31,6 +44,7 @@ class Inscricao(Document):
 
     def on_cancel(self):
         self._close_sga()
+        advance_months.cancel_adiantamento(self)
         if self.sales_invoice:
             inv_status = frappe.db.get_value("Sales Invoice", self.sales_invoice, "docstatus")
             if inv_status == 0:
@@ -59,7 +73,19 @@ class Inscricao(Document):
                 title=_("Encarregado obrigatório"),
             )
 
+    def _require_turma_decision(self):
+        """Leaving the student without a turma must be an explicit choice, not an oversight."""
+        if self.class_group or self.skip_turma:
+            return
+        frappe.throw(
+            _("Seleccione uma Turma, crie uma <b>Nova Turma</b>, ou escolha <b>Não alocar</b> "
+              "para deixar o aluno como Pendente de Turma."),
+            title=_("Turma por definir"),
+        )
+
     def _validate_class_group(self):
+        if self.class_group:
+            self.skip_turma = 0
         if not self.class_group:
             return
         cg = frappe.db.get_value(
@@ -90,6 +116,20 @@ class Inscricao(Document):
             frappe.throw(
                 _("A Turma <b>{0}</b> não está activa.").format(self.class_group),
                 title=_("Turma inactiva"),
+            )
+
+    def _validate_payment_total(self):
+        """With months paid upfront, the payments must cover the whole invoice."""
+        if not self.advance_periods or not self.payments:
+            return
+        paid = sum(flt(p.amount) for p in self.payments)
+        if abs(paid - flt(self.total_to_pay)) > 0.01:
+            frappe.throw(
+                _("O total dos métodos de pagamento ({0}) não corresponde ao Total a Pagar ({1}).").format(
+                    frappe.format_value(paid, {"fieldtype": "Currency"}),
+                    frappe.format_value(self.total_to_pay, {"fieldtype": "Currency"}),
+                ),
+                title=_("Pagamento incorrecto"),
             )
 
     def _warn_possible_duplicate(self):
@@ -222,24 +262,36 @@ class Inscricao(Document):
             sga.save(ignore_permissions=True)
 
 
-def _create_enrollment_invoice(doc):
-    """Create a Sales Invoice for the enrollment fee. Returns the invoice or None."""
+def _enrollment_fee_amount(doc):
+    """Enrolment fee that will be invoiced for this Inscrição (0 when none)."""
+    if doc.is_bolsista:
+        return 0.0
+    settings = frappe.get_single("School Settings")
+    if not int(settings.get("auto_invoice_on_enrollment") or 0) or not settings.get("enrollment_fee_item_code"):
+        return 0.0
+    return flt(settings.get("enrollment_fee_amount"))
+
+
+def _create_enrollment_invoice(doc, adp=None):
+    """Create one Sales Invoice for the enrolment fee plus any months paid upfront
+    (``adp``, the Adiantamento recording them). Returns the invoice or None."""
     from escola.escola.doctype.student.student import ensure_customer_for_student
 
     settings = frappe.get_single("School Settings")
-    if not int(settings.get("auto_invoice_on_enrollment") or 0):
-        return None
-
-    if frappe.db.get_value("Student", doc.student, "is_bolsista"):
-        return None
-
+    bill_fee = (
+        int(settings.get("auto_invoice_on_enrollment") or 0)
+        and not frappe.db.get_value("Student", doc.student, "is_bolsista")
+    )
     item_code = settings.get("enrollment_fee_item_code")
-    if not item_code:
+    if bill_fee and not item_code:
         frappe.msgprint(
             _("Factura de inscrição não gerada: configure o <b>Item da Taxa de Inscrição</b> em Configurações da Escola."),
             title=_("Item em falta"),
             indicator="orange",
         )
+        bill_fee = False
+
+    if not bill_fee and not adp:
         return None
 
     try:
@@ -257,7 +309,8 @@ def _create_enrollment_invoice(doc):
     due_days    = int(frappe.db.get_single_value("School Settings", "invoice_due_days") or 30)
     today_date  = today()
     due_date    = add_days(today_date, due_days)
-    auto_submit = int(settings.get("auto_submit_enrollment_invoice") or 0)
+    # Months paid upfront are paid by definition — always submit those invoices.
+    auto_submit = int(settings.get("auto_submit_enrollment_invoice") or 0) or bool(adp)
     fee_amount  = float(settings.get("enrollment_fee_amount") or 0)
     is_pos      = int(settings.get("enrollment_is_pos") or 0)
     pos_profile = settings.get("enrollment_pos_profile") or ""
@@ -269,6 +322,8 @@ def _create_enrollment_invoice(doc):
     si.posting_date = today_date
     si.due_date     = due_date
     si.remarks      = description
+    if adp:
+        si.remarks = _("Inscrição {0} — {1} mensalidade(s)").format(doc.academic_year or "", adp.total_periods)
 
     if is_pos and pos_profile:
         si.is_pos      = 1
@@ -279,13 +334,17 @@ def _create_enrollment_invoice(doc):
     except Exception:
         pass
 
-    si.append("items", {
-        "item_code":   item_code,
-        "item_name":   description,
-        "description": description,
-        "qty":         1,
-        "rate":        fee_amount,
-    })
+    if bill_fee:
+        si.append("items", {
+            "item_code":   item_code,
+            "item_name":   description,
+            "description": description,
+            "qty":         1,
+            "rate":        fee_amount,
+        })
+
+    if adp:
+        advance_months.append_month_lines(si, adp)
 
     if is_pos:
         for p in (doc.payments or []):
@@ -308,6 +367,14 @@ def _create_enrollment_invoice(doc):
 
 
 @frappe.whitelist()
+def get_advance_period_options(academic_year, school_class):
+    """Months the parent can pay at enrolment, plus what the form needs to price them."""
+    return advance_months.get_options(
+        academic_year, school_class, _enrollment_fee_amount(frappe._dict(is_bolsista=0))
+    )
+
+
+@frappe.whitelist()
 def get_required_docs_for_type(enrollment_type):
     """Return active Tipo de Documento records that apply to the given enrollment_type."""
     return frappe.get_all(
@@ -327,6 +394,55 @@ def get_available_turmas(academic_year, school_class):
         fields=["name", "group_name", "student_count", "max_students", "shift"],
         order_by="group_name asc",
     )
+
+
+def _next_turma_name(academic_year, school_class):
+    """Next free '{class_name} {letter}-{YY}' name, skipping letters already taken."""
+    from escola.escola.doctype.student_promotion.student_promotion import _turma_name
+
+    n_existing = frappe.db.count(
+        "Class Group", {"academic_year": academic_year, "school_class": school_class}
+    )
+    for offset in range(26):
+        name = _turma_name(school_class, academic_year, n_existing, offset)
+        if not frappe.db.exists("Class Group", {"group_name": name, "academic_year": academic_year}):
+            return name
+    return _turma_name(school_class, academic_year, n_existing)
+
+
+@frappe.whitelist()
+def get_new_turma_defaults(academic_year, school_class):
+    """Pre-fill values for the 'Nova Turma' dialog on the Inscrição form."""
+    return {
+        "group_name": _next_turma_name(academic_year, school_class),
+        "max_students": frappe.db.get_single_value("School Settings", "default_max_students_per_class") or 0,
+    }
+
+
+@frappe.whitelist()
+def create_turma(academic_year, school_class, group_name, shift=None, max_students=0, classroom=None):
+    """Create a Class Group from the Inscrição form so the secretary never leaves the enrolment."""
+    group_name = (group_name or "").strip()
+    if not group_name:
+        frappe.throw(_("Indique o nome da Turma."), title=_("Nome em falta"))
+    if frappe.db.exists("Class Group", {"group_name": group_name, "academic_year": academic_year}):
+        frappe.throw(
+            _("Já existe uma Turma <b>{0}</b> no Ano Lectivo <b>{1}</b>.").format(group_name, academic_year),
+            title=_("Turma duplicada"),
+        )
+
+    cg = frappe.get_doc({
+        "doctype": "Class Group",
+        "group_name": group_name,
+        "academic_year": academic_year,
+        "school_class": school_class,
+        "shift": shift or "",
+        "classroom": classroom or "",
+        "max_students": int(max_students or 0),
+        "is_active": 1,
+        "student_count": 0,
+    }).insert()  # respects Class Group create permission
+    return cg.name
 
 
 @frappe.whitelist()

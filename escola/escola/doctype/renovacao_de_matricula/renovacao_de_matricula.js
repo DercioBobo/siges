@@ -3,8 +3,10 @@
 
 frappe.ui.form.on("Renovacao De Matricula", {
 
-	onload(frm) {
+	async onload(frm) {
 		escola.utils.auto_fill_academic_year(frm);
+		frm._renewal_fee = flt(await frappe.db.get_single_value("School Settings", "renewal_fee_amount"));
+		escola.utils.advance_months.render(frm, _advance_cfg(frm));
 	},
 
 	refresh(frm) {
@@ -12,6 +14,7 @@ frappe.ui.form.on("Renovacao De Matricula", {
 		_set_status_indicator(frm);
 		_toggle_payments_grid(frm);
 		_load_fee_info(frm, "renewal_fee_amount", __("Valor da Taxa de Renovação"));
+		escola.utils.advance_months.render(frm, _advance_cfg(frm));
 
 		if (frm.doc.docstatus === 1 && frm.doc.sales_invoice) {
 			frm.add_custom_button(__("Ver Factura"), () => {
@@ -41,6 +44,27 @@ frappe.ui.form.on("Renovacao De Matricula", {
 
 	target_academic_year(frm) {
 		_set_queries(frm);
+		_reset_advance(frm);
+	},
+
+	student(frm) {
+		_reset_advance(frm);
+	},
+
+	pay_advance_months(frm) {
+		if (frm.doc.pay_advance_months) {
+			_predict_target_class(frm);
+		} else {
+			escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+		}
+	},
+
+	target_school_class(frm) {
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+	},
+
+	is_bolsista(frm) {
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
 	},
 
 	async payments_add(frm, cdt, cdn) {
@@ -61,8 +85,9 @@ frappe.ui.form.on("Renovacao Payment", {
 		if (frm.doc.docstatus !== 0) return;
 		const row = locals[cdt][cdn];
 		if (!row.mode_of_payment || flt(row.amount) > 0) return;
-		// Fill with whatever is still missing to cover the renewal fee
-		const fee = flt(await frappe.db.get_single_value("School Settings", "renewal_fee_amount"));
+		// Fill with whatever is still missing to cover the total (fee + advance months)
+		const fee = flt(frm.doc.total_to_pay)
+			|| flt(await frappe.db.get_single_value("School Settings", "renewal_fee_amount"));
 		const others = (frm.doc.payments || [])
 			.filter(p => p.name !== cdn)
 			.reduce((s, p) => s + flt(p.amount), 0);
@@ -118,6 +143,56 @@ async function _prefill_payments_from_pos(frm) {
 	row.mode_of_payment = mode_of_payment;
 	row.amount = fee;
 	frm.refresh_field("payments");
+	escola.utils.advance_months.sync_payments(frm);
+}
+
+// ---------------------------------------------------------------------------
+// Mensalidades antecipadas — months of the target year paid with the renewal
+// (picker lives in escola.utils.advance_months, shared with Inscrição)
+// ---------------------------------------------------------------------------
+
+function _advance_cfg(frm) {
+	return {
+		academic_year: frm.doc.target_academic_year,
+		school_class: frm.doc.target_school_class,
+		exempt: frm.doc.is_bolsista,
+		disabled: !frm.doc.pay_advance_months,
+		base_fee: frm._renewal_fee,
+		method: "escola.escola.doctype.renovacao_de_matricula.renovacao_de_matricula.get_advance_period_options",
+		prefill_first: false,
+		hint: __("Opcional. As mensalidades seleccionadas entram na factura da renovação e não serão facturadas de novo pelo ciclo de cobrança."),
+	};
+}
+
+// Student or year changed: the opt-in and class no longer apply.
+function _reset_advance(frm) {
+	if (frm.doc.docstatus !== 0) return;
+	if (frm.doc.pay_advance_months) {
+		frm.set_value("pay_advance_months", 0);  // its handler clears the months
+	}
+	if (frm.doc.target_school_class) frm.set_value("target_school_class", null);
+}
+
+// Next year's class drives the month prices. Pre-filled only when certain
+// (turma already assigned for that year); otherwise the secretary chooses it.
+async function _predict_target_class(frm) {
+	if (frm.doc.docstatus !== 0 || frm.doc.target_school_class) {
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+		return;
+	}
+	if (!frm.doc.student || !frm.doc.target_academic_year) {
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+		return;
+	}
+	const r = await frappe.call({
+		method: "escola.escola.doctype.renovacao_de_matricula.renovacao_de_matricula.get_target_school_class",
+		args: { student: frm.doc.student, target_academic_year: frm.doc.target_academic_year },
+	});
+	if (r.message && r.message !== frm.doc.target_school_class) {
+		await frm.set_value("target_school_class", r.message);  // triggers the picker reset
+	} else {
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
+	}
 }
 
 const DEFAULT_MODE_OF_PAYMENT = "POS";

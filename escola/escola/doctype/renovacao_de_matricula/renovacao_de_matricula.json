@@ -14,11 +14,24 @@
   "renewal_date",
   "student",
   "student_name",
+  "is_bolsista",
   "section_break_payment",
   "fee_info_html",
+  "section_break_advance",
+  "pay_advance_months",
+  "target_school_class",
+  "advance_periods_html",
+  "advance_periods",
+  "cb_advance",
+  "advance_gross_total",
+  "advance_discount_percent",
+  "advance_total",
+  "section_break_pay_methods",
+  "total_to_pay",
   "payments",
   "section_break_invoice",
   "sales_invoice",
+  "adiantamento",
   "section_break_notes",
   "notes"
  ],
@@ -88,6 +101,14 @@
    "in_standard_filter": 1
   },
   {
+   "fieldname": "is_bolsista",
+   "fieldtype": "Check",
+   "label": "Bolsista",
+   "fetch_from": "student.is_bolsista",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
    "fieldname": "section_break_payment",
    "fieldtype": "Section Break",
    "label": "Pagamento"
@@ -96,6 +117,84 @@
    "fieldname": "fee_info_html",
    "fieldtype": "HTML",
    "label": "Info de Taxa"
+  },
+  {
+   "fieldname": "section_break_advance",
+   "fieldtype": "Section Break",
+   "label": "Mensalidades Antecipadas",
+   "depends_on": "eval:doc.student && !doc.is_bolsista"
+  },
+  {
+   "fieldname": "pay_advance_months",
+   "fieldtype": "Check",
+   "label": "Pagar mensalidades do próximo ano",
+   "default": "0",
+   "description": "Opcional. Active apenas quando a classe do próximo ano for certa."
+  },
+  {
+   "fieldname": "target_school_class",
+   "fieldtype": "Link",
+   "label": "Classe no Próximo Ano",
+   "options": "School Class",
+   "depends_on": "eval:doc.pay_advance_months",
+   "mandatory_depends_on": "eval:doc.pay_advance_months",
+   "description": "Define o valor das mensalidades. Preenchida automaticamente se o aluno já tem turma no próximo ano; caso contrário, confirme se o aluno transita ou repete antes de escolher."
+  },
+  {
+   "fieldname": "advance_periods_html",
+   "depends_on": "eval:doc.pay_advance_months && doc.target_school_class",
+   "fieldtype": "HTML",
+   "label": "Seleccionar Mensalidades"
+  },
+  {
+   "fieldname": "advance_periods",
+   "fieldtype": "Table",
+   "label": "Mensalidades a Pagar",
+   "options": "Adiantamento Period Line",
+   "hidden": 1
+  },
+  {
+   "fieldname": "cb_advance",
+   "depends_on": "eval:doc.pay_advance_months",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "advance_gross_total",
+   "depends_on": "eval:doc.pay_advance_months",
+   "fieldtype": "Currency",
+   "label": "Valor das Mensalidades",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "advance_discount_percent",
+   "fieldtype": "Percent",
+   "label": "Desconto (%)",
+   "read_only": 1,
+   "default": "0",
+   "depends_on": "eval:doc.pay_advance_months && doc.advance_discount_percent"
+  },
+  {
+   "fieldname": "advance_total",
+   "depends_on": "eval:doc.pay_advance_months",
+   "fieldtype": "Currency",
+   "label": "Mensalidades (líquido)",
+   "read_only": 1,
+   "default": "0"
+  },
+  {
+   "fieldname": "section_break_pay_methods",
+   "fieldtype": "Section Break",
+   "label": "Total e Pagamento"
+  },
+  {
+   "fieldname": "total_to_pay",
+   "fieldtype": "Currency",
+   "label": "Total a Pagar",
+   "read_only": 1,
+   "default": "0",
+   "bold": 1,
+   "description": "Taxa de Renovação + Mensalidades seleccionadas."
   },
   {
    "fieldname": "payments",
@@ -122,6 +221,15 @@
    "description": "Preenchido automaticamente após submissão."
   },
   {
+   "fieldname": "adiantamento",
+   "fieldtype": "Link",
+   "label": "Adiantamento de Mensalidades",
+   "options": "Adiantamento De Pagamento",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Criado automaticamente na submissão quando há mensalidades seleccionadas."
+  },
+  {
    "fieldname": "section_break_notes",
    "fieldtype": "Section Break",
    "label": "Observações"
@@ -133,7 +241,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-24 12:00:00.000000",
+ "modified": "2026-10-02 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Renovacao De Matricula",

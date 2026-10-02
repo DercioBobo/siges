@@ -36,6 +36,12 @@ class AdiantamentoDePagamento(Document):
         self._validate_no_duplicate_adiantamento()
 
     def on_submit(self):
+        if self.flags.invoice_from_enrollment:
+            # Created by an Inscrição: the months are already billed on the
+            # enrolment invoice (self.sales_invoice), so don't invoice twice.
+            for p in self.periods:
+                p.db_set("invoice", self.sales_invoice)
+            return
         from escola.escola.invoice_utils import invoice_success_msg
         inv = self._create_invoice()
         self.db_set("sales_invoice", inv.name)
@@ -46,6 +52,9 @@ class AdiantamentoDePagamento(Document):
         )
 
     def on_cancel(self):
+        if self.flags.invoice_from_enrollment:
+            # The invoice belongs to the Inscrição, which handles it on its own cancel.
+            return
         self._cancel_invoice()
 
     # ------------------------------------------------------------------
@@ -83,7 +92,9 @@ class AdiantamentoDePagamento(Document):
         )
         if s:
             self.student_full_name = s.full_name or ""
-            self.school_class      = s.current_school_class or ""
+            # A renewal prices next year's months at next year's class — keep it.
+            if not (self.flags.keep_school_class and self.school_class):
+                self.school_class = s.current_school_class or ""
 
     def _recalculate_summary(self):
         n = len(self.periods or [])
@@ -91,24 +102,14 @@ class AdiantamentoDePagamento(Document):
         self.gross_total   = sum(flt(p.gross_amount) for p in (self.periods or []))
 
         # Compute full_year_periods from active billing schedules
-        full_year = _count_year_periods(self.student, self.academic_year)
+        full_year = count_class_year_periods(self.school_class, self.academic_year)
         self.full_year_periods = full_year
 
         if self.discount_is_manual:
             # User overrode the percent on the client — keep it, just refresh the totals.
             pct = flt(self.discount_percent)
         else:
-            # Discount tier
-            if n == full_year and n > 0:
-                pct    = _DISCOUNT_FULL_YEAR
-                reason = _("Ano Lectivo completo")
-            elif n >= _MIN_PERIODS_DISCOUNT:
-                pct    = _DISCOUNT_SIX_PLUS
-                reason = _("{0} períodos ou mais").format(_MIN_PERIODS_DISCOUNT)
-            else:
-                pct    = 0.0
-                reason = ""
-
+            pct, reason = discount_tier(n, full_year)
             self.discount_percent = pct
             self.discount_reason  = reason
 
@@ -278,11 +279,10 @@ class AdiantamentoDePagamento(Document):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _count_year_periods(student, academic_year):
-    """Count total billing periods for student's class in the given academic year."""
+def count_class_year_periods(school_class, academic_year):
+    """Count total billing periods for a class in the given academic year."""
     from escola.escola.billing_forecast import _billing_periods
 
-    school_class = frappe.db.get_value("Student", student, "current_school_class") if student else None
     if not school_class or not academic_year:
         return 0
 
@@ -304,6 +304,15 @@ def _count_year_periods(student, academic_year):
     for sched in schedules:
         total += len(_billing_periods(sched, ay_start, ay_end, inv_day))
     return total
+
+
+def discount_tier(n_periods, full_year_periods):
+    """Return (percent, reason) for paying ``n_periods`` in advance."""
+    if n_periods and n_periods == full_year_periods:
+        return _DISCOUNT_FULL_YEAR, _("Ano Lectivo completo")
+    if n_periods >= _MIN_PERIODS_DISCOUNT:
+        return _DISCOUNT_SIX_PLUS, _("{0} períodos ou mais").format(_MIN_PERIODS_DISCOUNT)
+    return 0.0, ""
 
 
 def _period_already_covered(student, billing_mode, posting_date, exclude_adiantamento=None):
@@ -396,12 +405,18 @@ def get_available_periods(student, academic_year):
     that are not yet covered by an invoice or an active adiantamento.
     Each item: {period_label, posting_date, billing_mode, gross_amount}.
     """
-    from escola.escola.billing_forecast import _billing_periods
-
     if frappe.db.get_value("Student", student, "is_bolsista"):
         return []
 
     school_class = frappe.db.get_value("Student", student, "current_school_class")
+    return periods_for_class(school_class, academic_year, student)
+
+
+def periods_for_class(school_class, academic_year, student=None):
+    """Billing periods of ``school_class`` in the year with their amount.
+    With ``student``, periods already invoiced or advanced for them are left out."""
+    from escola.escola.billing_forecast import _billing_periods
+
     if not school_class:
         return []
 
@@ -442,7 +457,7 @@ def get_available_periods(student, academic_year):
 
         for p in _billing_periods(sched, ay_start, ay_end, day):
             posting_date = p["posting_date"]
-            if not _period_already_covered(student, sched.billing_mode, posting_date):
+            if not student or not _period_already_covered(student, sched.billing_mode, posting_date):
                 result.append({
                     "period_label": p["period_label"],
                     "posting_date": str(posting_date),
