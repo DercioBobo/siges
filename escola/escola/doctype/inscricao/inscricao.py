@@ -5,6 +5,8 @@ from frappe.utils import add_days, flt, getdate, today
 
 from escola.escola import advance_months
 
+ADVANCE_WITH = "Com mensalidades antecipadas"
+
 
 class Inscricao(Document):
     def before_save(self):
@@ -15,9 +17,11 @@ class Inscricao(Document):
         self._validate_guardian_requirement()
         self._validate_class_group()
         self._warn_possible_duplicate()
+        self._validate_advance_choice()
         advance_months.compute_totals(
             self, self.academic_year, self.school_class,
-            _enrollment_fee_amount(self), exempt=self.is_bolsista,
+            _enrollment_fee_amount(self),
+            exempt=self.is_bolsista or self.advance_choice != ADVANCE_WITH,
         )
         self._validate_payment_total()
 
@@ -116,6 +120,23 @@ class Inscricao(Document):
             frappe.throw(
                 _("A Turma <b>{0}</b> não está activa.").format(self.class_group),
                 title=_("Turma inactiva"),
+            )
+
+    def _validate_advance_choice(self):
+        """Paying months upfront must be a conscious yes/no — the section sits far down the form."""
+        if self.is_bolsista:
+            return
+        if not self.advance_choice:
+            frappe.throw(
+                _("Indique se o encarregado paga <b>mensalidades antecipadas</b> "
+                  "(Com ou Sem) na secção Mensalidades Antecipadas."),
+                title=_("Mensalidades por definir"),
+            )
+        if self.advance_choice == ADVANCE_WITH and not self.advance_periods:
+            frappe.throw(
+                _("Escolheu <b>Com mensalidades antecipadas</b> mas não seleccionou nenhuma mensalidade. "
+                  "Seleccione os meses ou mude para <b>Sem mensalidades antecipadas</b>."),
+                title=_("Sem mensalidades seleccionadas"),
             )
 
     def _validate_payment_total(self):

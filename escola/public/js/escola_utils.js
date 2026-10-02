@@ -559,7 +559,7 @@ escola.utils.advance_months = (() => {
             frm._advance_opts_key = key;
 
             const periods = frm._advance_opts.periods || [];
-            if (cfg.prefill_first && frm.doc.__islocal && !frm._advance_prefilled
+            if (cfg.prefill_first && frm.doc.docstatus === 0 && !frm._advance_prefilled
                 && !(frm.doc.advance_periods || []).length && periods.length) {
                 frm._advance_prefilled = true;
                 set_rows(frm, [periods[0]]);

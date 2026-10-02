@@ -3,7 +3,8 @@
 
 frappe.ui.form.on("Inscricao", {
 	onload(frm) {
-		escola.utils.auto_fill_academic_year(frm);
+		// No auto-fill: enrolments for next year start before it is current,
+		// so the secretary must pick the Ano Lectivo explicitly.
 		_apply_novo_class_filter(frm);
 	},
 
@@ -66,6 +67,12 @@ frappe.ui.form.on("Inscricao", {
 
 	skip_turma(frm) {
 		highlight_selected_card(frm);
+	},
+
+	advance_choice(frm) {
+		// Choosing "Com" pre-ticks the first month again (what parents usually pay).
+		frm._advance_prefilled = false;
+		escola.utils.advance_months.reset(frm, _advance_cfg(frm));
 	},
 
 	is_bolsista(frm) {
@@ -383,6 +390,7 @@ function _advance_cfg(frm) {
 		academic_year: frm.doc.academic_year,
 		school_class: frm.doc.school_class,
 		exempt: frm.doc.is_bolsista,
+		disabled: frm.doc.advance_choice !== "Com mensalidades antecipadas",
 		method: "escola.escola.doctype.inscricao.inscricao.get_advance_period_options",
 		// Parents usually pay the first month of the year when enrolling.
 		prefill_first: true,

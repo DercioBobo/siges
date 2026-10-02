@@ -44,6 +44,7 @@
   "is_bolsista",
   "fee_info_html",
   "section_break_advance",
+  "advance_choice",
   "advance_periods_html",
   "advance_periods",
   "cb_advance",
@@ -299,7 +300,16 @@
    "depends_on": "eval:!doc.is_bolsista && doc.school_class"
   },
   {
+   "fieldname": "advance_choice",
+   "fieldtype": "Select",
+   "label": "Mensalidades Antecipadas",
+   "options": "\nCom mensalidades antecipadas\nSem mensalidades antecipadas",
+   "mandatory_depends_on": "eval:!doc.is_bolsista",
+   "description": "Obrigatório: indique se o encarregado paga já mensalidades do ano lectivo (ex.: Fevereiro)."
+  },
+  {
    "fieldname": "advance_periods_html",
+   "depends_on": "eval:doc.advance_choice == \"Com mensalidades antecipadas\"",
    "fieldtype": "HTML",
    "label": "Seleccionar Mensalidades"
   },
@@ -312,10 +322,12 @@
   },
   {
    "fieldname": "cb_advance",
+   "depends_on": "eval:doc.advance_choice == \"Com mensalidades antecipadas\"",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "advance_gross_total",
+   "depends_on": "eval:doc.advance_choice == \"Com mensalidades antecipadas\"",
    "fieldtype": "Currency",
    "label": "Valor das Mensalidades",
    "read_only": 1,
@@ -327,10 +339,11 @@
    "label": "Desconto (%)",
    "read_only": 1,
    "default": "0",
-   "depends_on": "eval:doc.advance_discount_percent"
+   "depends_on": "eval:doc.advance_choice == \"Com mensalidades antecipadas\" && doc.advance_discount_percent"
   },
   {
    "fieldname": "advance_total",
+   "depends_on": "eval:doc.advance_choice == \"Com mensalidades antecipadas\"",
    "fieldtype": "Currency",
    "label": "Mensalidades (líquido)",
    "read_only": 1,
@@ -400,7 +413,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Inscricao",
