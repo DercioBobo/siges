@@ -13,7 +13,7 @@ $(function () {
         if (!window.location.pathname.startsWith("/app")) return;
         if (sessionStorage.getItem("escola_desk_ok")) return;
         const roles = (frappe.boot && frappe.boot.user && frappe.boot.user.roles) || [];
-        const desk_first = ["System Manager", "Diretor Escolar", "Secretaria Escolar"];
+        const desk_first = ["System Manager", "Diretor Escolar", "Diretor Pedagógico", "Secretaria Escolar"];
         if (roles.includes("Professor") && !desk_first.some((r) => roles.includes(r))) {
             window.location.replace("/portal-professor");
         }

@@ -242,8 +242,8 @@ class AlocacaoTurmas {
                 <div class="aloc-section-head">
                     <div><span class="aloc-section-title">${esc(sec.class_name)}</span>${badge}</div>
                     <div class="aloc-section-actions">
-                        <button class="btn btn-default btn-xs aloc-new-turma">+ ${__("Nova Turma")}</button>
-                        ${n && sec.turmas.length ? `<button class="btn btn-default btn-xs aloc-auto">
+                        ${sec.no_class ? "" : `<button class="btn btn-default btn-xs aloc-new-turma">+ ${__("Nova Turma")}</button>`}
+                        ${n && sec.turmas.length && !sec.no_class ? `<button class="btn btn-default btn-xs aloc-auto">
                             <i class="fa fa-magic"></i> ${__("Distribuir automaticamente")}</button>` : ""}
                     </div>
                 </div>
@@ -268,16 +268,17 @@ class AlocacaoTurmas {
     _student_row(sec, p) {
         const esc = frappe.utils.escape_html;
         const checked = (this.selected[sec.school_class] || new Set()).has(p.student);
-        const meta = [p.gender, p.enrollment_type, p.enrollment_date && frappe.datetime.str_to_user(p.enrollment_date)]
+        const meta = [p.source, p.gender, p.enrollment_type, p.enrollment_date && frappe.datetime.str_to_user(p.enrollment_date)]
             .filter(Boolean).map(esc).join(" · ");
+        const doc_url = `/app/${frappe.router.slug(p.doc_doctype || "Student")}/${encodeURIComponent(p.doc_name || p.student)}`;
         return `
             <div class="aloc-row${checked ? " checked" : ""}" data-student="${esc(p.student)}"
                  data-search="${esc((p.student_name || "").toLowerCase())}">
                 <input type="checkbox" ${checked ? "checked" : ""}>
                 <div class="aloc-row-name">${esc(p.student_name || "")}
                     <div class="aloc-row-meta">${meta}</div></div>
-                <a class="aloc-open-insc text-muted" href="/app/inscricao/${encodeURIComponent(p.inscricao)}"
-                   title="${__("Abrir Inscrição")}"><i class="fa fa-external-link"></i></a>
+                <a class="aloc-open-insc text-muted" href="${doc_url}" target="_blank"
+                   title="${__("Abrir {0}", [esc(p.source || "")])}"><i class="fa fa-external-link"></i></a>
             </div>`;
     }
 

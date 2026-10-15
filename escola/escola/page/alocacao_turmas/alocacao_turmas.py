@@ -24,27 +24,76 @@ def get_filter_options():
     return {"years": years, "classes": classes, "default_year": default_year}
 
 
+NO_CLASS = ""  # section key for students whose class can't be determined
+
+_NO_ACTIVE_SGA = """
+    NOT EXISTS (
+        SELECT 1 FROM `tabStudent Group Assignment` sga
+        WHERE sga.student = s.name AND sga.academic_year = %(academic_year)s
+          AND sga.status = 'Activa'
+    )"""
+
+
 def _pending_rows(academic_year, school_class=None):
-    """Students with a submitted Inscrição for the year and no active turma in that year."""
-    class_sql = "AND i.school_class = %(school_class)s" if school_class else ""
-    return frappe.db.sql(f"""
-        SELECT i.name AS inscricao, i.student, i.school_class, i.enrollment_date,
-               i.enrollment_type, s.full_name AS student_name, s.gender
+    """
+    Every student without an active turma in the year, from three sources
+    (first match wins, so a student appears once):
+      1. Inscrição submitted for the year — class from the Inscrição
+      2. Renovação submitted for the year — class from target_school_class
+      3. (current year only) any other Activo / Pendente de Turma student —
+         class from current_school_class, else their last turma's class
+    `doc_doctype`/`doc_name` point at the source document, if any.
+    """
+    params = {"academic_year": academic_year, "inactive": _INACTIVE_STATUSES}
+    rows, seen = [], set()
+
+    def add(found):
+        for r in found:
+            if r.student not in seen:
+                seen.add(r.student)
+                rows.append(r)
+
+    add(frappe.db.sql(f"""
+        SELECT i.student, i.school_class, i.enrollment_date, i.enrollment_type,
+               'Inscricao' AS doc_doctype, i.name AS doc_name, 'Inscrição' AS source,
+               s.full_name AS student_name, s.gender
         FROM `tabInscricao` i
         JOIN `tabStudent` s ON s.name = i.student
-        WHERE i.docstatus = 1
-          AND i.academic_year = %(academic_year)s
-          {class_sql}
-          AND s.current_status NOT IN %(inactive)s
-          AND NOT EXISTS (
-              SELECT 1 FROM `tabStudent Group Assignment` sga
-              WHERE sga.student = i.student
-                AND sga.academic_year = i.academic_year
-                AND sga.status = 'Activa'
-          )
-        ORDER BY s.full_name ASC
-    """, {"academic_year": academic_year, "school_class": school_class, "inactive": _INACTIVE_STATUSES},
-        as_dict=True)
+        WHERE i.docstatus = 1 AND i.academic_year = %(academic_year)s
+          AND s.current_status NOT IN %(inactive)s AND {_NO_ACTIVE_SGA}
+    """, params, as_dict=True))
+
+    add(frappe.db.sql(f"""
+        SELECT r.student, r.target_school_class AS school_class,
+               r.renewal_date AS enrollment_date, NULL AS enrollment_type,
+               'Renovacao De Matricula' AS doc_doctype, r.name AS doc_name, 'Renovação' AS source,
+               s.full_name AS student_name, s.gender
+        FROM `tabRenovacao De Matricula` r
+        JOIN `tabStudent` s ON s.name = r.student
+        WHERE r.docstatus = 1 AND r.target_academic_year = %(academic_year)s
+          AND s.current_status NOT IN %(inactive)s AND {_NO_ACTIVE_SGA}
+    """, params, as_dict=True))
+
+    if academic_year == frappe.db.get_single_value("School Settings", "current_academic_year"):
+        add(frappe.db.sql(f"""
+            SELECT s.name AS student,
+                   COALESCE(NULLIF(s.current_school_class, ''), (
+                       SELECT last.school_class FROM `tabStudent Group Assignment` last
+                       WHERE last.student = s.name ORDER BY last.creation DESC LIMIT 1
+                   )) AS school_class,
+                   NULL AS enrollment_date, NULL AS enrollment_type,
+                   'Student' AS doc_doctype, s.name AS doc_name, 'Sem inscrição' AS source,
+                   s.full_name AS student_name, s.gender
+            FROM `tabStudent` s
+            WHERE s.current_status IN ('Activo', 'Pendente de Turma') AND {_NO_ACTIVE_SGA}
+        """, params, as_dict=True))
+
+    for r in rows:
+        r.school_class = r.school_class or NO_CLASS
+    if school_class:
+        rows = [r for r in rows if r.school_class == school_class]
+    rows.sort(key=lambda r: (r.student_name or "").lower())
+    return rows
 
 
 def _turmas(academic_year, school_classes):
@@ -75,7 +124,13 @@ def get_allocation_data(academic_year, school_class=None):
     if school_class:
         class_names.add(school_class)
 
-    turmas = _turmas(academic_year, class_names)
+    turmas = _turmas(academic_year, class_names - {NO_CLASS})
+    # Students without a known class can go to any turma of the year.
+    if NO_CLASS in class_names:
+        all_classes = frappe.db.get_all("School Class", filters={"is_active": 1}, pluck="name")
+        no_class_turmas = _turmas(academic_year, all_classes)
+    else:
+        no_class_turmas = []
 
     meta = {
         c.name: c for c in frappe.db.get_all(
@@ -86,12 +141,15 @@ def get_allocation_data(academic_year, school_class=None):
 
     sections = []
     for cls in class_names:
+        no_class = cls == NO_CLASS
         sections.append({
             "school_class": cls,
-            "class_name": meta[cls].class_name if cls in meta else cls,
-            "class_level": meta[cls].class_level if cls in meta else 0,
+            "class_name": _("Sem classe definida") if no_class
+                          else (meta[cls].class_name if cls in meta else cls),
+            "class_level": 999 if no_class else (meta[cls].class_level if cls in meta else 0),
+            "no_class": no_class,
             "pending": [r for r in pending if r.school_class == cls],
-            "turmas": [g for g in turmas if g.school_class == cls],
+            "turmas": no_class_turmas if no_class else [g for g in turmas if g.school_class == cls],
         })
     sections.sort(key=lambda s: (s["class_level"] or 0, s["class_name"]))
 
@@ -163,6 +221,8 @@ def _distribution_plan(academic_year, school_class):
 
 @frappe.whitelist()
 def auto_allocate(academic_year, school_class, dry_run=1):
+    if not school_class:
+        frappe.throw(_("Escolha uma classe para distribuir automaticamente."))
     plan, names, leftover = _distribution_plan(academic_year, school_class)
     summary = [{"class_group": cg, "group_name": names[cg], "count": len(s)} for cg, s in plan.items() if s]
 

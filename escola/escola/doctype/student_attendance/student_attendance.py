@@ -48,7 +48,8 @@ class StudentAttendance(Document):
     def _validate_teacher_permission(self):
         if frappe.session.user == "Administrator":
             return
-        if frappe.has_role("Diretor Escolar") or frappe.has_role("Secretaria Escolar"):
+        if frappe.has_role("Diretor Escolar") or frappe.has_role("Diretor Pedagógico") \
+                or frappe.has_role("Secretaria Escolar"):
             return
         if not frappe.has_role("Professor"):
             return

@@ -11,6 +11,7 @@ frappe.ui.form.on("Student Attendance", {
 		frm._teacher_name = null;
 		const isProfessor = frappe.user.has_role("Professor")
 			&& !frappe.user.has_role("Diretor Escolar")
+			&& !frappe.user.has_role("Diretor Pedagógico")
 			&& !frappe.user.has_role("Secretaria Escolar");
 
 		if (isProfessor) {

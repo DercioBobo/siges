@@ -11,6 +11,7 @@
  "restrict_to_domain": "",
  "roles": [
   {"role": "Diretor Escolar"},
+  {"role": "Diretor Pedagógico"},
   {"role": "Secretaria Escolar"},
   {"role": "Professor"}
  ],

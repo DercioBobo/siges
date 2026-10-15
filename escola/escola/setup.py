@@ -128,11 +128,14 @@ def after_migrate():
 _PORTAL_ROLES = [
     {"role_name": "Encarregado de Educação", "desk_access": 0},
     {"role_name": "Aluno", "desk_access": 0},
+    # Academic management without finance — permissions live in each
+    # DocType/Page JSON next to Diretor Escolar's.
+    {"role_name": "Diretor Pedagógico", "desk_access": 1},
 ]
 
 
 def create_portal_roles():
-    """Idempotently create roles used for the parent/student portal."""
+    """Idempotently create the app's roles (portal + Diretor Pedagógico)."""
     try:
         for role_def in _PORTAL_ROLES:
             if not frappe.db.exists("Role", role_def["role_name"]):
