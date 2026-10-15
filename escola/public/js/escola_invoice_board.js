@@ -207,7 +207,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		const amount = line || flt(r.dynamic_penalty);
 		if (!amount) return "";
 		const title = line ? __("Multa na factura") : __("Multa calculada (modo Dinâmico)");
-		return `<span class="ibd-b ibd-b--purple" title="${title}">${__("Multa")} ${format_currency(amount)}</span>`;
+		return `<span class="ibd-b ibd-b--purple" title="${title}">${__("Multa")} ${_ibd_amount(amount)}</span>`;
 	}
 
 	_filter_turmas() {
@@ -284,12 +284,12 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 				<div class="ibd-sname">${frappe.utils.escape_html(r.student_name || r.student)}</div>
 				<div class="ibd-sid">${frappe.utils.escape_html(r.student)}</div>
 			</td>
-			<td>${frappe.utils.escape_html(r.turma_name  || "—")}</td>
-			<td>${frappe.datetime.str_to_user(r.posting_date)}</td>
-			<td>${frappe.datetime.str_to_user(r.due_date)}</td>
-			<td class="ibd-r">${format_currency(r.grand_total)}</td>
-			<td class="ibd-r">${format_currency(r.paid)}</td>
-			<td class="ibd-r">${format_currency(r.outstanding_amount)}</td>
+			<td class="ibd-nw">${frappe.utils.escape_html(r.turma_name  || "—")}</td>
+			<td class="ibd-nw">${frappe.datetime.str_to_user(r.posting_date)}</td>
+			<td class="ibd-nw">${frappe.datetime.str_to_user(r.due_date)}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(r.grand_total)}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(r.paid)}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(r.outstanding_amount)}</td>
 			<td>
 				<span class="ibd-b ${BADGE[r.display_status] || ""}">${__(r.display_status)}</span>
 				${this._penalty_tag(r)}
@@ -300,6 +300,12 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		this.$body.find("#ibd-tbody").html(html);
 	}
 };
+
+// Table cells show plain numbers — the currency symbol on every cell made
+// the amounts wrap onto two lines. Summary cards keep format_currency.
+function _ibd_amount(value) {
+	return format_number(flt(value), null, 2);
+}
 
 function _ibd_debounce(fn, wait) {
 	let t;
@@ -360,7 +366,7 @@ function _ibd_styles() {
 .ibd-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
 /* ── Table ─── */
-.ibd-tbl-wrap { border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
+.ibd-tbl-wrap { border: 1px solid var(--border-color); border-radius: 10px; overflow-x: auto; }
 .ibd-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ibd-tbl thead tr { background: var(--subtle-fg); }
 .ibd-tbl th { padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700;
@@ -370,6 +376,9 @@ function _ibd_styles() {
 .ibd-tbl tbody tr:last-child td { border-bottom: none; }
 .ibd-tbl tbody tr:hover { background: var(--subtle-fg); }
 .ibd-r { text-align: right; font-variant-numeric: tabular-nums; }
+.ibd-nw { white-space: nowrap; }
+.ibd-tbl th.ibd-r { text-align: right; }
+.ibd-b--purple { white-space: nowrap; }
 .ibd-sname { font-weight: 500; }
 .ibd-sid   { font-size: 11px; color: var(--text-muted); }
 .ibd-b { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 12px; white-space: nowrap; }
