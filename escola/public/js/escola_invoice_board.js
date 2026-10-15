@@ -9,6 +9,11 @@ escola.utils = escola.utils || {};
 // pills. Pages differ only in query_module and row_action_html/on_row_action_click.
 // ---------------------------------------------------------------------------
 
+const IBD_MONTHS = [
+	"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+	"Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
 escola.utils.InvoiceBoard = class InvoiceBoard {
 	constructor(page, opts) {
 		this.page = page;
@@ -50,6 +55,13 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 					<div class="ibd-fg ibd-fg--grow">
 						<label>${__("Aluno")}</label>
 						<input id="ibd-student" type="text" placeholder="${__("Nome ou código…")}">
+					</div>
+					<div class="ibd-fg">
+						<label>${__("Mês")}</label>
+						<select id="ibd-month">
+							<option value="">${__("Todos")}</option>
+							${IBD_MONTHS.map((m, i) => `<option value="${i + 1}">${__(m)}</option>`).join("")}
+						</select>
 					</div>
 					<div class="ibd-fg">
 						<label>${__("De")}</label>
@@ -119,7 +131,25 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 	_bind() {
 		this.$body.find("#ibd-cls").on("change", () => { this._filter_turmas(); this.search(); });
 		this.$body.find("#ibd-turma").on("change", () => this.search());
-		this.$body.find("#ibd-from, #ibd-to").on("change", () => this.search());
+		// Picking a month fills De/Até with that month of the current year;
+		// editing De/Até by hand clears the month so they never disagree.
+		this.$body.find("#ibd-month").on("change", (e) => {
+			const month = parseInt($(e.currentTarget).val(), 10);
+			if (month) {
+				const year = new Date().getFullYear();
+				const last = new Date(year, month, 0).getDate();
+				const mm = String(month).padStart(2, "0");
+				this.$body.find("#ibd-from").val(`${year}-${mm}-01`);
+				this.$body.find("#ibd-to").val(`${year}-${mm}-${last}`);
+			} else {
+				this.$body.find("#ibd-from, #ibd-to").val("");
+			}
+			this.search();
+		});
+		this.$body.find("#ibd-from, #ibd-to").on("change", () => {
+			this.$body.find("#ibd-month").val("");
+			this.search();
+		});
 		this.$body.find("#ibd-student").on("input", _ibd_debounce(() => this.search(), 350));
 
 		this.$body.find("#ibd-status").on("click", ".ibd-pill", (e) => {
