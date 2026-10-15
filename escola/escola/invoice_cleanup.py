@@ -130,20 +130,19 @@ def execute(year=DEFAULT_YEAR, months=DEFAULT_MONTHS):
 # Duplicate monthly invoices — keep the newest, remove the older ones
 # ---------------------------------------------------------------------------
 # A duplicate is two or more regular (non-"Extras Mensais") Billing Cycle
-# invoices for the same student and the same reference month. The newest
+# invoices for the same student posted within the date range. The newest
 # (by creation) is kept. An older copy with any payment on it is never
 # touched — it's listed so you can decide by hand.
 #
 #   bench --site <site> execute escola.escola.invoice_cleanup.preview_duplicates
 #   bench --site <site> execute escola.escola.invoice_cleanup.execute_duplicates
-# Defaults to Julho 2026; otherwise --kwargs "{'month': 'Agosto', 'year': 2026}"
+# Defaults to posting dates 10–30 July 2026; otherwise
+#   --kwargs "{'from_date': '2026-08-10', 'to_date': '2026-08-30'}"
 
-_MESES = ("Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+DUP_FROM, DUP_TO = "2026-07-10", "2026-07-30"
 
 
-def _duplicate_groups(month, year):
-    month_no = _MESES.index(month) + 1
+def _duplicate_groups(from_date, to_date):
     rows = frappe.db.sql(
         """
         SELECT si.name, si.docstatus, si.escola_student, st.full_name, si.creation,
@@ -155,15 +154,10 @@ def _duplicate_groups(month, year):
           AND IFNULL(si.escola_billing_cycle, '') != ''
           AND IFNULL(si.escola_student, '') != ''
           AND COALESCE(si.escola_is_addon_invoice, 0) = 0
-          AND YEAR(COALESCE(si.due_date, si.posting_date)) = %(year)s
-          AND (
-                si.escola_mes_referencia = %(month)s
-             OR (IFNULL(si.escola_mes_referencia, '') = ''
-                 AND MONTH(COALESCE(si.due_date, si.posting_date)) = %(month_no)s)
-          )
+          AND si.posting_date BETWEEN %(from_date)s AND %(to_date)s
         ORDER BY st.full_name, si.escola_student, si.creation DESC
         """,
-        {"month": month, "month_no": month_no, "year": int(year)},
+        {"from_date": from_date, "to_date": to_date},
         as_dict=True,
     )
     groups = {}
@@ -190,10 +184,10 @@ def _describe(r):
             f"total={r.grand_total}  ({state})  ciclo={r.escola_billing_cycle}")
 
 
-def preview_duplicates(month="Julho", year=DEFAULT_YEAR):
+def preview_duplicates(from_date=DUP_FROM, to_date=DUP_TO):
     """Read-only: list each student's duplicates and what would happen."""
     counts = {}
-    groups = _duplicate_groups(month, year)
+    groups = _duplicate_groups(from_date, to_date)
     for g in groups:
         keep, older = g[0], g[1:]
         print(f"\n{keep.full_name or keep.escola_student} ({keep.escola_student})")
@@ -211,7 +205,7 @@ def preview_duplicates(month="Julho", year=DEFAULT_YEAR):
         print(f"{action}: {n}")
 
 
-def execute_duplicates(month="Julho", year=DEFAULT_YEAR):
+def execute_duplicates(from_date=DUP_FROM, to_date=DUP_TO):
     from escola.escola.doctype.billing_cycle.billing_cycle import _unlink_from_generation_log
     from escola.escola.doctype.billing_cycle.penalty import update_student_financial_status
 
@@ -219,7 +213,7 @@ def execute_duplicates(month="Julho", year=DEFAULT_YEAR):
     students = set()
     note = _("Factura eliminada — duplicada (mantida a mais recente).")
 
-    for g in _duplicate_groups(month, year):
+    for g in _duplicate_groups(from_date, to_date):
         for r in g[1:]:
             action = _duplicate_action(r)
             if action not in ("eliminar", "cancelar"):
