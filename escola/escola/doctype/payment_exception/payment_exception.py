@@ -77,6 +77,19 @@ class PaymentException(Document):
 
         inv_count = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
 
+        # ERPNext recomputes due_date from the payment schedule on every save,
+        # so the schedule must move too or the extension is silently undone.
+        frappe.db.sql(
+            """
+            UPDATE `tabPayment Schedule` ps
+            JOIN `tabSales Invoice` si ON si.name = ps.parent
+            SET ps.due_date = %s
+            WHERE ps.parenttype = 'Sales Invoice'
+              AND si.escola_billing_cycle IN %s AND si.docstatus = 0
+            """,
+            (self.extended_due_date, tuple(cycles)),
+        )
+
         frappe.msgprint(
             _("{0} ciclo(s) e {1} factura(s) actualizados com vencimento <b>{2}</b>.").format(
                 len(cycles),

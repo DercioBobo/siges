@@ -127,6 +127,31 @@ def _remove_penalty_lines(inv):
     inv.items = [row for row in inv.items if not row.get("escola_is_penalty_line")]
 
 
+def _repair_draft_dates(inv):
+    """
+    Make a draft invoice saveable again before re-saving it.
+
+    On save ERPNext replaces inv.due_date with the latest payment_schedule
+    due_date, then rejects it if it is before posting_date. The schedule is
+    written once at creation and goes stale whenever due_date is changed
+    without it (e.g. Payment Exception's SQL update), and older drafts may
+    have had posting_date moved to the day they were last saved.
+    - posting_date after due_date → restore the Billing Cycle's posting_date
+      (the cycle itself validates posting_date <= due_date).
+    - payment_schedule rows → aligned to inv.due_date.
+    """
+    if not inv.due_date:
+        return
+
+    if inv.posting_date and getdate(inv.posting_date) > getdate(inv.due_date) and inv.escola_billing_cycle:
+        cycle_posting = frappe.db.get_value("Billing Cycle", inv.escola_billing_cycle, "posting_date")
+        if cycle_posting and getdate(cycle_posting) <= getdate(inv.due_date):
+            inv.posting_date = cycle_posting
+
+    for row in inv.get("payment_schedule") or []:
+        row.due_date = inv.due_date
+
+
 def _get_or_create_penalty_item(item_code=None):
     """Return the item_code for penalty lines, creating the ERPNext Item if absent."""
     if not item_code:
@@ -259,6 +284,7 @@ def apply_penalty_to_invoice(invoice_name):
     # Prevent ERPNext's validate_posting_time() from silently resetting
     # posting_date/posting_time to "now" on save.
     inv.set_posting_time = 1
+    _repair_draft_dates(inv)
 
     pd = _compute_penalty(inv.due_date, settings)
 
