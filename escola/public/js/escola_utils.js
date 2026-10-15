@@ -359,7 +359,10 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
     default_amount = flt(default_amount);
     penalty_amount = flt(penalty_amount);
     const has_penalty_line = penalty_amount > 0;
-    const can_waive = docstatus === 0 && has_penalty_line;
+    // Drafts lose the multa line; submitted invoices get it written off
+    // (Journal Entry) — never more than is still outstanding.
+    const can_waive = has_penalty_line;
+    const waivable = Math.min(penalty_amount, default_amount);
 
     const fields = [
         { fieldname: "mode_of_payment", fieldtype: "Link", options: "Mode of Payment", label: __("Modo de Pagamento"), reqd: 1 },
@@ -367,10 +370,12 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
     if (can_waive) {
         fields.push({
             fieldname: "waive_penalty", fieldtype: "Check", label: __("Dispensar multa"),
-            description: __("Remove a linha de multa da factura antes de a submeter."),
+            description: docstatus === 0
+                ? __("Remove a linha de multa da factura antes de a submeter.")
+                : __("Abate a multa da factura (lançamento contabilístico, sem nota de crédito)."),
             onchange() {
                 const waived = d.get_value("waive_penalty");
-                d.set_value("amount", waived ? default_amount - penalty_amount : default_amount);
+                d.set_value("amount", waived ? default_amount - waivable : default_amount);
             },
         });
     }
@@ -381,7 +386,8 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
         });
     }
     fields.push(
-        { fieldname: "amount", fieldtype: "Currency", label: __("Valor"), default: default_amount, reqd: 1 },
+        // Not reqd: waiving a multa that is all that's left means paying 0.
+        { fieldname: "amount", fieldtype: "Currency", label: __("Valor"), default: default_amount },
         { fieldname: "reference_no", fieldtype: "Data", label: __("Referência") },
         { fieldname: "reference_date", fieldtype: "Date", label: __("Data de Referência"), default: frappe.datetime.get_today() },
     );
@@ -406,7 +412,11 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
             }).then((r) => {
                 if (!r.message) return;
                 d.hide();
-                window.open(r.message.print_url, "_blank");
+                if (r.message.print_url) {
+                    window.open(r.message.print_url, "_blank");
+                } else {
+                    frappe.show_alert({ message: __("Multa dispensada. Factura liquidada."), indicator: "green" });
+                }
                 if (on_success) on_success(r.message);
             });
         },

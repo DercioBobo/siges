@@ -39,9 +39,20 @@ def register_payment(invoice_name, mode_of_payment, amount, reference_no=None,
         frappe.throw(_("A factura {0} está cancelada.").format(invoice_name))
 
     waive_penalty = int(waive_penalty or 0)
-    if waive_penalty:
-        if inv.docstatus != 0:
-            frappe.throw(_("Só é possível dispensar a multa numa factura em Rascunho."))
+    if waive_penalty and inv.docstatus == 1:
+        # Submitted lines can't be edited — write the multa off instead.
+        waive_submitted_penalty(inv.name)
+        inv.reload()
+        if flt(inv.outstanding_amount) <= 0:
+            # Only the multa was left: nothing to pay, no recibo.
+            return {
+                "payment_entry": None,
+                "sales_invoice": inv.name,
+                "invoice_docstatus": inv.docstatus,
+                "outstanding_amount": 0,
+                "print_url": None,
+            }
+    elif waive_penalty:
         if any(row.get("escola_is_penalty_line") for row in inv.items):
             _remove_penalty_lines(inv)
             inv.set_posting_time = 1
@@ -101,3 +112,160 @@ def register_payment(invoice_name, mode_of_payment, amount, reference_no=None,
         "outstanding_amount": flt(inv.outstanding_amount) - amount,
         "print_url": f"/printview?doctype=Payment%20Entry&name={pe.name}&trigger_print=1",
     }
+
+
+# ---------------------------------------------------------------------------
+# Waive the multa of a SUBMITTED invoice — no Credit Note
+# ---------------------------------------------------------------------------
+# A submitted invoice's lines can't change, so the multa is written off with a
+# Journal Entry against the invoice: debit the multa's income account (and any
+# tax charged on it, proportionally), credit the customer's receivable with
+# reference to the invoice. ERPNext then lowers the invoice's outstanding_amount.
+
+WAIVER_REMARK = "Dispensa de multa"
+
+
+def _already_waived(inv):
+    return flt(frappe.db.sql(
+        """
+        SELECT COALESCE(SUM(jea.credit_in_account_currency), 0)
+        FROM `tabJournal Entry Account` jea
+        JOIN `tabJournal Entry` je ON je.name = jea.parent
+        WHERE je.docstatus = 1
+          AND je.user_remark LIKE %s
+          AND jea.reference_type = 'Sales Invoice'
+          AND jea.reference_name = %s
+        """,
+        (f"{WAIVER_REMARK}%", inv.name),
+    )[0][0])
+
+
+@frappe.whitelist()
+def waive_submitted_penalty(invoice_name):
+    """
+    Write off the multa still owed on a submitted invoice. Idempotent: never
+    waives more than the multa lines minus what was already waived, nor more
+    than the outstanding amount. Returns the Journal Entry name or None.
+    """
+    inv = frappe.get_doc("Sales Invoice", invoice_name)
+    if inv.docstatus != 1:
+        frappe.throw(_("A factura {0} não está submetida.").format(inv.name))
+
+    penalty_rows = [r for r in inv.items if r.get("escola_is_penalty_line")]
+    penalty_net = sum(flt(r.net_amount or r.amount) for r in penalty_rows)
+    outstanding = flt(inv.outstanding_amount)
+    if not penalty_rows or penalty_net <= 0 or outstanding <= 0:
+        return None
+
+    # Tax charged on the multa, proportionally per tax row
+    ratio = penalty_net / flt(inv.net_total) if flt(inv.net_total) else 0
+    tax_lines = []
+    for t in inv.get("taxes") or []:
+        share = round(flt(t.base_tax_amount_after_discount_amount or t.tax_amount) * ratio, 2)
+        if share:
+            tax_lines.append((t.account_head, share, t.cost_center))
+
+    gross = round(penalty_net + sum(s for _a, s, _c in tax_lines), 2)
+    remaining = round(gross - _already_waived(inv), 2)
+    if remaining <= 0:
+        return None
+
+    amount = min(remaining, outstanding)
+    # Rounding (rounded_total) can leave a few cents — absorb them.
+    if 0 < outstanding - amount < 1:
+        amount = outstanding
+
+    # Reverse the tax on the multa only when waiving it in full; whatever is
+    # left goes to the multa's income account.
+    debits = list(tax_lines) if amount >= gross else []
+    income = round(amount - sum(v for _a, v, _c in debits), 2)
+    debits.append((penalty_rows[0].income_account, income, penalty_rows[0].cost_center))
+
+    je = frappe.new_doc("Journal Entry")
+    je.voucher_type = "Write Off Entry"
+    je.company = inv.company
+    je.posting_date = nowdate()
+    je.user_remark = f"{WAIVER_REMARK} — {inv.name}"
+    for acc, value, cc in debits:
+        if value:
+            je.append("accounts", {
+                "account": acc,
+                "debit_in_account_currency": value,
+                "cost_center": cc or inv.cost_center,
+            })
+    je.append("accounts", {
+        "account": inv.debit_to,
+        "party_type": "Customer",
+        "party": inv.customer,
+        "credit_in_account_currency": amount,
+        "reference_type": "Sales Invoice",
+        "reference_name": inv.name,
+        "cost_center": inv.cost_center,
+    })
+    je.insert(ignore_permissions=True)
+    je.submit()
+    return je.name
+
+
+def _invoices_with_unpaid_penalty_only():
+    """Submitted invoices whose outstanding is exactly what's left of the multa."""
+    return frappe.db.sql(
+        """
+        SELECT si.name, si.escola_student, si.grand_total, si.outstanding_amount,
+               SUM(sii.amount) AS multa
+        FROM `tabSales Invoice` si
+        JOIN `tabSales Invoice Item` sii
+          ON sii.parent = si.name AND sii.escola_is_penalty_line = 1
+        WHERE si.docstatus = 1 AND si.outstanding_amount > 0
+        GROUP BY si.name
+        HAVING si.outstanding_amount <= SUM(sii.amount) + 1
+        ORDER BY si.posting_date
+        """,
+        as_dict=True,
+    )
+
+
+def preview_fix_unpaid_penalties():
+    """
+    Read-only. bench --site <site> execute escola.escola.payment_actions.preview_fix_unpaid_penalties
+    """
+    rows = _invoices_with_unpaid_penalty_only()
+    for r in rows:
+        print(f"{r.name}  aluno={r.escola_student}  total={r.grand_total}  "
+              f"em dívida={r.outstanding_amount}  multa={r.multa}")
+    print(f"Total: {len(rows)} factura(s), "
+          f"{sum(flt(r.outstanding_amount) for r in rows):.2f} a dispensar")
+
+
+def fix_unpaid_penalties():
+    """
+    Waive the leftover multa on every invoice where the multa is all that's
+    still owed (the fee itself was paid).
+    bench --site <site> execute escola.escola.payment_actions.fix_unpaid_penalties
+    """
+    from escola.escola.doctype.billing_cycle.penalty import update_student_financial_status
+
+    done, errors, students = [], [], set()
+    for r in _invoices_with_unpaid_penalty_only():
+        try:
+            frappe.db.savepoint("waive_penalty")
+            je = waive_submitted_penalty(r.name)
+            if je:
+                done.append(f"{r.name} -> {je}")
+                students.add(r.escola_student)
+            frappe.db.commit()
+        except Exception as e:
+            frappe.db.rollback(save_point="waive_penalty")
+            errors.append(f"{r.name}: {e}")
+
+    for s in filter(None, students):
+        try:
+            update_student_financial_status(s)
+        except Exception:
+            pass
+
+    print("\n".join(done))
+    print(f"Dispensadas: {len(done)}   Erros: {len(errors)}")
+    if errors:
+        print("\n".join(errors))
+        frappe.log_error(title="Escola — erro ao dispensar multas", message="\n".join(errors))
