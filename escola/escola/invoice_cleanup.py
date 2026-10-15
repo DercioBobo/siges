@@ -124,3 +124,134 @@ def execute(year=DEFAULT_YEAR, months=DEFAULT_MONTHS):
     if errors:
         print("\n".join(errors))
         frappe.log_error(title="Escola — erro na limpeza de facturas", message="\n".join(errors))
+
+
+# ---------------------------------------------------------------------------
+# Duplicate monthly invoices — keep the newest, remove the older ones
+# ---------------------------------------------------------------------------
+# A duplicate is two or more regular (non-"Extras Mensais") Billing Cycle
+# invoices for the same student and the same reference month. The newest
+# (by creation) is kept. An older copy with any payment on it is never
+# touched — it's listed so you can decide by hand.
+#
+#   bench --site <site> execute escola.escola.invoice_cleanup.preview_duplicates
+#   bench --site <site> execute escola.escola.invoice_cleanup.execute_duplicates
+# Defaults to Julho 2026; otherwise --kwargs "{'month': 'Agosto', 'year': 2026}"
+
+_MESES = ("Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+
+
+def _duplicate_groups(month, year):
+    month_no = _MESES.index(month) + 1
+    rows = frappe.db.sql(
+        """
+        SELECT si.name, si.docstatus, si.escola_student, st.full_name, si.creation,
+               si.posting_date, si.due_date, si.grand_total, si.outstanding_amount,
+               si.escola_billing_cycle
+        FROM `tabSales Invoice` si
+        LEFT JOIN `tabStudent` st ON st.name = si.escola_student
+        WHERE si.docstatus IN (0, 1)
+          AND IFNULL(si.escola_billing_cycle, '') != ''
+          AND IFNULL(si.escola_student, '') != ''
+          AND COALESCE(si.escola_is_addon_invoice, 0) = 0
+          AND YEAR(COALESCE(si.due_date, si.posting_date)) = %(year)s
+          AND (
+                si.escola_mes_referencia = %(month)s
+             OR (IFNULL(si.escola_mes_referencia, '') = ''
+                 AND MONTH(COALESCE(si.due_date, si.posting_date)) = %(month_no)s)
+          )
+        ORDER BY st.full_name, si.escola_student, si.creation DESC
+        """,
+        {"month": month, "month_no": month_no, "year": int(year)},
+        as_dict=True,
+    )
+    groups = {}
+    for r in rows:
+        groups.setdefault(r.escola_student, []).append(r)
+    # newest first within each group (ORDER BY creation DESC)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def _has_payment(r):
+    return r.docstatus == 1 and flt(r.outstanding_amount) < flt(r.grand_total)
+
+
+def _duplicate_action(r):
+    if _has_payment(r):
+        return "manter (tem pagamento — rever)"
+    return "eliminar" if r.docstatus == 0 else "cancelar"
+
+
+def _describe(r):
+    paid = flt(r.grand_total) - flt(r.outstanding_amount) if r.docstatus == 1 else 0
+    state = "rascunho" if r.docstatus == 0 else f"submetida, pago={paid:.2f}"
+    return (f"{r.name}  criada={r.creation:%Y-%m-%d %H:%M}  emissão={r.posting_date}  "
+            f"total={r.grand_total}  ({state})  ciclo={r.escola_billing_cycle}")
+
+
+def preview_duplicates(month="Julho", year=DEFAULT_YEAR):
+    """Read-only: list each student's duplicates and what would happen."""
+    counts = {}
+    groups = _duplicate_groups(month, year)
+    for g in groups:
+        keep, older = g[0], g[1:]
+        print(f"\n{keep.full_name or keep.escola_student} ({keep.escola_student})")
+        print(f"   MANTER    {_describe(keep)}")
+        for r in older:
+            action = _duplicate_action(r)
+            counts[action] = counts.get(action, 0) + 1
+            print(f"   {action.upper():<9} {_describe(r)}")
+        if not _has_payment(keep) and any(_has_payment(r) for r in older):
+            print("   ! a factura mais antiga tem pagamento e a mais recente não — "
+                  "talvez seja a recente que deve sair")
+    print("-" * 60)
+    print(f"Alunos com duplicados: {len(groups)}")
+    for action, n in sorted(counts.items()):
+        print(f"{action}: {n}")
+
+
+def execute_duplicates(month="Julho", year=DEFAULT_YEAR):
+    from escola.escola.doctype.billing_cycle.billing_cycle import _unlink_from_generation_log
+    from escola.escola.doctype.billing_cycle.penalty import update_student_financial_status
+
+    deleted, cancelled, kept, errors = [], [], [], []
+    students = set()
+    note = _("Factura eliminada — duplicada (mantida a mais recente).")
+
+    for g in _duplicate_groups(month, year):
+        for r in g[1:]:
+            action = _duplicate_action(r)
+            if action not in ("eliminar", "cancelar"):
+                kept.append(f"{r.name}: {action}")
+                continue
+            try:
+                frappe.db.savepoint("dup_cleanup")
+                if action == "cancelar":
+                    frappe.get_doc("Sales Invoice", r.name).cancel()
+                    cancelled.append(r.name)
+                else:
+                    _unlink_from_generation_log(r.name, note)
+                    frappe.delete_doc("Sales Invoice", r.name, ignore_permissions=True)
+                    deleted.append(r.name)
+                students.add(r.escola_student)
+                frappe.db.commit()
+            except Exception as e:
+                frappe.db.rollback(save_point="dup_cleanup")
+                errors.append(f"{r.name}: {e}")
+
+    for s in students:
+        try:
+            update_student_financial_status(s)
+        except Exception:
+            pass
+
+    print(f"Eliminadas (rascunho): {len(deleted)}")
+    print(f"Canceladas: {len(cancelled)}")
+    print(f"Mantidas (com pagamento): {len(kept)}")
+    if kept:
+        print("\n".join(kept))
+    print(f"Erros: {len(errors)}")
+    if errors:
+        print("\n".join(errors))
+        frappe.log_error(title="Escola — erro ao remover facturas duplicadas", message="\n".join(errors))
