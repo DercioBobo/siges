@@ -7,9 +7,9 @@ Estado/status rules only need to be correct in one place.
 import json
 
 import frappe
-from frappe.utils import getdate, today
+from frappe.utils import add_days, cint, flt, getdate, today
 
-ALL_STATUSES = ("Em Aberto", "Paga", "Em Dívida", "Vencida")
+ALL_STATUSES = ("Em Aberto", "Paga", "Em Dívida", "Vencida", "Parcialmente Paga")
 
 
 @frappe.whitelist()
@@ -76,6 +76,8 @@ def _status_sql(statuses, today_val, params):
     if "Vencida" in statuses:
         params["today_v"] = today_val
         submitted_conditions.append("(si.outstanding_amount > 0 AND si.due_date < %(today_v)s)")
+    if "Parcialmente Paga" in statuses:
+        submitted_conditions.append("(si.outstanding_amount > 0 AND si.outstanding_amount < si.grand_total)")
     if submitted_conditions:
         branches.append("(si.docstatus = 1 AND (" + " OR ".join(submitted_conditions) + "))")
 
@@ -84,8 +86,12 @@ def _status_sql(statuses, today_val, params):
 
 @frappe.whitelist()
 def get_invoices(from_date=None, to_date=None, school_class=None,
-                  class_group=None, student=None, status=None):
+                  class_group=None, student=None, status=None, with_penalty=0):
     """Return filtered invoice rows and summary stats."""
+    from escola.escola.doctype.billing_cycle.penalty import _compute_penalty, _get_settings
+
+    settings = _get_settings()
+    dynamic_mode = settings["penalty_mode"] == "Dinâmico"
     conditions = ["si.docstatus != 2", "si.escola_billing_cycle IS NOT NULL"]
     params = {}
 
@@ -111,6 +117,21 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
     status_sql = _status_sql(_normalize_statuses(status), today_val, params)
     if status_sql:
         conditions.append(status_sql)
+
+    if cint(with_penalty):
+        # "Com Multa": a multa line on the invoice ("Adicionar à Factura"), or
+        # in Dinâmico mode an unpaid invoice already past the grace period.
+        penalty_conds = [
+            "EXISTS (SELECT 1 FROM `tabSales Invoice Item` sp "
+            "WHERE sp.parent = si.name AND sp.escola_is_penalty_line = 1)"
+        ]
+        if dynamic_mode:
+            params["penalty_cutoff"] = add_days(today_val, -settings["penalty_grace_days"])
+            penalty_conds.append(
+                "((si.docstatus = 0 AND si.grand_total > 0) OR (si.docstatus = 1 AND si.outstanding_amount > 0))"
+                " AND si.due_date < %(penalty_cutoff)s"
+            )
+        conditions.append("(" + " OR ".join(f"({c})" for c in penalty_conds) + ")")
 
     where = " AND ".join(conditions)
 
@@ -161,6 +182,15 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
             r.display_status = "Vencida"
         else:
             r.display_status = "Em Dívida"
+
+        # Display-only multa for Dinâmico mode — kept apart from penalty_amount,
+        # which the payment dialog treats as a real line it can waive.
+        r.dynamic_penalty = 0
+        if dynamic_mode and not flt(r.penalty_amount):
+            owed = flt(r.grand_total) if r.docstatus == 0 else flt(r.outstanding_amount)
+            if owed > 0:
+                factor = _compute_penalty(r.due_date, settings)["penalty_amount_factor"]
+                r.dynamic_penalty = round(owed * factor, 2)
 
     total_invoiced    = sum(float(r.grand_total or 0) for r in rows)
     total_paid        = sum(r.paid for r in rows)

@@ -23,6 +23,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		this._turmas = [];
 		this._rows = [];
 		this._statuses = new Set(opts.default_statuses || []);
+		this._with_penalty = false;
 		this._build();
 	}
 
@@ -33,6 +34,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			{ value: "Em Aberto", cls: "ibd-pill--gray" },
 			{ value: "Em Dívida", cls: "ibd-pill--orange" },
 			{ value: "Vencida",   cls: "ibd-pill--red" },
+			{ value: "Parcialmente Paga", cls: "ibd-pill--blue" },
 			{ value: "Paga",      cls: "ibd-pill--green" },
 		];
 		const pills = STATUS_OPTIONS.map(o => `
@@ -75,7 +77,14 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 				<div class="ibd-row">
 					<div class="ibd-fg ibd-fg--grow">
 						<label>${__("Estado")}</label>
-						<div class="ibd-pills" id="ibd-status">${pills}</div>
+						<div class="ibd-pills">
+							<span id="ibd-status" class="ibd-pills">${pills}</span>
+							<span class="ibd-pill-sep"></span>
+							<button type="button" class="ibd-pill ibd-pill--purple" id="ibd-penalty"
+								title="${__("Mostra apenas facturas com multa (combina com o Estado)")}">
+								${__("Com Multa")}
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -103,8 +112,8 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			<div class="ibd-tbl-wrap" id="ibd-tbl-wrap" style="display:none">
 				<table class="ibd-tbl">
 					<thead><tr>
+						<th>${__("Factura")}</th>
 						<th>${__("Aluno")}</th>
-						<th>${__("Classe")}</th>
 						<th>${__("Turma")}</th>
 						<th>${__("Emissão")}</th>
 						<th>${__("Vencimento")}</th>
@@ -165,6 +174,12 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			this.search();
 		});
 
+		this.$body.find("#ibd-penalty").on("click", (e) => {
+			this._with_penalty = !this._with_penalty;
+			$(e.currentTarget).toggleClass("ibd-pill--active", this._with_penalty);
+			this.search();
+		});
+
 		if (this.opts.on_row_action_click) {
 			this.$body.find("#ibd-tbody").on("click", (e) => {
 				const name = $(e.target).closest("tr").data("name");
@@ -185,6 +200,14 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			$c.append(`<option value="${c.name}">${frappe.utils.escape_html(c.class_name || c.name)}</option>`)
 		);
 		this._populate_turmas("");
+	}
+
+	_penalty_tag(r) {
+		const line = flt(r.penalty_amount);
+		const amount = line || flt(r.dynamic_penalty);
+		if (!amount) return "";
+		const title = line ? __("Multa na factura") : __("Multa calculada (modo Dinâmico)");
+		return `<span class="ibd-b ibd-b--purple" title="${title}">${__("Multa")} ${format_currency(amount)}</span>`;
 	}
 
 	_filter_turmas() {
@@ -210,6 +233,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 				class_group:  this.$body.find("#ibd-turma").val()   || null,
 				student:      this.$body.find("#ibd-student").val() || null,
 				status:       Array.from(this._statuses),
+				with_penalty: this._with_penalty ? 1 : 0,
 			},
 		});
 		if (r && r.exc) {
@@ -239,6 +263,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			"Paga":      "ibd-b--green",
 			"Em Dívida": "ibd-b--orange",
 			"Vencida":   "ibd-b--red",
+			"Parcialmente Paga": "ibd-b--blue",
 		};
 
 		this.$body.find("#ibd-empty").css("color", "").text(__("Nenhuma factura encontrada."));
@@ -253,18 +278,22 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 
 		const html = this._rows.map(r => `
 		<tr data-name="${frappe.utils.escape_html(r.invoice)}">
+			<td><a href="/app/sales-invoice/${encodeURIComponent(r.invoice)}" target="_blank"
+				class="ibd-inv-link">${frappe.utils.escape_html(r.invoice)}</a></td>
 			<td>
 				<div class="ibd-sname">${frappe.utils.escape_html(r.student_name || r.student)}</div>
 				<div class="ibd-sid">${frappe.utils.escape_html(r.student)}</div>
 			</td>
-			<td>${frappe.utils.escape_html(r.school_class || "—")}</td>
 			<td>${frappe.utils.escape_html(r.turma_name  || "—")}</td>
 			<td>${frappe.datetime.str_to_user(r.posting_date)}</td>
 			<td>${frappe.datetime.str_to_user(r.due_date)}</td>
 			<td class="ibd-r">${format_currency(r.grand_total)}</td>
 			<td class="ibd-r">${format_currency(r.paid)}</td>
 			<td class="ibd-r">${format_currency(r.outstanding_amount)}</td>
-			<td><span class="ibd-b ${BADGE[r.display_status] || ""}">${r.display_status}</span></td>
+			<td>
+				<span class="ibd-b ${BADGE[r.display_status] || ""}">${__(r.display_status)}</span>
+				${this._penalty_tag(r)}
+			</td>
 			<td>${this.opts.row_action_html ? this.opts.row_action_html(r) : ""}</td>
 		</tr>`).join("");
 
@@ -311,6 +340,10 @@ function _ibd_styles() {
 .ibd-pill--active.ibd-pill--green  { background: #dcfce7; color: #166534; border-color: #10b981; }
 .ibd-pill--active.ibd-pill--orange { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
 .ibd-pill--active.ibd-pill--red    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+.ibd-pill--active.ibd-pill--blue   { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
+.ibd-pill--active.ibd-pill--purple { background: #ede9fe; color: #5b21b6; border-color: #8b5cf6; }
+.ibd-pill-sep { width: 1px; align-self: stretch; background: var(--border-color); margin: 0 4px; }
+.ibd-inv-link { font-weight: 600; white-space: nowrap; }
 
 /* ── Summary cards ─── */
 .ibd-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -344,6 +377,8 @@ function _ibd_styles() {
 .ibd-b--green  { background: #dcfce7; color: #166534; }
 .ibd-b--orange { background: #fef3c7; color: #92400e; }
 .ibd-b--red    { background: #fee2e2; color: #991b1b; }
+.ibd-b--blue   { background: #dbeafe; color: #1e40af; }
+.ibd-b--purple { background: #ede9fe; color: #5b21b6; margin-left: 4px; }
 .ibd-link { font-size: 15px; color: var(--text-muted); text-decoration: none; }
 .ibd-link:hover { color: var(--primary); }
 .ibd-muted { color: var(--text-muted); }
