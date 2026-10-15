@@ -47,6 +47,10 @@ def register_payment(invoice_name, mode_of_payment, amount, reference_no=None,
             inv.set_posting_time = 1
             inv.save(ignore_permissions=True)
             inv.reload()
+            # Never submit with the multa still on it — the payment below would
+            # then leave exactly the multa as outstanding on a submitted invoice.
+            if any(row.get("escola_is_penalty_line") for row in inv.items):
+                frappe.throw(_("Não foi possível remover a multa da factura {0}.").format(inv.name))
 
     if inv.docstatus == 0:
         inv.set_posting_time = 1

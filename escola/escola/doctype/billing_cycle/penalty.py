@@ -124,7 +124,8 @@ def _get_base_total(invoice_name):
 def _remove_penalty_lines(inv):
     """Remove all penalty lines from a Sales Invoice doc in memory.
     Also called from escola.escola.payment_actions.register_payment."""
-    inv.items = [row for row in inv.items if not row.get("escola_is_penalty_line")]
+    for row in [r for r in inv.items if r.get("escola_is_penalty_line")]:
+        inv.remove(row)
 
 
 def _repair_draft_dates(inv):
