@@ -212,13 +212,17 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
 
 
 @frappe.whitelist()
-def get_student_statement(student, limit=12):
+def get_student_statement(student, limit=12, full=0):
     """
     Mini extrato for the "Aluno" modal on Monitor de Facturas / Central de
     Pagamentos: student header, last invoices (any origin — mensalidade,
     inscrição, renovação…) with their multa, last payments, and totals.
     Drafts count as owed by their grand_total (their outstanding is unset).
+
+    full=1 (printed extrato on the Student form): every invoice and payment,
+    plus the school header.
     """
+    full = cint(full)
     from escola.escola.doctype.student.student import get_student_invoices
 
     st = frappe.db.get_value(
@@ -250,7 +254,7 @@ def get_student_statement(student, limit=12):
             (tuple(names),),
         ))
         payments = frappe.db.sql(
-            """
+            f"""
             SELECT pe.name, pe.posting_date, pe.mode_of_payment,
                    per.reference_name AS invoice, per.allocated_amount AS amount
             FROM `tabPayment Entry Reference` per
@@ -259,7 +263,7 @@ def get_student_statement(student, limit=12):
               AND per.reference_doctype = 'Sales Invoice'
               AND per.reference_name IN %s
             ORDER BY pe.posting_date DESC, pe.creation DESC
-            LIMIT 10
+            {"" if full else "LIMIT 10"}
             """,
             (tuple(names),),
             as_dict=True,
@@ -275,9 +279,17 @@ def get_student_statement(student, limit=12):
     summary["total_owed"] = round(owed, 2)
     summary["last_payment"] = payments[0] if payments else None
 
-    return {
+    out = {
         "student": st,
-        "invoices": data["invoices"][: cint(limit) or 12],
+        "invoices": data["invoices"] if full else data["invoices"][: cint(limit) or 12],
         "payments": payments,
         "summary": summary,
     }
+    if full:
+        out["school"] = frappe.db.get_value(
+            "School Settings", "School Settings",
+            ["school_name", "school_logo", "school_nif", "school_phone",
+             "school_email", "school_address"],
+            as_dict=True,
+        )
+    return out
