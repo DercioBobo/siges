@@ -221,8 +221,14 @@ def register_withdrawal(student, withdrawal_date, withdrawal_reason):
         _sync_student_current_turma(sga)
         _remove_from_draft_pautas(sga)
 
+    # The student won't pay anymore — drop drafts and cancel unpaid invoices.
+    from escola.escola.doctype.billing_cycle.billing_cycle import (
+        void_open_invoices_for_student, void_invoices_message,
+    )
+    invoices = void_open_invoices_for_student(student)
+
     frappe.db.commit()
-    return {"class_group": class_group}
+    return {"class_group": class_group, "invoices_message": void_invoices_message(invoices)}
 
 
 @frappe.whitelist()

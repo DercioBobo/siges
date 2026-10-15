@@ -1375,6 +1375,10 @@ function _register_withdrawal_dialog(frm) {
 				message:   __("Desistência registada. O aluno foi removido da turma."),
 				indicator: "orange",
 			}, 5);
+			const inv_msg = r.message && r.message.invoices_message;
+			if (inv_msg) {
+				frappe.msgprint({ title: __("Facturas do aluno"), message: inv_msg, indicator: "orange" });
+			}
 			frm.reload_doc();
 		},
 	});

@@ -93,10 +93,16 @@ class StudentTransfer(Document):
         self.db_set("from_assignment", assignments[0].name)
         _safe_set_student_status(self.student, "Transferido")
 
+        # The student won't pay anymore — drop drafts and cancel unpaid invoices.
+        from escola.escola.doctype.billing_cycle.billing_cycle import (
+            void_open_invoices_for_student, void_invoices_message,
+        )
+        invoices_msg = void_invoices_message(void_open_invoices_for_student(self.student))
+
         frappe.msgprint(
             _("{0} alocação(ões) encerrada(s). Aluno registado como transferido.").format(
                 len(assignments)
-            ),
+            ) + ("<br>" + invoices_msg if invoices_msg else ""),
             title=_("Saída registada"),
             indicator="orange",
         )

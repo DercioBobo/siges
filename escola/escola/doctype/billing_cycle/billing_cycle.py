@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate
+from frappe.utils import flt, getdate
 from escola.escola.doctype.student.student import ensure_customer_for_student, student_label
 
 
@@ -446,6 +446,78 @@ def cancel_cycle(doc_name):
     frappe.db.commit()
 
     return {"cancelled": cancelled, "deleted": deleted, "errors": errors}
+
+
+def void_open_invoices_for_student(student):
+    """
+    Called when a student leaves the school (Transferido / Desistente) — they
+    won't pay anymore, so their open invoices must go:
+    - Draft invoices (docstatus=0) are deleted.
+    - Submitted invoices with nothing paid yet (outstanding == grand_total)
+      are cancelled (a submitted invoice cannot be deleted in ERPNext).
+    Partially paid invoices are left untouched — cancelling them would require
+    unlinking the received payments — and are reported back instead.
+    """
+    invoices = frappe.get_all(
+        "Sales Invoice",
+        filters={"escola_student": student, "docstatus": ("!=", 2)},
+        fields=["name", "docstatus", "grand_total", "outstanding_amount"],
+    )
+
+    deleted, cancelled, partially_paid, errors = [], [], [], []
+
+    for inv in invoices:
+        if inv.docstatus == 1:
+            outstanding = flt(inv.outstanding_amount)
+            if outstanding <= 0:
+                continue  # fully paid
+            if outstanding < flt(inv.grand_total):
+                partially_paid.append(inv.name)
+                continue
+        try:
+            frappe.db.savepoint("void_invoice")
+            if inv.docstatus == 1:
+                frappe.get_doc("Sales Invoice", inv.name).cancel()
+                cancelled.append(inv.name)
+            else:
+                frappe.delete_doc("Sales Invoice", inv.name, ignore_permissions=True)
+                deleted.append(inv.name)
+        except Exception as e:
+            frappe.db.rollback(save_point="void_invoice")
+            errors.append(f"{inv.name}: {str(e)}")
+
+    if deleted or cancelled:
+        # Deleted drafts don't fire on_cancel, so refresh the status manually.
+        from escola.escola.doctype.billing_cycle.penalty import update_student_financial_status
+        try:
+            update_student_financial_status(student)
+        except Exception:
+            pass
+
+    return {
+        "deleted": deleted,
+        "cancelled": cancelled,
+        "partially_paid": partially_paid,
+        "errors": errors,
+    }
+
+
+def void_invoices_message(result):
+    """Portuguese summary of void_open_invoices_for_student() for msgprint."""
+    parts = []
+    if result["deleted"]:
+        parts.append(_("{0} factura(s) em rascunho eliminada(s).").format(len(result["deleted"])))
+    if result["cancelled"]:
+        parts.append(_("{0} factura(s) pendente(s) cancelada(s).").format(len(result["cancelled"])))
+    if result["partially_paid"]:
+        parts.append(
+            _("Facturas parcialmente pagas mantidas (verificar manualmente): {0}").format(
+                ", ".join(result["partially_paid"])
+            )
+        )
+    if result["errors"]:
+        parts.append(_("Erros: {0}").format("<br>".join(result["errors"])))
+    return "<br>".join(parts)
 
 
 # ---------------------------------------------------------------------------
