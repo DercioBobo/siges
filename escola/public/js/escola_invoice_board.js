@@ -190,6 +190,14 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			this.search();
 		});
 
+		this.$body.find("#ibd-tbody").on("click", ".ibd-student-link", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			escola.utils.open_student_statement($(e.currentTarget).attr("data-student"), {
+				query_module: this.query_module,
+			});
+		});
+
 		if (this.opts.on_row_action_click) {
 			this.$body.find("#ibd-tbody").on("click", (e) => {
 				const name = $(e.target).closest("tr").data("name");
@@ -305,7 +313,8 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			<td><a href="/app/sales-invoice/${encodeURIComponent(r.invoice)}" target="_blank"
 				class="ibd-inv-link">${frappe.utils.escape_html(r.invoice)}</a></td>
 			<td>
-				<div class="ibd-sname">${frappe.utils.escape_html(r.student_name || r.student)}</div>
+				<a class="ibd-sname ibd-student-link" data-student="${frappe.utils.escape_html(r.student)}"
+					title="${__("Ver extrato do aluno")}">${frappe.utils.escape_html(r.student_name || r.student)}</a>
 				<div class="ibd-sid">${frappe.utils.escape_html(r.student)}</div>
 			</td>
 			<td class="ibd-nw">${frappe.utils.escape_html(r.turma_name  || "—")}</td>
@@ -323,6 +332,128 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 
 		this.$body.find("#ibd-tbody").html(html);
 	}
+};
+
+// ---------------------------------------------------------------------------
+// Mini extrato do aluno — opened from the Aluno name on either board.
+// ---------------------------------------------------------------------------
+
+const IBD_STMT_STATUS = {
+	// get_student_invoices vocabulary → the boards' Estado vocabulary
+	"Rascunho":  { label: "Em Aberto", cls: "ibd-b--gray" },
+	"Paga":      { label: "Paga",      cls: "ibd-b--green" },
+	"Em Atraso": { label: "Vencida",   cls: "ibd-b--red" },
+	"Emitida":   { label: "Em Dívida", cls: "ibd-b--orange" },
+};
+
+escola.utils.open_student_statement = async function (student, { query_module } = {}) {
+	_ibd_styles();
+	const d = new frappe.ui.Dialog({ title: __("Extrato do Aluno"), size: "extra-large" });
+	d.$body.html(`<div class="ibd-stmt-loading">${__("A carregar…")}</div>`);
+	d.show();
+
+	const r = await frappe.call({
+		method: `${query_module || "escola.escola.invoice_query"}.get_student_statement`,
+		args: { student },
+	}).catch(() => null);
+	if (!r || !r.message) {
+		d.$body.html(`<div class="ibd-stmt-loading">${__("Não foi possível carregar o extrato.")}</div>`);
+		return;
+	}
+
+	const { student: st, invoices, payments, summary } = r.message;
+	const esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
+	d.set_title(__("Extrato — {0}", [st.full_name]));
+
+	const contact = [st.phone, st.primary_guardian && `${st.primary_guardian}${st.guardian_phone ? " · " + st.guardian_phone : ""}`]
+		.filter(Boolean).map(esc).join(" &nbsp;|&nbsp; ");
+
+	const inv_rows = invoices.map((i) => {
+		let s = IBD_STMT_STATUS[i.status] || { label: i.status, cls: "" };
+		if (i.status !== "Paga" && i.status !== "Rascunho" && i.paid > 0) {
+			s = { label: "Parcialmente Paga", cls: "ibd-b--blue" };
+		}
+		return `
+		<tr>
+			<td><a href="/app/sales-invoice/${encodeURIComponent(i.name)}" target="_blank" class="ibd-inv-link">${esc(i.name)}</a></td>
+			<td class="ibd-nw">${esc(i.mes_referencia !== "—" ? i.mes_referencia : i.posting_date)}</td>
+			<td class="ibd-nw">${esc(i.due_date)}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(i.grand_total)}</td>
+			<td class="ibd-r ibd-nw">${i.multa ? _ibd_amount(i.multa) : "—"}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(i.paid)}</td>
+			<td class="ibd-r ibd-nw ${i.owed > 0 ? "ibd-stmt-owed" : ""}">${_ibd_amount(i.owed)}</td>
+			<td><span class="ibd-b ${s.cls}">${__(s.label)}</span></td>
+		</tr>`;
+	}).join("");
+
+	const pay_rows = payments.map((p) => `
+		<tr>
+			<td class="ibd-nw">${frappe.datetime.str_to_user(p.posting_date)}</td>
+			<td><a href="/app/payment-entry/${encodeURIComponent(p.name)}" target="_blank" class="ibd-inv-link">${esc(p.name)}</a></td>
+			<td>${esc(p.mode_of_payment || "—")}</td>
+			<td>${esc(p.invoice)}</td>
+			<td class="ibd-r ibd-nw">${_ibd_amount(p.amount)}</td>
+		</tr>`).join("");
+
+	const last = summary.last_payment;
+	d.$body.html(`
+	<div class="ibd-stmt">
+		<div class="ibd-stmt-head">
+			<div>
+				<div class="ibd-stmt-name">${esc(st.full_name)}
+					<span class="ibd-sid">${esc(st.student_code || st.name)}</span></div>
+				<div class="ibd-stmt-meta">
+					${esc(st.turma_name || st.current_school_class || "—")}
+					&nbsp;·&nbsp; ${esc(st.current_status || "—")}
+					&nbsp;·&nbsp; ${__("Situação financeira")}: <b>${esc(st.financial_status || "—")}</b>
+				</div>
+				${contact ? `<div class="ibd-stmt-meta">${contact}</div>` : ""}
+			</div>
+			<a class="btn btn-xs btn-default" href="/app/student/${encodeURIComponent(st.name)}" target="_blank">${__("Abrir ficha")}</a>
+		</div>
+
+		<div class="ibd-summary ibd-stmt-cards">
+			<div class="ibd-card ibd-card--blue">
+				<div class="ibd-card-lbl">${__("Facturado")}</div>
+				<div class="ibd-card-val">${format_currency(summary.total_invoiced)}</div>
+				<div class="ibd-card-sub">${__("{0} factura(s)", [summary.count])}</div>
+			</div>
+			<div class="ibd-card ibd-card--green">
+				<div class="ibd-card-lbl">${__("Pago")}</div>
+				<div class="ibd-card-val">${format_currency(summary.total_paid)}</div>
+				<div class="ibd-card-sub">${last
+					? __("Último: {0} em {1}", [_ibd_amount(last.amount), frappe.datetime.str_to_user(last.posting_date)])
+					: __("Sem pagamentos")}</div>
+			</div>
+			<div class="ibd-card ibd-card--orange">
+				<div class="ibd-card-lbl">${__("Em Dívida")}</div>
+				<div class="ibd-card-val">${format_currency(summary.total_owed)}</div>
+			</div>
+		</div>
+
+		<div class="ibd-stmt-title">${__("Últimas facturas")}</div>
+		<div class="ibd-tbl-wrap">
+			<table class="ibd-tbl">
+				<thead><tr>
+					<th>${__("Factura")}</th><th>${__("Mês / Emissão")}</th><th>${__("Vencimento")}</th>
+					<th class="ibd-r">${__("Total")}</th><th class="ibd-r">${__("Multa")}</th>
+					<th class="ibd-r">${__("Pago")}</th><th class="ibd-r">${__("Em Dívida")}</th><th>${__("Estado")}</th>
+				</tr></thead>
+				<tbody>${inv_rows || `<tr><td colspan="8" class="ibd-stmt-empty">${__("Sem facturas.")}</td></tr>`}</tbody>
+			</table>
+		</div>
+
+		<div class="ibd-stmt-title">${__("Últimos pagamentos")}</div>
+		<div class="ibd-tbl-wrap">
+			<table class="ibd-tbl">
+				<thead><tr>
+					<th>${__("Data")}</th><th>${__("Pagamento")}</th><th>${__("Modo")}</th>
+					<th>${__("Factura")}</th><th class="ibd-r">${__("Valor")}</th>
+				</tr></thead>
+				<tbody>${pay_rows || `<tr><td colspan="5" class="ibd-stmt-empty">${__("Sem pagamentos registados.")}</td></tr>`}</tbody>
+			</table>
+		</div>
+	</div>`);
 };
 
 // Table cells show plain numbers — the currency symbol on every cell made
@@ -375,6 +506,18 @@ function _ibd_styles() {
 .ibd-pill--active.ibd-pill--all    { background: var(--primary); color: #fff; border-color: var(--primary); }
 .ibd-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .ibd-loading .ibd-tbl-wrap, .ibd-loading .ibd-summary { opacity: .45; pointer-events: none; transition: opacity .15s; }
+.ibd-student-link { cursor: pointer; color: var(--text-color); display: block; }
+.ibd-student-link:hover { color: var(--primary); text-decoration: underline; }
+.ibd-stmt-loading { padding: 30px; text-align: center; color: var(--text-muted); }
+.ibd-stmt-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.ibd-stmt-name { font-size: 16px; font-weight: 600; }
+.ibd-stmt-name .ibd-sid { margin-left: 6px; }
+.ibd-stmt-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.ibd-stmt-cards { margin-bottom: 12px; }
+.ibd-stmt-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+	letter-spacing: .5px; margin: 14px 0 6px; }
+.ibd-stmt-owed { font-weight: 600; color: #b45309; }
+.ibd-stmt-empty { text-align: center; color: var(--text-muted); }
 .ibd-pill-sep { width: 1px; align-self: stretch; background: var(--border-color); margin: 0 4px; }
 .ibd-inv-link { font-weight: 600; white-space: nowrap; }
 

@@ -209,3 +209,75 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
             "total_overdue":     round(total_overdue, 2),
         },
     }
+
+
+@frappe.whitelist()
+def get_student_statement(student, limit=12):
+    """
+    Mini extrato for the "Aluno" modal on Monitor de Facturas / Central de
+    Pagamentos: student header, last invoices (any origin — mensalidade,
+    inscrição, renovação…) with their multa, last payments, and totals.
+    Drafts count as owed by their grand_total (their outstanding is unset).
+    """
+    from escola.escola.doctype.student.student import get_student_invoices
+
+    st = frappe.db.get_value(
+        "Student", student,
+        ["name", "full_name", "student_code", "current_status", "financial_status",
+         "current_school_class", "current_class_group", "phone", "primary_guardian"],
+        as_dict=True,
+    )
+    if not st:
+        frappe.throw(frappe._("Aluno {0} não encontrado.").format(student))
+
+    if st.current_class_group:
+        st.turma_name = frappe.db.get_value("Class Group", st.current_class_group, "group_name")
+    if st.primary_guardian:
+        st.guardian_phone = frappe.db.get_value("Guardian", st.primary_guardian, "phone")
+
+    data = get_student_invoices(student)
+    names = [i["name"] for i in data["invoices"]]
+
+    penalties = {}
+    payments = []
+    if names:
+        penalties = dict(frappe.db.sql(
+            """
+            SELECT parent, SUM(amount) FROM `tabSales Invoice Item`
+            WHERE parent IN %s AND escola_is_penalty_line = 1
+            GROUP BY parent
+            """,
+            (tuple(names),),
+        ))
+        payments = frappe.db.sql(
+            """
+            SELECT pe.name, pe.posting_date, pe.mode_of_payment,
+                   per.reference_name AS invoice, per.allocated_amount AS amount
+            FROM `tabPayment Entry Reference` per
+            JOIN `tabPayment Entry` pe ON pe.name = per.parent
+            WHERE pe.docstatus = 1
+              AND per.reference_doctype = 'Sales Invoice'
+              AND per.reference_name IN %s
+            ORDER BY pe.posting_date DESC, pe.creation DESC
+            LIMIT 10
+            """,
+            (tuple(names),),
+            as_dict=True,
+        )
+
+    owed = 0.0
+    for i in data["invoices"]:
+        i["multa"] = flt(penalties.get(i["name"]))
+        i["owed"] = i["grand_total"] if i["status"] == "Rascunho" else i["outstanding"]
+        owed += i["owed"]
+
+    summary = data["summary"]
+    summary["total_owed"] = round(owed, 2)
+    summary["last_payment"] = payments[0] if payments else None
+
+    return {
+        "student": st,
+        "invoices": data["invoices"][: cint(limit) or 12],
+        "payments": payments,
+        "summary": summary,
+    }
