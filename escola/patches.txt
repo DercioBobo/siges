@@ -4,4 +4,4 @@
 [post_model_sync]
 # Runs after DocType JSON sync (needs the new student_name columns)
 escola.patches.v1_0.student_id_from_code
-escola.patches.v1_0.void_invoices_of_departed_students
+escola.patches.v1_0.void_invoices_of_departed_students #2026-10-15 re-run after generation_log unlink fix
