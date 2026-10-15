@@ -1685,16 +1685,38 @@ async function _delete_duplicate_dialog(frm) {
 	d.show();
 }
 
-function reactivate_dialog(frm) {
+async function reactivate_dialog(frm) {
+	// Defaults: current academic year and the class the student was last in
+	// (current_school_class is cleared when they leave).
+	const [current_year, last_sga] = await Promise.all([
+		frappe.db.get_single_value("School Settings", "current_academic_year"),
+		frappe.db.get_list("Student Group Assignment", {
+			filters: { student: frm.doc.name },
+			fields: ["school_class"],
+			order_by: "creation desc",
+			limit: 1,
+		}).catch(() => []),
+	]);
+	const last_class = frm.doc.current_school_class || (last_sga[0] && last_sga[0].school_class) || null;
+
 	const d = new frappe.ui.Dialog({
 		title: __("Reactivar {0}", [frm.doc.full_name]),
 		fields: [
+			{
+				fieldname:   "return_date",
+				fieldtype:   "Date",
+				label:       __("Data de Regresso"),
+				reqd:        1,
+				default:     frappe.datetime.get_today(),
+				description: __("As mensalidades são cobradas a partir do mês desta data."),
+			},
 			{
 				fieldname: "academic_year",
 				fieldtype: "Link",
 				options:   "Academic Year",
 				label:     __("Ano Lectivo"),
 				reqd:      1,
+				default:   current_year || null,
 				onchange() {
 					d.set_value("class_group", null);
 					d.fields_dict.class_group.get_query = () => ({ filters: build_filters(d) });
@@ -1705,6 +1727,8 @@ function reactivate_dialog(frm) {
 				fieldtype: "Link",
 				options:   "School Class",
 				label:     __("Classe"),
+				reqd:      1,
+				default:   last_class,
 				get_query: () => ({ filters: { is_active: 1 } }),
 				onchange() {
 					d.set_value("class_group", null);
@@ -1718,7 +1742,7 @@ function reactivate_dialog(frm) {
 				label:       __("Turma"),
 				reqd:        1,
 				get_query:   () => ({ filters: build_filters(d) }),
-				description: __("Seleccione a turma para o ano lectivo em curso."),
+				description: __("Seleccione a turma da classe escolhida."),
 			},
 		],
 		primary_action_label: __("Reactivar"),
@@ -1728,16 +1752,29 @@ function reactivate_dialog(frm) {
 				args: {
 					student_name:     frm.doc.name,
 					class_group_name: values.class_group,
+					return_date:      values.return_date,
 				},
+				freeze: true,
 				callback(r) {
 					if (r.exc) return;
 					d.hide();
 					frappe.show_alert({ message: __("Aluno reactivado e atribuído à turma."), indicator: "green" });
+					const missed = (r.message && r.message.missed_cycles) || [];
+					if (missed.length) {
+						frappe.msgprint({
+							title: __("Mensalidade do mês de regresso"),
+							indicator: "orange",
+							message: __("Já existe(m) ciclo(s) de facturação a partir do mês de regresso sem factura para este aluno: {0}. "
+								+ "Abra o ciclo e gere as facturas novamente para incluir o aluno.",
+								[missed.map((c) => `<a href="/app/billing-cycle/${encodeURIComponent(c)}">${frappe.utils.escape_html(c)}</a>`).join(", ")]),
+						});
+					}
 					frm.reload_doc();
 				},
 			});
 		},
 	});
+	d.fields_dict.class_group.get_query = () => ({ filters: build_filters(d) });
 	d.show();
 }
 

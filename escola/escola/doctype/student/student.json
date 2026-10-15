@@ -42,6 +42,8 @@
   "withdrawal_date",
   "column_break_withdrawal",
   "withdrawal_reason",
+  "section_break_return",
+  "return_date",
   "section_break_history",
   "student_history_html",
   "section_break_notes",
@@ -279,6 +281,19 @@
    "fieldtype": "Small Text",
    "label": "Motivo de Desistência",
    "depends_on": "eval:doc.current_status === 'Desistente'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_return",
+   "fieldtype": "Section Break",
+   "label": "Regresso",
+   "depends_on": "eval:doc.return_date"
+  },
+  {
+   "fieldname": "return_date",
+   "fieldtype": "Date",
+   "label": "Data de Regresso",
+   "description": "Preenchida ao reactivar o aluno. As mensalidades só são cobradas a partir deste mês.",
    "read_only": 1
   },
   {

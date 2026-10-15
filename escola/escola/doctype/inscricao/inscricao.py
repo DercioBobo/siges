@@ -467,11 +467,13 @@ def create_turma(academic_year, school_class, group_name, shift=None, max_studen
 
 
 @frappe.whitelist()
-def reactivate_student(student_name, class_group_name):
+def reactivate_student(student_name, class_group_name, return_date=None):
     """
     Reactivate a student who previously left (Transferido or Desistente).
-    Sets current_status back to Activo and creates a new SGA.
+    Sets current_status back to Activo, records return_date (billing restarts
+    from that month — see billing_cycle.generate_invoices) and creates a new SGA.
     """
+    return_date = frappe.utils.getdate(return_date or frappe.utils.today())
     student = frappe.get_doc("Student", student_name)
     if student.current_status not in ("Transferido", "Desistente"):
         frappe.throw(
@@ -497,7 +499,10 @@ def reactivate_student(student_name, class_group_name):
             title=_("Alocação já existente"),
         )
 
-    frappe.db.set_value("Student", student_name, "current_status", "Activo", update_modified=False)
+    frappe.db.set_value("Student", student_name, {
+        "current_status": "Activo",
+        "return_date": return_date,
+    }, update_modified=False)
 
     sga = frappe.get_doc({
         "doctype": "Student Group Assignment",
@@ -505,10 +510,28 @@ def reactivate_student(student_name, class_group_name):
         "class_group": class_group_name,
         "academic_year": cg.academic_year,
         "school_class": cg.school_class,
-        "assignment_date": frappe.utils.today(),
+        "assignment_date": return_date,
         "status": "Activa",
-        "notes": _("Reactivação manual."),
+        "notes": _("Reactivação manual — regresso em {0}.").format(frappe.utils.formatdate(return_date)),
     })
     sga.insert()
     frappe.db.commit()
-    return sga.name
+
+    # A cycle for the return month may already have run without this student —
+    # tell the user so they can bill that month (the cycles after it will
+    # include the student automatically).
+    month_start = return_date.replace(day=1)
+    missed = frappe.db.sql(
+        """
+        SELECT bc.name FROM `tabBilling Cycle` bc
+        WHERE bc.school_class = %(cls)s AND bc.status != 'Cancelado'
+          AND COALESCE(bc.due_date, bc.posting_date) >= %(start)s
+          AND NOT EXISTS (SELECT 1 FROM `tabSales Invoice` si
+                          WHERE si.escola_billing_cycle = bc.name
+                            AND si.escola_student = %(student)s AND si.docstatus != 2)
+        ORDER BY bc.posting_date
+        """,
+        {"cls": cg.school_class, "start": month_start, "student": student_name},
+        pluck=True,
+    )
+    return {"sga": sga.name, "missed_cycles": missed}

@@ -108,6 +108,28 @@ def generate_invoices(doc_name):
 
     period_label = mes_referencia or str(cycle.posting_date)
 
+    # Students who left and came back (Reactivar Aluno sets return_date) are
+    # billed only from their return month on — never for the months away,
+    # even when an older cycle is generated or regenerated later.
+    if reference_date and sgAs:
+        period_start = getdate(reference_date).replace(day=1)
+        returned = dict(frappe.get_all(
+            "Student",
+            filters={"name": ["in", [s.student for s in sgAs]], "return_date": ["is", "set"]},
+            fields=["name", "return_date"],
+            as_list=True,
+        ))
+        kept = []
+        for sga in sgAs:
+            rd = returned.get(sga.student)
+            if rd and getdate(rd).replace(day=1) > period_start:
+                _outcome(sga)["reason"] = _(
+                    "Regressou em {0} — sem cobrança antes desse mês."
+                ).format(frappe.utils.formatdate(rd))
+            else:
+                kept.append(sga)
+        sgAs = kept
+
     # --- Phase 1: pre-create all customers before touching invoices ---
     # A customer failure skips that student but never leaves invoices in a partial state.
     customer_map = {}
