@@ -426,6 +426,7 @@ def cancel_cycle(doc_name):
                 frappe.get_doc("Sales Invoice", inv.name).cancel()
                 cancelled += 1
             else:
+                _unlink_from_generation_log(inv.name, _("Factura eliminada — ciclo cancelado."))
                 frappe.delete_doc("Sales Invoice", inv.name, ignore_permissions=True)
                 deleted += 1
         except Exception as e:
@@ -480,6 +481,7 @@ def void_open_invoices_for_student(student):
                 frappe.get_doc("Sales Invoice", inv.name).cancel()
                 cancelled.append(inv.name)
             else:
+                _unlink_from_generation_log(inv.name, _("Factura eliminada — aluno saiu da escola."))
                 frappe.delete_doc("Sales Invoice", inv.name, ignore_permissions=True)
                 deleted.append(inv.name)
         except Exception as e:
@@ -500,6 +502,26 @@ def void_open_invoices_for_student(student):
         "partially_paid": partially_paid,
         "errors": errors,
     }
+
+
+def _unlink_from_generation_log(invoice, note):
+    """
+    A Billing Cycle's generation_log row links to the invoice it created, which
+    makes frappe.delete_doc refuse to delete that invoice. Clear the link and
+    keep the invoice number in the reason so the log stays traceable.
+    """
+    rows = frappe.get_all(
+        "Billing Cycle Student Log",
+        filters={"sales_invoice": invoice, "parenttype": "Billing Cycle"},
+        fields=["name", "reason"],
+    )
+    for row in rows:
+        reason = f"{row.reason}\n" if row.reason else ""
+        frappe.db.set_value(
+            "Billing Cycle Student Log", row.name,
+            {"sales_invoice": None, "reason": f"{reason}{invoice}: {note}"},
+            update_modified=False,
+        )
 
 
 def void_invoices_message(result):
