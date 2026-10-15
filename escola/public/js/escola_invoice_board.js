@@ -37,8 +37,10 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			{ value: "Parcialmente Paga", cls: "ibd-pill--blue" },
 			{ value: "Paga",      cls: "ibd-pill--green" },
 		];
-		const pills = STATUS_OPTIONS.map(o => `
-			<button type="button" class="ibd-pill ${o.cls} ${this._statuses.has(o.value) ? "ibd-pill--active" : ""}" data-status="${o.value}">
+		const pills = `
+			<button type="button" class="ibd-pill ibd-pill--all" data-status="">${__("Todos")}</button>`
+			+ STATUS_OPTIONS.map(o => `
+			<button type="button" class="ibd-pill ${o.cls}" data-status="${o.value}">
 				${__(o.value)}
 			</button>`).join("");
 
@@ -85,6 +87,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 								${__("Com Multa")}
 							</button>
 						</div>
+						<div class="ibd-hint">${__("Clique para filtrar por um estado · Ctrl+clique para seleccionar vários")}</div>
 					</div>
 				</div>
 			</div>
@@ -132,6 +135,7 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 			</div>
 		</div>`);
 
+		this._sync_pills();
 		this._load_options();
 		this._bind();
 		this.search();
@@ -161,16 +165,22 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		});
 		this.$body.find("#ibd-student").on("input", _ibd_debounce(() => this.search(), 350));
 
+		// Click = only this state (click it again → Todos).
+		// Ctrl/Cmd/Shift+click = add/remove it from the current selection.
 		this.$body.find("#ibd-status").on("click", ".ibd-pill", (e) => {
-			const $btn = $(e.currentTarget);
-			const status = $btn.data("status");
-			if (this._statuses.has(status)) {
-				this._statuses.delete(status);
-				$btn.removeClass("ibd-pill--active");
+			const status = $(e.currentTarget).attr("data-status");
+			const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+			if (!status) {
+				this._statuses.clear();
+			} else if (multi) {
+				if (this._statuses.has(status)) this._statuses.delete(status);
+				else this._statuses.add(status);
+			} else if (this._statuses.size === 1 && this._statuses.has(status)) {
+				this._statuses.clear();
 			} else {
-				this._statuses.add(status);
-				$btn.addClass("ibd-pill--active");
+				this._statuses = new Set([status]);
 			}
+			this._sync_pills();
 			this.search();
 		});
 
@@ -202,6 +212,14 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 		this._populate_turmas("");
 	}
 
+	_sync_pills() {
+		this.$body.find("#ibd-status .ibd-pill").each((_i, el) => {
+			const status = el.getAttribute("data-status");
+			const active = status ? this._statuses.has(status) : this._statuses.size === 0;
+			el.classList.toggle("ibd-pill--active", active);
+		});
+	}
+
 	_penalty_tag(r) {
 		const line = flt(r.penalty_amount);
 		const amount = line || flt(r.dynamic_penalty);
@@ -224,6 +242,10 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 	}
 
 	async search() {
+		// Responses can arrive out of order (a big "Paga" query finishing after
+		// a quick "Vencida" one) — only the latest request may render.
+		const seq = this._search_seq = (this._search_seq || 0) + 1;
+		this.$body.find(".ibd-wrap").addClass("ibd-loading");
 		const r = await frappe.call({
 			method: `${this.query_module}.get_invoices`,
 			args: {
@@ -235,8 +257,10 @@ escola.utils.InvoiceBoard = class InvoiceBoard {
 				status:       Array.from(this._statuses),
 				with_penalty: this._with_penalty ? 1 : 0,
 			},
-		});
-		if (r && r.exc) {
+		}).catch(() => null);
+		if (seq !== this._search_seq) return;
+		this.$body.find(".ibd-wrap").removeClass("ibd-loading");
+		if (!r || r.exc) {
 			this._rows = [];
 			this.$body.find("#ibd-tbl-wrap, #ibd-summary").hide();
 			this.$body.find("#ibd-empty")
@@ -348,6 +372,9 @@ function _ibd_styles() {
 .ibd-pill--active.ibd-pill--red    { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
 .ibd-pill--active.ibd-pill--blue   { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
 .ibd-pill--active.ibd-pill--purple { background: #ede9fe; color: #5b21b6; border-color: #8b5cf6; }
+.ibd-pill--active.ibd-pill--all    { background: var(--primary); color: #fff; border-color: var(--primary); }
+.ibd-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.ibd-loading .ibd-tbl-wrap, .ibd-loading .ibd-summary { opacity: .45; pointer-events: none; transition: opacity .15s; }
 .ibd-pill-sep { width: 1px; align-self: stretch; background: var(--border-color); margin: 0 4px; }
 .ibd-inv-link { font-weight: 600; white-space: nowrap; }
 
