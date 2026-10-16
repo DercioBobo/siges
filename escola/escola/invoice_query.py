@@ -9,7 +9,23 @@ import json
 import frappe
 from frappe.utils import add_days, cint, flt, getdate, today
 
+from escola.escola.payment_actions import WAIVER_REMARK
+
 ALL_STATUSES = ("Em Aberto", "Paga", "Em Dívida", "Vencida", "Parcialmente Paga")
+
+# Multa still standing on an invoice: its multa lines minus what was waived.
+# A draft's waiver deletes the line; a submitted invoice can't lose the line,
+# so its waiver is a Journal Entry against the invoice — subtract those, or the
+# multa keeps showing after it was waived. Needs params["waiver_like"].
+_OPEN_PENALTY_SQL = """GREATEST(0,
+    (SELECT COALESCE(SUM(sii.amount), 0) FROM `tabSales Invoice Item` sii
+     WHERE sii.parent = si.name AND sii.escola_is_penalty_line = 1)
+  - (SELECT COALESCE(SUM(jea.credit_in_account_currency), 0)
+     FROM `tabJournal Entry Account` jea
+     JOIN `tabJournal Entry` je ON je.name = jea.parent
+     WHERE je.docstatus = 1 AND je.user_remark LIKE %(waiver_like)s
+       AND jea.reference_type = 'Sales Invoice' AND jea.reference_name = si.name)
+)"""
 
 
 @frappe.whitelist()
@@ -118,13 +134,12 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
     if status_sql:
         conditions.append(status_sql)
 
+    params["waiver_like"] = WAIVER_REMARK + "%"
+
     if cint(with_penalty):
-        # "Com Multa": a multa line on the invoice ("Adicionar à Factura"), or
-        # in Dinâmico mode an unpaid invoice already past the grace period.
-        penalty_conds = [
-            "EXISTS (SELECT 1 FROM `tabSales Invoice Item` sp "
-            "WHERE sp.parent = si.name AND sp.escola_is_penalty_line = 1)"
-        ]
+        # "Com Multa": a multa line still standing on the invoice ("Adicionar à
+        # Factura"), or in Dinâmico mode an unpaid invoice past the grace period.
+        penalty_conds = [f"{_OPEN_PENALTY_SQL} > 0"]
         if dynamic_mode:
             params["penalty_cutoff"] = add_days(today_val, -settings["penalty_grace_days"])
             penalty_conds.append(
@@ -149,10 +164,7 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
             si.grand_total,
             si.outstanding_amount,
             bc.billing_mode,
-            (
-                SELECT COALESCE(SUM(sii.amount), 0) FROM `tabSales Invoice Item` sii
-                WHERE sii.parent = si.name AND sii.escola_is_penalty_line = 1
-            ) AS penalty_amount
+            {_OPEN_PENALTY_SQL} AS penalty_amount
         FROM `tabSales Invoice` si
         LEFT JOIN `tabBilling Cycle` bc
                ON bc.name = si.escola_billing_cycle
@@ -245,13 +257,14 @@ def get_student_statement(student, limit=12, full=0):
     penalties = {}
     payments = []
     if names:
+        # Multa still standing per invoice (lines minus Journal Entry waivers)
         penalties = dict(frappe.db.sql(
-            """
-            SELECT parent, SUM(amount) FROM `tabSales Invoice Item`
-            WHERE parent IN %s AND escola_is_penalty_line = 1
-            GROUP BY parent
+            f"""
+            SELECT si.name, {_OPEN_PENALTY_SQL}
+            FROM `tabSales Invoice` si
+            WHERE si.name IN %(names)s
             """,
-            (tuple(names),),
+            {"names": tuple(names), "waiver_like": WAIVER_REMARK + "%"},
         ))
         payments = frappe.db.sql(
             f"""
