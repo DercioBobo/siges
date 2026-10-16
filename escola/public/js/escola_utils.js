@@ -447,6 +447,14 @@ frappe.ui.form.on("Sales Invoice", {
             );
         }
 
+        // Unsaved changes: the payment would act on the saved version, not what's
+        // on screen. Hidden while dirty; refresh() runs again after save, so the
+        // button comes back then.
+        frm.$wrapper.off("dirty.escola_pay").on("dirty.escola_pay", () => {
+            frm.remove_custom_button(__("Registar Pagamento"));
+        });
+        if (frm.is_new() || frm.is_dirty()) return;
+
         const payable = frm.doc.docstatus === 0
             ? flt(frm.doc.grand_total) > 0
             : (frm.doc.docstatus === 1 && flt(frm.doc.outstanding_amount) > 0);
