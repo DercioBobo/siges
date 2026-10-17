@@ -298,6 +298,8 @@ function _show_actions_modal(frm) {
 		{ id: "fundir",            ico: "⇉",  label: __("Fundir com Outro Registo"),     color: "#1e40af", bg: "#eff6ff", show: frappe.model.can_delete("Student") },
 		{ id: "atribuir-turma",    ico: "＋", label: __("Atribuir Turma"),               color: "#1d4ed8", bg: "#eff6ff", show: !isConcluded },
 		{ id: "troca-turma",       ico: "⇄",  label: __("Trocar de Turma"),              color: "#6d28d9", bg: "#f5f3ff", show: isActive   },
+		{ id: "corrigir-classe",   ico: "✎",  label: __("Corrigir Classe"),              color: "#b45309", bg: "#fffbeb",
+		  show: !isInactive && !isConcluded && frappe.user.has_role(["Diretor Escolar", "Secretaria Escolar", "System Manager"]) },
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
 		{ id: "desistencia",       ico: "✕",  label: __("Registar Desistência"),         color: "#dc2626", bg: "#fef2f2", show: isActive   },
 		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
@@ -359,6 +361,7 @@ function _show_actions_modal(frm) {
 			case "desistencia":       _register_withdrawal_dialog(frm); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
 			case "imprimir-extrato":  escola.print.extrato(frm.doc.name); break;
+			case "corrigir-classe":   _correct_class_from_student(frm); break;
 			case "impressoes":
 				frappe.route_options = { student: frm.doc.name };
 				frappe.set_route("impressoes-aluno");
@@ -475,6 +478,35 @@ function _cg_filters(d) {
 	if (ay) f.academic_year = ay;
 	if (sc) f.school_class  = sc;
 	return f;
+}
+
+// ---------------------------------------------------------------------------
+// Corrigir Classe — the class comes from the student's Inscrição, so the
+// correction is made there (shared dialog in escola_utils.js).
+// ---------------------------------------------------------------------------
+
+async function _correct_class_from_student(frm) {
+	const rows = await frappe.db.get_list("Inscricao", {
+		filters: { student: frm.doc.name, docstatus: 1 },
+		fields: ["name", "school_class", "academic_year"],
+		order_by: "creation desc",
+		limit: 1,
+	});
+	if (!rows.length) {
+		frappe.msgprint({
+			title: __("Sem inscrição"),
+			indicator: "orange",
+			message: __("Este aluno não entrou por Inscrição (ex.: veio por Renovação ou Promoção), por isso não há classe de inscrição a corrigir. "
+				+ "Para mudar de turma use «Trocar de Turma»; para mudar de classe, encerre a alocação actual e atribua a turma da classe correcta."),
+		});
+		return;
+	}
+	const insc = rows[0];
+	escola.utils.correct_class_dialog({
+		inscricao: insc.name,
+		current_class: insc.school_class,
+		on_done: () => frm.reload_doc(),
+	});
 }
 
 // ---------------------------------------------------------------------------

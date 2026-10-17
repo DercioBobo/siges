@@ -425,6 +425,63 @@ escola.utils.open_payment_dialog = function ({ invoice, docstatus, default_amoun
 };
 
 // ---------------------------------------------------------------------------
+// Corrigir Classe — fixes a submitted Inscrição registered in the wrong class
+// (cancel + amend would create a second Student). Used from the Inscrição
+// form and the Student's Opções menu. See inscricao.correct_school_class.
+// ---------------------------------------------------------------------------
+
+escola.utils.correct_class_dialog = function ({ inscricao, current_class, on_done }) {
+    const esc = frappe.utils.escape_html;
+    const d = new frappe.ui.Dialog({
+        title: __("Corrigir Classe da Inscrição"),
+        fields: [
+            {
+                fieldtype: "HTML",
+                options: `<div class="text-muted small" style="margin-bottom:10px;">
+                    ${__("Inscrição")}: <b>${esc(inscricao)}</b> · ${__("Classe actual")}: <b>${esc(current_class || "—")}</b><br>
+                    ${__("Se o aluno já estiver numa turma da classe errada, essa alocação é encerrada e o aluno volta a «Pendente de Turma». Depois da correcção, aloque-o em Alocação de Turmas, onde aparece na classe correcta.")}
+                </div>`,
+            },
+            {
+                fieldname: "new_school_class", fieldtype: "Link", options: "School Class",
+                label: __("Classe correcta"), reqd: 1,
+                get_query: () => ({ filters: { is_active: 1, name: ["!=", current_class] } }),
+            },
+            { fieldname: "reason", fieldtype: "Small Text", label: __("Motivo"), reqd: 1 },
+        ],
+        primary_action_label: __("Corrigir"),
+        primary_action(values) {
+            frappe.call({
+                method: "escola.escola.doctype.inscricao.inscricao.correct_school_class",
+                args: { inscricao, new_school_class: values.new_school_class, reason: values.reason },
+                freeze: true,
+                callback(r) {
+                    if (r.exc) return;
+                    d.hide();
+                    const res = r.message || {};
+                    const notes = [];
+                    if (res.closed_turma) {
+                        notes.push(__("A turma {0} foi encerrada para este aluno.", [esc(res.closed_turma)]));
+                    }
+                    if ((res.billed_invoices || []).length) {
+                        notes.push(__("Atenção: já existem mensalidades geradas desde a inscrição ({0}). Verifique se o valor corresponde à nova classe.",
+                            [res.billed_invoices.map(esc).join(", ")]));
+                    }
+                    frappe.msgprint({
+                        title: __("Classe corrigida"),
+                        indicator: "green",
+                        message: (notes.join("<br><br>") || __("Classe actualizada."))
+                            + `<br><br><a class="btn btn-xs btn-primary" href="/app/alocacao-turmas">${__("Abrir Alocação de Turmas")}</a>`,
+                    });
+                    if (on_done) on_done(res);
+                },
+            });
+        },
+    });
+    d.show();
+};
+
+// ---------------------------------------------------------------------------
 // Sales Invoice — quick link to Student + one-click "Registar Pagamento"
 // ---------------------------------------------------------------------------
 

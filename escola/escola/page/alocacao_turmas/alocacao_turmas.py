@@ -39,7 +39,9 @@ def _pending_rows(academic_year, school_class=None):
     Every student without an active turma in the year, from three sources
     (first match wins, so a student appears once):
       1. Inscrição submitted for the year — class from the Inscrição
-      2. Renovação submitted for the year — class from target_school_class
+      2. Renovação submitted for the year — class from target_school_class —
+         only once the student has left the year they renewed from (until
+         then Student Promotion is what gives them next year's turma)
       3. (current year only) any other Activo / Pendente de Turma student —
          class from current_school_class, else their last turma's class
     `doc_doctype`/`doc_name` point at the source document, if any.
@@ -72,6 +74,18 @@ def _pending_rows(academic_year, school_class=None):
         JOIN `tabStudent` s ON s.name = r.student
         WHERE r.docstatus = 1 AND r.target_academic_year = %(academic_year)s
           AND s.current_status NOT IN %(inactive)s AND {_NO_ACTIVE_SGA}
+          -- A Renovação only pays for next year; the turma comes from Student
+          -- Promotion. Before the target year starts, a student still active in
+          -- the year they renewed from is waiting for promotion — not pending.
+          -- (Old-year turmas are never closed, so from the year's start on,
+          -- anyone promotion didn't place does show up.)
+          AND NOT (
+              EXISTS (SELECT 1 FROM `tabStudent Group Assignment` cur
+                      WHERE cur.student = r.student AND cur.academic_year = r.academic_year
+                        AND cur.status = 'Activa')
+              AND IFNULL((SELECT ay.start_date FROM `tabAcademic Year` ay
+                          WHERE ay.name = r.target_academic_year), '2999-12-31') > CURDATE()
+          )
     """, params, as_dict=True))
 
     if academic_year == frappe.db.get_single_value("School Settings", "current_academic_year"):
@@ -167,18 +181,34 @@ def allocate(class_group, students):
     if not cg or not cg.is_active:
         frappe.throw(_("A Turma <b>{0}</b> não existe ou não está activa.").format(class_group))
 
+    # Each student may only go to a turma of the class their Inscrição /
+    # Renovação / record says — the same class the page groups them under.
+    # Only students with no known class ("Sem classe definida") may go anywhere.
+    expected = {r.student: r.school_class for r in _pending_rows(cg.academic_year)}
+    insc = dict(frappe.get_all(
+        "Inscricao", filters={"student": ["in", students], "academic_year": cg.academic_year, "docstatus": 1},
+        fields=["student", "name"], as_list=True,
+    )) if students else {}
+
     valid, errors = [], []
     for student in students:
-        insc_class = frappe.db.get_value(
-            "Inscricao", {"student": student, "academic_year": cg.academic_year, "docstatus": 1}, "school_class"
-        )
-        if insc_class and insc_class != cg.school_class:
+        if student not in expected:
             errors.append({
                 "student": student_label(student),
-                "error": _("Inscrito na {0}, não na {1}.").format(insc_class, cg.school_class),
+                "error": _("Já tem turma neste ano lectivo ou não está pendente de alocação."),
             })
-        else:
-            valid.append(student)
+            continue
+        exp = expected[student]
+        if exp and exp != cg.school_class:
+            hint = (_(" Se a classe da inscrição {0} estiver errada, use «Corrigir Classe» na inscrição.")
+                    .format(insc[student]) if student in insc else "")
+            errors.append({
+                "student": student_label(student),
+                "error": _("Pertence à {0}, não pode ir para uma turma da {1}.{2}").format(
+                    exp, cg.school_class, hint),
+            })
+            continue
+        valid.append(student)
 
     result = add_students_to_group(class_group, valid) if valid else {"created": 0, "skipped": 0, "errors": []}
     result["errors"] = errors + result["errors"]

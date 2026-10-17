@@ -24,6 +24,14 @@ frappe.ui.form.on("Inscricao", {
 				() => frappe.set_route("Form", "Student", frm.doc.student)
 			);
 		}
+		if (frm.doc.docstatus === 1 && frm.doc.student
+				&& frappe.user.has_role(["Diretor Escolar", "Secretaria Escolar", "System Manager"])) {
+			frm.add_custom_button(__("Corrigir Classe"), () => escola.utils.correct_class_dialog({
+				inscricao: frm.doc.name,
+				current_class: frm.doc.school_class,
+				on_done: () => frm.reload_doc(),
+			}));
+		}
 		if (frm.doc.docstatus === 1 && frm.doc.student && !frm.doc.class_group) {
 			frm.add_custom_button(__("Alocar Turma"), () => {
 				frappe.route_options = {

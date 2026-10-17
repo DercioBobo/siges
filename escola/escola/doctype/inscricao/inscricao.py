@@ -467,6 +467,88 @@ def create_turma(academic_year, school_class, group_name, shift=None, max_studen
 
 
 @frappe.whitelist()
+def correct_school_class(inscricao, new_school_class, reason):
+    """
+    Fix the Classe of a submitted Inscrição chosen by mistake (e.g. 2ª instead
+    of 1ª). Cancel + amend is NOT an option: submitting the amendment creates
+    a second Student. Instead, in place:
+      - Inscrição.school_class and Student.current_school_class are updated
+      - a turma already assigned in the wrong class is closed, the student goes
+        back to "Pendente de Turma" and reappears in Alocação de Turmas under
+        the right class
+      - the change is logged as a comment on the Inscrição
+    Refused when months were paid upfront: those are priced and dated from the
+    old class's billing schedule and must be handled manually.
+    """
+    frappe.only_for(("Diretor Escolar", "Secretaria Escolar", "System Manager"))
+    from escola.escola.doctype.student_group_assignment.student_group_assignment import (
+        _remove_from_draft_pautas, _roster_sync, _sync_student_current_turma,
+    )
+
+    doc = frappe.get_doc("Inscricao", inscricao)
+    if doc.docstatus != 1:
+        frappe.throw(_("Só é possível corrigir a classe de uma inscrição submetida."))
+    if not (reason or "").strip():
+        frappe.throw(_("Indique o motivo da correcção."))
+    if new_school_class == doc.school_class:
+        frappe.throw(_("A inscrição já está na classe {0}.").format(new_school_class))
+    if not frappe.db.get_value("School Class", new_school_class, "is_active"):
+        frappe.throw(_("A classe {0} não existe ou não está activa.").format(new_school_class))
+    if frappe.db.exists("Adiantamento De Pagamento", {"student": doc.student, "docstatus": 1,
+                                                      "academic_year": doc.academic_year}):
+        frappe.throw(
+            _("Esta inscrição incluiu mensalidades pagas antecipadamente, calculadas com o plano "
+              "de cobrança da {0}. Corrija primeiro o Adiantamento de Pagamento (cancelar e "
+              "registar de novo para a classe certa) e depois a classe.").format(doc.school_class),
+            title=_("Mensalidades antecipadas"),
+        )
+
+    old_class = doc.school_class
+    closed_turma = None
+    sga_name = frappe.db.get_value(
+        "Student Group Assignment",
+        {"student": doc.student, "academic_year": doc.academic_year, "status": "Activa"},
+        "name",
+    )
+    if sga_name:
+        sga = frappe.get_doc("Student Group Assignment", sga_name)
+        if sga.school_class != new_school_class:
+            closed_turma = sga.class_group
+            frappe.db.set_value("Student Group Assignment", sga_name, {
+                "status": "Encerrada",
+                "notes": ((sga.notes or "") + "\n" + _("Encerrada — correcção de classe da inscrição {0}.")
+                          .format(doc.name)).strip(),
+            })
+            sga.reload()
+            _roster_sync(sga)
+            _sync_student_current_turma(sga)
+            _remove_from_draft_pautas(sga)
+
+    doc.db_set("school_class", new_school_class)
+    if closed_turma:
+        doc.db_set("class_group", None)
+    student_values = {"current_school_class": new_school_class}
+    if closed_turma:
+        student_values["current_status"] = "Pendente de Turma"
+    frappe.db.set_value("Student", doc.student, student_values)
+
+    # Mensalidades already generated while in the wrong class
+    billed = frappe.get_all(
+        "Sales Invoice",
+        filters={"escola_student": doc.student, "docstatus": ["!=", 2],
+                 "escola_billing_cycle": ["is", "set"], "posting_date": [">=", doc.enrollment_date]},
+        pluck="name",
+    )
+
+    doc.add_comment("Info", _("Classe corrigida de {0} para {1}{2}. Motivo: {3}").format(
+        old_class, new_school_class,
+        _(" (turma {0} encerrada)").format(closed_turma) if closed_turma else "",
+        frappe.utils.escape_html(reason.strip()),
+    ))
+    return {"closed_turma": closed_turma, "billed_invoices": billed}
+
+
+@frappe.whitelist()
 def reactivate_student(student_name, class_group_name, return_date=None):
     """
     Reactivate a student who previously left (Transferido or Desistente).
