@@ -519,7 +519,7 @@ function _extrato_html({ school, student: st, invoices, payments, summary }) {
 		if (i.status !== "Paga" && i.status !== "Rascunho" && i.paid > 0) status = "Parcialmente Paga";
 		return `<tr>
 			<td>${esc(i.name)}</td>
-			<td>${esc(i.mes_referencia !== "—" ? i.mes_referencia : "")}</td>
+			<td>${esc(i.tipo || "")}</td>
 			<td>${esc(i.posting_date)}</td>
 			<td>${esc(i.due_date)}</td>
 			<td class="r">${num(i.grand_total)}</td>
@@ -605,7 +605,7 @@ function _extrato_html({ school, student: st, invoices, payments, summary }) {
 	<h2>${__("Facturas")} (${invoices.length})</h2>
 	<table>
 		<thead><tr>
-			<th>${__("Factura")}</th><th>${__("Mês")}</th><th>${__("Emissão")}</th><th>${__("Vencimento")}</th>
+			<th>${__("Factura")}</th><th>${__("Tipo")}</th><th>${__("Emissão")}</th><th>${__("Vencimento")}</th>
 			<th class="r">${__("Total")}</th><th class="r">${__("Multa")}</th><th class="r">${__("Pago")}</th>
 			<th class="r">${__("Em Dívida")}</th><th>${__("Estado")}</th>
 		</tr></thead>
@@ -615,7 +615,7 @@ function _extrato_html({ school, student: st, invoices, payments, summary }) {
 	<h2>${__("Pagamentos")} (${payments.length})</h2>
 	<table>
 		<thead><tr>
-			<th>${__("Data")}</th><th>${__("Recibo")}</th><th>${__("Modo")}</th><th>${__("Factura")}</th><th class="r">${__("Valor")}</th>
+			<th>${__("Data")}</th><th>${__("Documento")}</th><th>${__("Modo")}</th><th>${__("Factura")}</th><th class="r">${__("Valor")}</th>
 		</tr></thead>
 		<tbody>${pay_rows || `<tr><td colspan="5" class="empty">${__("Sem pagamentos registados.")}</td></tr>`}</tbody>
 	</table>

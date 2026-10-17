@@ -376,7 +376,7 @@ escola.utils.open_student_statement = async function (student, { query_module } 
 		return `
 		<tr>
 			<td><a href="/app/sales-invoice/${encodeURIComponent(i.name)}" target="_blank" class="ibd-inv-link">${esc(i.name)}</a></td>
-			<td class="ibd-nw">${esc(i.mes_referencia !== "—" ? i.mes_referencia : i.posting_date)}</td>
+			<td class="ibd-nw">${esc(i.tipo || "")}</td>
 			<td class="ibd-nw">${esc(i.due_date)}</td>
 			<td class="ibd-r ibd-nw">${_ibd_amount(i.grand_total)}</td>
 			<td class="ibd-r ibd-nw">${i.multa ? _ibd_amount(i.multa) : "—"}</td>
@@ -389,7 +389,7 @@ escola.utils.open_student_statement = async function (student, { query_module } 
 	const pay_rows = payments.map((p) => `
 		<tr>
 			<td class="ibd-nw">${frappe.datetime.str_to_user(p.posting_date)}</td>
-			<td><a href="/app/payment-entry/${encodeURIComponent(p.name)}" target="_blank" class="ibd-inv-link">${esc(p.name)}</a></td>
+			<td><a href="/app/${frappe.router.slug(p.doctype || "Payment Entry")}/${encodeURIComponent(p.name)}" target="_blank" class="ibd-inv-link">${esc(p.name)}</a></td>
 			<td>${esc(p.mode_of_payment || "—")}</td>
 			<td>${esc(p.invoice)}</td>
 			<td class="ibd-r ibd-nw">${_ibd_amount(p.amount)}</td>
@@ -435,7 +435,7 @@ escola.utils.open_student_statement = async function (student, { query_module } 
 		<div class="ibd-tbl-wrap">
 			<table class="ibd-tbl">
 				<thead><tr>
-					<th>${__("Factura")}</th><th>${__("Mês / Emissão")}</th><th>${__("Vencimento")}</th>
+					<th>${__("Factura")}</th><th>${__("Tipo")}</th><th>${__("Vencimento")}</th>
 					<th class="ibd-r">${__("Total")}</th><th class="ibd-r">${__("Multa")}</th>
 					<th class="ibd-r">${__("Pago")}</th><th class="ibd-r">${__("Em Dívida")}</th><th>${__("Estado")}</th>
 				</tr></thead>
@@ -447,7 +447,7 @@ escola.utils.open_student_statement = async function (student, { query_module } 
 		<div class="ibd-tbl-wrap">
 			<table class="ibd-tbl">
 				<thead><tr>
-					<th>${__("Data")}</th><th>${__("Pagamento")}</th><th>${__("Modo")}</th>
+					<th>${__("Data")}</th><th>${__("Documento")}</th><th>${__("Modo")}</th>
 					<th>${__("Factura")}</th><th class="ibd-r">${__("Valor")}</th>
 				</tr></thead>
 				<tbody>${pay_rows || `<tr><td colspan="5" class="ibd-stmt-empty">${__("Sem pagamentos registados.")}</td></tr>`}</tbody>

@@ -7,6 +7,7 @@ Estado/status rules only need to be correct in one place.
 import json
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, cint, flt, getdate, today
 
 from escola.escola.payment_actions import WAIVER_REMARK
@@ -223,6 +224,109 @@ def get_invoices(from_date=None, to_date=None, school_class=None,
     }
 
 
+def _invoice_types(names):
+    """
+    What each invoice is for, so the extrato reads clearly. Source documents
+    keep a sales_invoice back-link; Inscrição/Renovação win over the
+    Adiantamento they may have created for months paid upfront.
+    """
+    if not names:
+        return {}
+    names = tuple(names)
+    types = {}
+
+    rows = frappe.db.sql(
+        """
+        SELECT name, escola_billing_cycle, escola_is_addon_invoice,
+               escola_mes_referencia, escola_advance_payment
+        FROM `tabSales Invoice` WHERE name IN %s
+        """,
+        (names,), as_dict=True,
+    )
+    for r in rows:
+        mes = f" · {r.escola_mes_referencia}" if r.escola_mes_referencia else ""
+        if r.escola_billing_cycle:
+            types[r.name] = (_("Extras") if r.escola_is_addon_invoice else _("Propina")) + mes
+        elif r.escola_advance_payment:
+            types[r.name] = _("Adiantamento")
+
+    for doctype, label in (("Adiantamento De Pagamento", _("Adiantamento")),
+                           ("Renovacao De Matricula", _("Renovação")),
+                           ("Inscricao", _("Inscrição"))):
+        for inv in frappe.get_all(doctype, filters={"sales_invoice": ["in", names], "docstatus": 1},
+                                  pluck="sales_invoice"):
+            types[inv] = label
+    return types
+
+
+def _invoice_payments(names):
+    """
+    Every way an invoice gets paid, newest first:
+      - Payment Entries (Registar Pagamento, Make → Payment Entry)
+      - POS invoices, paid inside the invoice itself (no Payment Entry)
+      - Journal Entries against the invoice (multa waivers, manual entries)
+    """
+    names = tuple(names)
+    payments = frappe.db.sql(
+        """
+        SELECT pe.name, 'Payment Entry' AS doctype, pe.posting_date, pe.creation,
+               pe.mode_of_payment, per.reference_name AS invoice, per.allocated_amount AS amount
+        FROM `tabPayment Entry Reference` per
+        JOIN `tabPayment Entry` pe ON pe.name = per.parent
+        WHERE pe.docstatus = 1 AND per.reference_doctype = 'Sales Invoice'
+          AND per.reference_name IN %s
+        """,
+        (names,), as_dict=True,
+    )
+
+    pos_rows = frappe.db.sql(
+        """
+        SELECT si.name, si.posting_date, si.creation, si.change_amount,
+               sip.mode_of_payment, sip.amount
+        FROM `tabSales Invoice` si
+        JOIN `tabSales Invoice Payment` sip ON sip.parent = si.name AND sip.parenttype = 'Sales Invoice'
+        WHERE si.docstatus = 1 AND si.is_pos = 1 AND si.name IN %s AND sip.amount > 0
+        ORDER BY si.name, sip.idx
+        """,
+        (names,), as_dict=True,
+    )
+    change_left = {}
+    for r in pos_rows:
+        # Change handed back is paid in, not kept — take it off the first rows.
+        change_left.setdefault(r.name, flt(r.change_amount))
+        amount = flt(r.amount)
+        taken = min(change_left[r.name], amount)
+        change_left[r.name] -= taken
+        if amount - taken > 0:
+            payments.append(frappe._dict(
+                name=r.name, doctype="Sales Invoice", posting_date=r.posting_date, creation=r.creation,
+                mode_of_payment=f"{r.mode_of_payment} (POS)", invoice=r.name, amount=amount - taken,
+            ))
+
+    payments += [
+        frappe._dict(r, doctype="Journal Entry", mode_of_payment=(
+            _("Dispensa de multa") if (r.user_remark or "").startswith(WAIVER_REMARK)
+            else _("Lançamento contabilístico")))
+        for r in frappe.db.sql(
+            """
+            SELECT je.name, je.posting_date, je.creation, je.user_remark,
+                   jea.reference_name AS invoice, jea.credit_in_account_currency AS amount
+            FROM `tabJournal Entry Account` jea
+            JOIN `tabJournal Entry` je ON je.name = jea.parent
+            WHERE je.docstatus = 1 AND jea.reference_type = 'Sales Invoice'
+              AND jea.reference_name IN %s AND jea.credit_in_account_currency > 0
+            """,
+            (names,), as_dict=True,
+        )
+    ]
+
+    payments.sort(key=lambda p: (getdate(p.posting_date), p.creation), reverse=True)
+    for p in payments:
+        p.pop("creation", None)
+        p.pop("user_remark", None)
+    return payments
+
+
 @frappe.whitelist()
 def get_student_statement(student, limit=12, full=0):
     """
@@ -266,31 +370,22 @@ def get_student_statement(student, limit=12, full=0):
             """,
             {"names": tuple(names), "waiver_like": WAIVER_REMARK + "%"},
         ))
-        payments = frappe.db.sql(
-            f"""
-            SELECT pe.name, pe.posting_date, pe.mode_of_payment,
-                   per.reference_name AS invoice, per.allocated_amount AS amount
-            FROM `tabPayment Entry Reference` per
-            JOIN `tabPayment Entry` pe ON pe.name = per.parent
-            WHERE pe.docstatus = 1
-              AND per.reference_doctype = 'Sales Invoice'
-              AND per.reference_name IN %s
-            ORDER BY pe.posting_date DESC, pe.creation DESC
-            {"" if full else "LIMIT 10"}
-            """,
-            (tuple(names),),
-            as_dict=True,
-        )
+        payments = _invoice_payments(names)
+        if not full:
+            payments = payments[:10]
 
+    types = _invoice_types(names)
     owed = 0.0
     for i in data["invoices"]:
+        i["tipo"] = types.get(i["name"], _("Outro"))
         i["multa"] = flt(penalties.get(i["name"]))
         i["owed"] = i["grand_total"] if i["status"] == "Rascunho" else i["outstanding"]
         owed += i["owed"]
 
     summary = data["summary"]
     summary["total_owed"] = round(owed, 2)
-    summary["last_payment"] = payments[0] if payments else None
+    # Money actually received — a multa waiver / journal entry isn't a payment
+    summary["last_payment"] = next((p for p in payments if p.doctype != "Journal Entry"), None)
 
     out = {
         "student": st,
