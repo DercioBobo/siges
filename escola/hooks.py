@@ -58,7 +58,11 @@ fixtures = [
 # App includes — kept minimal
 # -----------------------------------------------------------------
 # app_include_css = []
-app_include_js = ["/assets/escola/js/escola_utils.js", "/assets/escola/js/escola_invoice_board.js"]
+app_include_js = [
+    "/assets/escola/js/escola_utils.js",
+    "/assets/escola/js/escola_invoice_board.js",
+    "/assets/escola/js/escola_print.js",
+]
 
 # -----------------------------------------------------------------
 # Website

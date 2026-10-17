@@ -301,7 +301,8 @@ function _show_actions_modal(frm) {
 		{ id: "transferencia",     ico: "✈",  label: __("Registar Transferência"),       color: "#b45309", bg: "#fffbeb", show: isActive   },
 		{ id: "desistencia",       ico: "✕",  label: __("Registar Desistência"),         color: "#dc2626", bg: "#fef2f2", show: isActive   },
 		{ id: "estado-financeiro", ico: "↻",  label: __("Actualizar Estado Financeiro"), color: "#374151", bg: "#f3f4f6", show: true       },
-		{ id: "imprimir-extrato",  ico: "🖨", label: __("Imprimir Extrato"),             color: "#0f766e", bg: "#f0fdfa", show: !frm.is_new() },
+		{ id: "imprimir-extrato",  ico: "🖨", label: __("Imprimir Extrato"),             color: "#0f766e", bg: "#f0fdfa", show: !frm.is_new() && frappe.model.can_read("Sales Invoice") },
+		{ id: "impressoes",        ico: "🗂", label: __("Impressões do Aluno"),          color: "#0f766e", bg: "#f0fdfa", show: !frm.is_new() },
 		{ id: "reactivar",         ico: "↺",  label: __("Reactivar Aluno"),              color: "#166534", bg: "#f0fdf4", show: isInactive },
 		{ id: "eliminar-duplicado", ico: "🗑", label: __("Eliminar Registo Duplicado"),  color: "#991b1b", bg: "#fef2f2", show: true       },
 	].filter(b => b.show);
@@ -357,7 +358,11 @@ function _show_actions_modal(frm) {
 			case "transferencia":     frappe.new_doc("Student Transfer", { student: frm.doc.name }); break;
 			case "desistencia":       _register_withdrawal_dialog(frm); break;
 			case "estado-financeiro": _update_financial_status(frm); break;
-			case "imprimir-extrato":  _print_extrato(frm); break;
+			case "imprimir-extrato":  escola.print.extrato(frm.doc.name); break;
+			case "impressoes":
+				frappe.route_options = { student: frm.doc.name };
+				frappe.set_route("impressoes-aluno");
+				break;
 			case "reactivar":         reactivate_dialog(frm); break;
 			case "eliminar-duplicado": _delete_duplicate_dialog(frm); break;
 			case "nova-renovacao":
@@ -470,166 +475,6 @@ function _cg_filters(d) {
 	if (ay) f.academic_year = ay;
 	if (sc) f.school_class  = sc;
 	return f;
-}
-
-// ---------------------------------------------------------------------------
-// Imprimir Extrato — full statement (every invoice and payment) in a print
-// window. Same data source as the boards' "Extrato do Aluno" modal.
-// ---------------------------------------------------------------------------
-
-const _EXTRATO_STATUS = {
-	"Rascunho":  "Em Aberto",
-	"Paga":      "Paga",
-	"Em Atraso": "Vencida",
-	"Emitida":   "Em Dívida",
-};
-
-async function _print_extrato(frm) {
-	// Open the window now, while still inside the click — browsers block
-	// window.open() called after an await.
-	const w = window.open("", "_blank");
-	if (!w) {
-		frappe.msgprint(__("O navegador bloqueou a janela de impressão. Permita pop-ups para este site."));
-		return;
-	}
-	w.document.write(`<p style="font-family:sans-serif;padding:20px">${__("A preparar extrato…")}</p>`);
-
-	const r = await frappe.call({
-		method: "escola.escola.invoice_query.get_student_statement",
-		args: { student: frm.doc.name, full: 1 },
-	}).catch(() => null);
-	if (!r || !r.message) {
-		w.close();
-		return;
-	}
-
-	w.document.open();
-	w.document.write(_extrato_html(r.message));
-	w.document.close();
-}
-
-function _extrato_html({ school, student: st, invoices, payments, summary }) {
-	const esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
-	const num = (v) => format_number(flt(v), null, 2);
-	const sc = school || {};
-	const today = frappe.datetime.str_to_user(frappe.datetime.get_today());
-
-	const inv_rows = invoices.slice().reverse().map((i) => {
-		let status = _EXTRATO_STATUS[i.status] || i.status;
-		if (i.status !== "Paga" && i.status !== "Rascunho" && i.paid > 0) status = "Parcialmente Paga";
-		return `<tr>
-			<td>${esc(i.name)}</td>
-			<td>${esc(i.tipo || "")}</td>
-			<td>${esc(i.posting_date)}</td>
-			<td>${esc(i.due_date)}</td>
-			<td class="r">${num(i.grand_total)}</td>
-			<td class="r">${i.multa ? num(i.multa) : "—"}</td>
-			<td class="r">${num(i.paid)}</td>
-			<td class="r ${i.owed > 0 ? "owed" : ""}">${num(i.owed)}</td>
-			<td>${esc(__(status))}</td>
-		</tr>`;
-	}).join("");
-
-	const pay_rows = payments.slice().reverse().map((p) => `<tr>
-			<td>${esc(frappe.datetime.str_to_user(p.posting_date))}</td>
-			<td>${esc(p.name)}</td>
-			<td>${esc(p.mode_of_payment || "—")}</td>
-			<td>${esc(p.invoice)}</td>
-			<td class="r">${num(p.amount)}</td>
-		</tr>`).join("");
-
-	const school_lines = [
-		sc.school_address,
-		[sc.school_nif && `NUIT: ${sc.school_nif}`, sc.school_phone, sc.school_email].filter(Boolean).join(" · "),
-	].filter(Boolean).map(esc).join("<br>");
-
-	return `<!DOCTYPE html>
-<html lang="pt">
-<head>
-<meta charset="utf-8">
-<title>${esc(__("Extrato"))} — ${esc(st.full_name)}</title>
-<style>
-	@page { size: A4; margin: 14mm 12mm; }
-	* { box-sizing: border-box; }
-	body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; color: #111; margin: 0; }
-	.top { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #111; padding-bottom: 10px; }
-	.top img { height: 60px; }
-	.school { font-size: 15px; font-weight: 700; }
-	.school-sub { font-size: 10px; color: #444; margin-top: 2px; line-height: 1.4; }
-	h1 { font-size: 14px; text-align: center; letter-spacing: 1px; margin: 14px 0 10px; }
-	.info { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 24px; margin-bottom: 12px; }
-	.info b { display: inline-block; min-width: 110px; }
-	.cards { display: flex; gap: 10px; margin-bottom: 14px; }
-	.card { flex: 1; border: 1px solid #bbb; border-radius: 4px; padding: 6px 10px; }
-	.card .l { font-size: 9px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
-	.card .v { font-size: 14px; font-weight: 700; margin-top: 2px; }
-	.card.owed .v { color: #b45309; }
-	h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 5px; }
-	table { width: 100%; border-collapse: collapse; }
-	th, td { border: 1px solid #bbb; padding: 4px 6px; text-align: left; }
-	th { background: #eee; font-size: 9.5px; text-transform: uppercase; }
-	tr { page-break-inside: avoid; }
-	.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-	.owed { font-weight: 700; }
-	.empty { text-align: center; color: #666; }
-	.foot { margin-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #444; }
-	.sig { width: 220px; border-top: 1px solid #111; text-align: center; padding-top: 4px; }
-</style>
-</head>
-<body>
-	<div class="top">
-		${sc.school_logo ? `<img src="${esc(sc.school_logo)}">` : ""}
-		<div>
-			<div class="school">${esc(sc.school_name || "")}</div>
-			<div class="school-sub">${school_lines}</div>
-		</div>
-	</div>
-
-	<h1>${esc(__("EXTRATO DE CONTA DO ALUNO"))}</h1>
-
-	<div class="info">
-		<div><b>${__("Aluno")}:</b> ${esc(st.full_name)}</div>
-		<div><b>${__("Código")}:</b> ${esc(st.student_code || st.name)}</div>
-		<div><b>${__("Turma")}:</b> ${esc(st.turma_name || st.current_school_class || "—")}</div>
-		<div><b>${__("Estado")}:</b> ${esc(st.current_status || "—")}</div>
-		<div><b>${__("Encarregado")}:</b> ${esc(st.primary_guardian || "—")}${st.guardian_phone ? " · " + esc(st.guardian_phone) : ""}</div>
-		<div><b>${__("Data de emissão")}:</b> ${esc(today)}</div>
-	</div>
-
-	<div class="cards">
-		<div class="card"><div class="l">${__("Total facturado")}</div><div class="v">${num(summary.total_invoiced)}</div></div>
-		<div class="card"><div class="l">${__("Total pago")}</div><div class="v">${num(summary.total_paid)}</div></div>
-		<div class="card owed"><div class="l">${__("Saldo em dívida")}</div><div class="v">${num(summary.total_owed)}</div></div>
-	</div>
-
-	<h2>${__("Facturas")} (${invoices.length})</h2>
-	<table>
-		<thead><tr>
-			<th>${__("Factura")}</th><th>${__("Tipo")}</th><th>${__("Emissão")}</th><th>${__("Vencimento")}</th>
-			<th class="r">${__("Total")}</th><th class="r">${__("Multa")}</th><th class="r">${__("Pago")}</th>
-			<th class="r">${__("Em Dívida")}</th><th>${__("Estado")}</th>
-		</tr></thead>
-		<tbody>${inv_rows || `<tr><td colspan="9" class="empty">${__("Sem facturas.")}</td></tr>`}</tbody>
-	</table>
-
-	<h2>${__("Pagamentos")} (${payments.length})</h2>
-	<table>
-		<thead><tr>
-			<th>${__("Data")}</th><th>${__("Documento")}</th><th>${__("Modo")}</th><th>${__("Factura")}</th><th class="r">${__("Valor")}</th>
-		</tr></thead>
-		<tbody>${pay_rows || `<tr><td colspan="5" class="empty">${__("Sem pagamentos registados.")}</td></tr>`}</tbody>
-	</table>
-
-	<div class="foot">
-		<div>${__("Valores em MZN.")} ${__("Documento emitido em {0}.", [esc(today)])}</div>
-		<div class="sig">${__("A Tesouraria")}</div>
-	</div>
-
-	<script>
-		window.onload = function () { setTimeout(function () { window.print(); }, 300); };
-	</script>
-</body>
-</html>`;
 }
 
 // ---------------------------------------------------------------------------

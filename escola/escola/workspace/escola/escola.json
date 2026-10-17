@@ -27,6 +27,7 @@
 
   {"hidden": 0, "is_query_report": 0, "label": "Inscrição",               "link_count": 0, "link_to": "Inscricao",               "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Alocação de Turmas",      "link_count": 0, "link_to": "alocacao-turmas",          "link_type": "Page",    "onboard": 1, "type": "Link"},
+  {"hidden": 0, "is_query_report": 0, "label": "Impressões do Aluno",     "link_count": 0, "link_to": "impressoes-aluno",         "link_type": "Page",    "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Atribuir Turma",          "link_count": 0, "link_to": "Student Group Assignment", "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Troca de Turma",          "link_count": 0, "link_to": "Troca De Turma",          "link_type": "DocType", "onboard": 1, "type": "Link"},
   {"hidden": 0, "is_query_report": 0, "label": "Renovação de Matrícula",  "link_count": 0, "link_to": "Renovacao De Matricula",  "link_type": "DocType", "onboard": 1, "type": "Link"},

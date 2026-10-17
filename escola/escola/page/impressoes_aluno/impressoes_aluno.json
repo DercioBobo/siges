@@ -1,0 +1,19 @@
+{
+ "content": "1",
+ "creation": "2026-10-17 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2026-10-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Escola",
+ "name": "impressoes-aluno",
+ "owner": "Administrator",
+ "page_name": "impressoes-aluno",
+ "restrict_to_domain": "",
+ "roles": [
+  {"role": "Diretor Escolar"},
+  {"role": "Diretor Pedagógico"},
+  {"role": "Secretaria Escolar"}
+ ],
+ "system_page": 0,
+ "title": "Impressões do Aluno"
+}

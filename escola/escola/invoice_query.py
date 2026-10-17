@@ -339,6 +339,7 @@ def get_student_statement(student, limit=12, full=0):
     plus the school header.
     """
     full = cint(full)
+    frappe.has_permission("Sales Invoice", "read", throw=True)
     from escola.escola.doctype.student.student import get_student_invoices
 
     st = frappe.db.get_value(
