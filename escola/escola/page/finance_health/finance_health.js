@@ -4,6 +4,7 @@
 
 const FH_API = "escola.escola.page.finance_health.finance_health";
 const FH_BATCH = 20;
+const FH_GROUP_ICON = { "Dados incorrectos": "🛠️", "Atenção": "👀" };
 
 frappe.pages["finance-health"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -34,6 +35,14 @@ class FinanceHealth {
 
 	_bind() {
 		this.$body.on("click", ".fh-item", (e) => this.open($(e.currentTarget).attr("data-key")));
+		this.$body.on("click", ".fh-seg-btn", (e) => {
+			this._side_view($(e.currentTarget).attr("data-view"));
+			this._render_side();
+		});
+		this.$body.on("click", ".fh-show-all", () => {
+			this._side_view("all");
+			this._render_side();
+		});
 		this.$body.on("click", ".fh-student", (e) => {
 			e.preventDefault();
 			escola.utils.open_student_statement($(e.currentTarget).attr("data-student"));
@@ -58,19 +67,62 @@ class FinanceHealth {
 	}
 
 	_render_side() {
+		const esc = frappe.utils.escape_html;
+		const only_problems = this._side_view() === "problems";
+		const problems = this.checks.filter((c) => c.count !== 0).length;
+
 		const groups = {};
 		this.checks.forEach((c) => (groups[c.group] = groups[c.group] || []).push(c));
-		const html = Object.entries(groups).map(([group, checks]) => `
-			<div class="fh-group">${__(group)}</div>
-			${checks.map((c) => `
-				<div class="fh-item ${c.key === this.current ? "fh-item--active" : ""}" data-key="${c.key}">
-					<span class="fh-dot fh-dot--${c.count ? c.severity : "ok"}"></span>
-					<span class="fh-item-lbl">${frappe.utils.escape_html(c.label)}</span>
-					<span class="fh-count ${c.count ? "fh-count--" + c.severity : ""}">
-						${c.count == null ? "!" : c.count}
-					</span>
-				</div>`).join("")}`).join("");
-		this.$body.find("#fh-side").html(html);
+
+		// count == null means the check itself failed — always shown, never "ok"
+		const badge = (c) => c.count === 0
+			? `<span class="fh-badge fh-badge--ok">✓</span>`
+			: `<span class="fh-badge fh-badge--${c.count == null ? "danger" : c.severity}">${c.count == null ? "!" : c.count}</span>`;
+
+		const card = (c) => `
+			<div class="fh-item ${c.key === this.current ? "fh-item--active" : ""}" data-key="${c.key}">
+				${badge(c)}
+				<div class="fh-item-txt">
+					<div class="fh-item-lbl">${esc(c.label)}</div>
+					${c.count && c.fixable && this.can_fix ? `<div class="fh-item-sub">${__("correcção rápida disponível")}</div>` : ""}
+					${c.count == null ? `<div class="fh-item-sub">${__("erro ao analisar")}</div>` : ""}
+				</div>
+			</div>`;
+
+		const html = Object.entries(groups).map(([group, checks]) => {
+			const total = checks.reduce((s, c) => s + (c.count || 0), 0);
+			// keep the open check visible even when it has nothing left
+			const visible = only_problems ? checks.filter((c) => c.count !== 0 || c.key === this.current) : checks;
+			const hidden = checks.length - visible.length;
+			return `
+			<div class="fh-group">
+				<span>${FH_GROUP_ICON[group] || ""} ${esc(__(group))}</span>
+				<span class="fh-group-total ${total ? "" : "fh-group-total--ok"}">${total || "✓"}</span>
+			</div>
+			${visible.map(card).join("")}
+			${!visible.length ? `<div class="fh-allok">✓ ${__("Tudo em ordem")}</div>` : ""}
+			${hidden ? `<a class="fh-show-all">${__("+ {0} sem problemas", [hidden])}</a>` : ""}`;
+		}).join("");
+
+		this.$body.find("#fh-side").html(`
+			<div class="fh-seg">
+				<button class="fh-seg-btn ${only_problems ? "active" : ""}" data-view="problems">
+					${__("Com problemas")} <span>${problems}</span></button>
+				<button class="fh-seg-btn ${only_problems ? "" : "active"}" data-view="all">
+					${__("Todos")} <span>${this.checks.length}</span></button>
+			</div>
+			${html}`);
+	}
+
+	_side_view(set) {
+		// Per-viewer preference; falls back to "problems" when storage is unavailable
+		try {
+			if (set) localStorage.setItem("fh_side_view", set);
+			return localStorage.getItem("fh_side_view") || "problems";
+		} catch (e) {
+			if (set) this._view = set;
+			return this._view || "problems";
+		}
 	}
 
 	async open(key) {
@@ -185,24 +237,41 @@ function _fh_styles() {
 	s.id = "fh-css";
 	s.textContent = `
 .fh-wrap { display: flex; gap: 16px; padding: 16px 20px; align-items: flex-start; }
-.fh-side { width: 260px; flex-shrink: 0; background: var(--fg-color); border: 1px solid var(--border-color);
-	border-radius: 10px; padding: 8px; position: sticky; top: 70px; }
+.fh-side { width: 300px; flex-shrink: 0; position: sticky; top: 70px;
+	max-height: calc(100vh - 90px); overflow-y: auto; padding-right: 4px; }
 .fh-main { flex: 1; min-width: 0; }
-.fh-group { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
-	letter-spacing: .5px; padding: 10px 10px 4px; }
-.fh-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px;
-	cursor: pointer; font-size: 13px; }
-.fh-item:hover { background: var(--subtle-fg); }
-.fh-item--active { background: var(--subtle-accent, var(--subtle-fg)); font-weight: 600; }
-.fh-item-lbl { flex: 1; }
-.fh-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.fh-dot--danger { background: #ef4444; } .fh-dot--warning { background: #f59e0b; }
-.fh-dot--info { background: #3b82f6; } .fh-dot--ok { background: #10b981; }
-.fh-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px;
-	background: var(--subtle-fg); color: var(--text-muted); }
-.fh-count--danger { background: #fee2e2; color: #991b1b; }
-.fh-count--warning { background: #fef3c7; color: #92400e; }
-.fh-count--info { background: #dbeafe; color: #1e40af; }
+
+/* Com problemas | Todos */
+.fh-seg { display: flex; background: var(--subtle-fg); border-radius: 8px; padding: 3px; margin-bottom: 12px; }
+.fh-seg-btn { flex: 1; border: none; background: transparent; border-radius: 6px; padding: 6px 8px;
+	font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+.fh-seg-btn span { font-weight: 700; opacity: .7; margin-left: 2px; }
+.fh-seg-btn.active { background: var(--fg-color); color: var(--text-color); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+.fh-group { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;
+	color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; padding: 12px 4px 8px; }
+.fh-group-total { font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 10px;
+	background: #fee2e2; color: #dc2626; text-transform: none; letter-spacing: 0; }
+.fh-group-total--ok { background: #dcfce7; color: #16a34a; }
+
+.fh-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; margin-bottom: 8px;
+	background: var(--fg-color); border: 1px solid var(--border-color); border-radius: 10px;
+	cursor: pointer; transition: border-color .12s, box-shadow .12s; }
+.fh-item:hover { border-color: var(--gray-400, #9ca3af); }
+.fh-item--active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.fh-badge { min-width: 46px; height: 34px; padding: 0 8px; border-radius: 8px; flex-shrink: 0;
+	display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;
+	font-variant-numeric: tabular-nums; }
+.fh-badge--danger  { background: #fee2e2; color: #dc2626; }
+.fh-badge--warning { background: #fef3c7; color: #b45309; }
+.fh-badge--info    { background: #dbeafe; color: #1d4ed8; }
+.fh-badge--ok      { background: #dcfce7; color: #16a34a; font-size: 14px; }
+.fh-item-txt { flex: 1; min-width: 0; }
+.fh-item-lbl { font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--text-color); }
+.fh-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.fh-allok { font-size: 12px; color: #16a34a; padding: 4px 4px 8px; }
+.fh-show-all { display: block; font-size: 12px; color: var(--text-muted); padding: 0 4px 6px; cursor: pointer; }
+.fh-show-all:hover { color: var(--primary); }
 .fh-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
 	background: var(--fg-color); border: 1px solid var(--border-color); border-radius: 10px;
 	padding: 14px 16px; margin-bottom: 12px; }
@@ -226,7 +295,7 @@ function _fh_styles() {
 .fh-detail { font-size: 12px; color: var(--text-muted); min-width: 220px; }
 @media (max-width: 900px) {
 	.fh-wrap { flex-direction: column; }
-	.fh-side { width: 100%; position: static; }
+	.fh-side { width: 100%; position: static; max-height: none; overflow: visible; }
 }`;
 	document.head.appendChild(s);
 }
