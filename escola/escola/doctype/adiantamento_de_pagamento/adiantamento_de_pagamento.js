@@ -14,6 +14,10 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 	refresh(frm) {
 		_update_discount_badge(frm);
 
+		if (frm.doc.__islocal && frm.doc.is_pos && !(frm.doc.payments && frm.doc.payments.length)) {
+			_prefill_payment(frm);
+		}
+
 		if (frm.doc.docstatus === 0) {
 			frm.add_custom_button(__("Carregar Períodos Disponíveis"), () => _load_periods(frm), __("Ferramentas"));
 
@@ -91,6 +95,8 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 		if (!frm.doc.is_pos) {
 			frm.clear_table("payments");
 			frm.refresh_field("payments");
+		} else if (!(frm.doc.payments && frm.doc.payments.length)) {
+			_prefill_payment(frm);
 		}
 	},
 
@@ -99,7 +105,53 @@ frappe.ui.form.on("Adiantamento De Pagamento", {
 		frm.set_value("discount_reason", __("Desconto manual"));
 		_apply_discount(frm, parseFloat(frm.doc.discount_percent) || 0);
 	},
+
+	async payments_add(frm, cdt, cdn) {
+		// New rows default to POS; the mode_of_payment handler then fills the amount
+		const mop = await _default_mode_of_payment(frm.doc.pos_profile);
+		if (mop && !locals[cdt][cdn].mode_of_payment) {
+			frappe.model.set_value(cdt, cdn, "mode_of_payment", mop);
+		}
+	},
 });
+
+frappe.ui.form.on("Adiantamento Payment", {
+	mode_of_payment(frm, cdt, cdn) {
+		if (frm.doc.docstatus !== 0) return;
+		const row = locals[cdt][cdn];
+		if (!row.mode_of_payment || flt(row.amount) > 0) return;
+		// Fill with whatever is still missing to cover the net total
+		const others = (frm.doc.payments || [])
+			.filter(p => p.name !== cdn)
+			.reduce((s, p) => s + flt(p.amount), 0);
+		frappe.model.set_value(cdt, cdn, "amount", Math.max(flt(frm.doc.net_total) - others, 0));
+	},
+});
+
+// Seed one POS payment row on new docs; _sync_payments_total keeps its amount in step
+async function _prefill_payment(frm) {
+	const mop = await _default_mode_of_payment(frm.doc.pos_profile);
+	if (!mop || (frm.doc.payments && frm.doc.payments.length)) return;
+	const row = frm.add_child("payments");
+	row.mode_of_payment = mop;
+	row.amount = flt(frm.doc.net_total);
+	frm.refresh_field("payments");
+}
+
+const DEFAULT_MODE_OF_PAYMENT = "POS";
+
+// "POS" when that Mode of Payment exists; otherwise the selected POS Profile's
+// default method (or its first one).
+async function _default_mode_of_payment(pos_profile) {
+	if (await frappe.db.exists("Mode of Payment", DEFAULT_MODE_OF_PAYMENT)) {
+		return DEFAULT_MODE_OF_PAYMENT;
+	}
+	if (!pos_profile) return null;
+	const doc = await frappe.db.get_doc("POS Profile", pos_profile);
+	const payments = (doc && doc.payments) || [];
+	const def = payments.find(p => p.default) || payments[0];
+	return def ? def.mode_of_payment : null;
+}
 
 // Recalculate when period rows change
 frappe.ui.form.on("Adiantamento Period Line", {

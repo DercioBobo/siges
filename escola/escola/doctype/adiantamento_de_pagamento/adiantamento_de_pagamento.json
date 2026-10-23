@@ -173,6 +173,7 @@
    "in_standard_filter": 1,
    "fieldtype": "Check",
    "label": "Pagamento Imediato (POS)",
+   "default": "1",
    "description": "Active para registar o pagamento no momento da submissão."
   },
   {
@@ -180,7 +181,8 @@
    "fieldtype": "Link",
    "label": "Perfil POS",
    "options": "POS Profile",
-   "depends_on": "eval:doc.is_pos"
+   "depends_on": "eval:doc.is_pos",
+   "mandatory_depends_on": "eval:doc.is_pos"
   },
   {
    "fieldname": "payments",
@@ -211,7 +213,7 @@
   }
  ],
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2026-10-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Escola",
  "name": "Adiantamento De Pagamento",

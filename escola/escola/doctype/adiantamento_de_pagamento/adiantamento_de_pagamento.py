@@ -142,6 +142,11 @@ class AdiantamentoDePagamento(Document):
     def _validate_payment(self):
         if not self.is_pos:
             return
+        if not self.pos_profile:
+            frappe.throw(
+                _("Seleccione o Perfil POS quando o Pagamento Imediato está activo."),
+                title=_("Perfil POS em falta"),
+            )
         if not self.payments:
             frappe.throw(
                 _("Defina pelo menos um método de pagamento quando o modo POS está activo."),
