@@ -526,4 +526,61 @@ def sync_student_in_rosters(doc, method=None):
         )
     customer = frappe.db.get_value("Customer", {"escola_student": doc.name}, "name")
     if customer:
-        frappe.db.set_value("Customer", customer, "customer_name", doc.full_name)
+        _sync_customer_name(customer, doc.full_name)
+
+
+def _sync_customer_name(customer, full_name):
+    """
+    Bring the student's Customer in line with a corrected full_name: rename
+    the document ID too (when customers are named by Customer Name, the ID is
+    the old name), then fix customer_name and the copies on invoices/payments.
+    """
+    if frappe.db.get_single_value("Selling Settings", "cust_master_name") != "Naming Series":
+        new_name = _free_customer_name(full_name, customer)
+        if new_name != customer:
+            # rename_doc updates every Link to this Customer (invoices, payments, GL…)
+            frappe.rename_doc("Customer", customer, new_name, force=True, ignore_permissions=True, show_alert=False)
+            customer = new_name
+
+    # after_rename sets customer_name to the ID (may carry a " - N" suffix) — restore the real name
+    frappe.db.set_value("Customer", customer, "customer_name", full_name)
+    frappe.db.sql(
+        "UPDATE `tabSales Invoice` SET customer_name = %s WHERE customer = %s",
+        (full_name, customer),
+    )
+    frappe.db.sql(
+        "UPDATE `tabPayment Entry` SET party_name = %s WHERE party_type = 'Customer' AND party = %s",
+        (full_name, customer),
+    )
+
+
+def resync_student_customers():
+    """
+    One-off repair for students renamed before the Customer ID was renamed too.
+    bench --site <site> execute escola.escola.doctype.class_group.class_group.resync_student_customers
+    """
+    rows = frappe.db.sql(
+        """
+        SELECT c.name AS customer, s.full_name
+        FROM `tabCustomer` c
+        JOIN `tabStudent` s ON s.name = c.escola_student
+        WHERE s.full_name IS NOT NULL AND s.full_name != ''
+          AND (c.customer_name != s.full_name
+               OR (c.name != s.full_name AND c.name NOT LIKE CONCAT(s.full_name, ' - %%')))
+        """,
+        as_dict=True,
+    )
+    for r in rows:
+        _sync_customer_name(r.customer, r.full_name)
+        print(f"{r.customer} -> {r.full_name}")
+    frappe.db.commit()
+    print(f"{len(rows)} customer(s) corrected")
+
+
+def _free_customer_name(full_name, current):
+    """full_name, or 'full_name - N' if another Customer already holds it (homonyms)."""
+    candidate, n = full_name, 0
+    while candidate != current and frappe.db.exists("Customer", candidate):
+        n += 1
+        candidate = f"{full_name} - {n}"
+    return candidate
