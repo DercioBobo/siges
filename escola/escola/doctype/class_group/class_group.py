@@ -538,8 +538,14 @@ def _sync_customer_name(customer, full_name):
     if frappe.db.get_single_value("Selling Settings", "cust_master_name") != "Naming Series":
         new_name = _free_customer_name(full_name, customer)
         if new_name != customer:
-            # rename_doc updates every Link to this Customer (invoices, payments, GL…)
-            frappe.rename_doc("Customer", customer, new_name, force=True, ignore_permissions=True, show_alert=False)
+            # rename_doc updates every Link to this Customer (invoices, payments, GL…).
+            # The frappe.rename_doc wrapper has no ignore_permissions; the model one does.
+            from frappe.model.rename_doc import rename_doc
+
+            rename_doc(
+                doctype="Customer", old=customer, new=new_name,
+                force=True, ignore_permissions=True, show_alert=False,
+            )
             customer = new_name
 
     # after_rename sets customer_name to the ID (may carry a " - N" suffix) — restore the real name
