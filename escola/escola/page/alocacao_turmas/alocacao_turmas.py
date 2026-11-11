@@ -46,7 +46,8 @@ def _pending_rows(academic_year, school_class=None):
          class from current_school_class, else their last turma's class
     `doc_doctype`/`doc_name` point at the source document, if any.
     """
-    params = {"academic_year": academic_year, "inactive": _INACTIVE_STATUSES}
+    params = {"academic_year": academic_year, "inactive": _INACTIVE_STATUSES,
+              "today": frappe.utils.today()}
     rows, seen = [], set()
 
     def add(found):
@@ -84,7 +85,7 @@ def _pending_rows(academic_year, school_class=None):
                       WHERE cur.student = r.student AND cur.academic_year = r.academic_year
                         AND cur.status = 'Activa')
               AND IFNULL((SELECT ay.start_date FROM `tabAcademic Year` ay
-                          WHERE ay.name = r.target_academic_year), '2999-12-31') > CURDATE()
+                          WHERE ay.name = r.target_academic_year), '2999-12-31') > %(today)s
           )
     """, params, as_dict=True))
 

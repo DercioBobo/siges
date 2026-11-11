@@ -512,11 +512,14 @@ def apply_all_pending_penalties():
             JOIN `tabBilling Cycle` bc ON bc.name = si.escola_billing_cycle
             WHERE si.docstatus = 0
               AND si.outstanding_amount > 0
-              AND si.due_date < CURDATE()
+              AND si.due_date < %(today)s
               AND si.escola_billing_cycle IS NOT NULL
               AND si.escola_billing_cycle != ''
               AND (bc.penalties_disabled IS NULL OR bc.penalties_disabled = 0)
             """,
+            # Frappe's today() (System Settings time zone), not MariaDB's
+            # CURDATE() (server OS zone) — _compute_penalty uses today().
+            {"today": today()},
             as_dict=True,
         )
     except Exception:
