@@ -426,7 +426,7 @@ escola.print = (function () {
 				title: __("Imprimir Extrato"),
 				fields: [{
 					fieldname: "notes", fieldtype: "Small Text", label: __("Observações"),
-					description: __("Opcional — aparece no extrato a seguir à tabela de pagamentos."),
+					description: __("Opcional - Observações do extrato."),
 				}],
 				primary_action_label: __("Imprimir"),
 				primary_action: ({ notes }) => {
