@@ -115,7 +115,7 @@ escola.print = (function () {
 		"Emitida":   "Em Dívida",
 	};
 
-	function extrato_html({ school, student: st, invoices, payments, summary }) {
+	function extrato_html({ school, student: st, invoices, payments, summary }, notes) {
 		const today = dt(frappe.datetime.get_today());
 
 		const inv_rows = invoices.slice().reverse().map((i) => {
@@ -176,6 +176,8 @@ escola.print = (function () {
 			<tbody>${pay_rows || `<tr><td colspan="5" class="empty">${__("Sem pagamentos registados.")}</td></tr>`}</tbody>
 		</table>
 
+		${notes ? `<h2>${__("Observações")}</h2><div class="notes">${esc(notes)}</div>` : ""}
+
 		<div class="foot">
 			<div>${__("Valores em MZN.")} ${__("Documento emitido em {0}.", [esc(today)])}</div>
 			<div class="sig">${__("A Tesouraria")}</div>
@@ -192,7 +194,8 @@ escola.print = (function () {
 	.card .l { font-size: 9px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
 	.card .v { font-size: 14px; font-weight: 700; margin-top: 2px; }
 	.card.owed .v { color: #b45309; }
-	.owed { font-weight: 700; }`,
+	.owed { font-weight: 700; }
+	.notes { border: 1px solid #bbb; border-radius: 4px; padding: 6px 10px; white-space: pre-wrap; line-height: 1.5; page-break-inside: avoid; }`,
 		});
 	}
 
@@ -336,10 +339,25 @@ escola.print = (function () {
 	return {
 		open,
 		shell,
-		extrato: (student) => open(async () => {
-			const data = await call("escola.escola.invoice_query.get_student_statement", { student, full: 1 });
-			return data && extrato_html(data);
-		}),
+		/** Asks for optional Observações first; the dialog click keeps window.open() a user gesture. */
+		extrato: (student) => {
+			const d = new frappe.ui.Dialog({
+				title: __("Imprimir Extrato"),
+				fields: [{
+					fieldname: "notes", fieldtype: "Small Text", label: __("Observações"),
+					description: __("Opcional — aparece no extrato a seguir à tabela de pagamentos."),
+				}],
+				primary_action_label: __("Imprimir"),
+				primary_action: ({ notes }) => {
+					d.hide();
+					open(async () => {
+						const data = await call("escola.escola.invoice_query.get_student_statement", { student, full: 1 });
+						return data && extrato_html(data, (notes || "").trim());
+					});
+				},
+			});
+			d.show();
+		},
 		declaracao: (student) => open(async () => {
 			const data = await call(DOC_API, { student });
 			return data && declaracao_html(data);
