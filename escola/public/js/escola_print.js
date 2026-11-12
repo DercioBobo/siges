@@ -6,6 +6,7 @@ window.escola = window.escola || {};
 // page written into a new tab that prints itself on load.
 //
 //   escola.print.extrato(student)
+//   escola.print.previsao(student)
 //   escola.print.declaracao(student)
 //   escola.print.ficha(student)
 // ---------------------------------------------------------------------------
@@ -200,6 +201,86 @@ escola.print = (function () {
 	}
 
 	// -----------------------------------------------------------------------
+	// Previsão Financeira
+	// -----------------------------------------------------------------------
+
+	function previsao_html({ school, student: st, academic_year, periods, summary, is_bolsista }) {
+		const today = frappe.datetime.get_today();
+		const s = summary || {};
+		st = st || {};
+
+		let content;
+		if (is_bolsista) {
+			content = `<p class="empty" style="margin:30px 0;">${__("Aluno Bolsista — isento de facturação.")}</p>`;
+		} else if (!periods || !periods.length) {
+			content = `<p class="empty" style="margin:30px 0;">${__("Nenhum período de facturação encontrado para o ano lectivo actual.")}</p>`;
+		} else {
+			const rows = periods.map((p) => {
+				const overdue = p.status === "Facturado" && p.due_date < today;
+				const valor = p.status === "Facturado" ? p.outstanding : p.amount;
+				const doc = p.invoice_name ? (p.is_advance ? __("Adiantamento") : p.invoice_name) : "—";
+				return `<tr${overdue ? ' class="overdue"' : ""}>
+					<td><b>${esc(p.period_label)}</b></td>
+					<td>${esc(p.billing_mode)}</td>
+					<td>${esc(dt(p.due_date))}</td>
+					<td class="r">${num(valor)}</td>
+					<td>${esc(__(p.status))}${overdue ? ` (${__("Vencida")})` : ""}</td>
+					<td>${esc(doc)}</td>
+				</tr>`;
+			}).join("");
+
+			content = `
+			<div class="cards">
+				<div class="card"><div class="l">${__("Total previsto")}</div><div class="v">${num(s.total_expected)}</div></div>
+				<div class="card"><div class="l">${__("Pago")}</div><div class="v">${num(s.total_paid)}</div></div>
+				<div class="card owed"><div class="l">${__("Em dívida")}</div><div class="v">${num(s.total_outstanding)}</div></div>
+				<div class="card"><div class="l">${__("A emitir")}</div><div class="v">${num(s.total_previsto)}</div></div>
+			</div>
+
+			<h2>${__("Períodos")} (${periods.length})</h2>
+			<table>
+				<thead><tr>
+					<th>${__("Período")}</th><th>${__("Modo")}</th><th>${__("Vencimento")}</th>
+					<th class="r">${__("Valor")}</th><th>${__("Estado")}</th><th>${__("Factura")}</th>
+				</tr></thead>
+				<tbody>${rows}</tbody>
+			</table>
+			<div style="font-size:9px;color:#555;margin-top:3px;">
+				${__("Valor: em dívida para períodos facturados; valor total para os restantes.")}
+			</div>`;
+		}
+
+		const body = `
+		<div class="info">
+			<div><b>${__("Aluno")}:</b> ${esc(st.full_name)}</div>
+			<div><b>${__("Código")}:</b> ${esc(st.student_code || st.name)}</div>
+			<div><b>${__("Turma")}:</b> ${esc(st.turma_name || st.current_school_class || "—")}</div>
+			<div><b>${__("Ano lectivo")}:</b> ${esc(academic_year || "—")}</div>
+			<div><b>${__("Encarregado")}:</b> ${esc(st.primary_guardian || "—")}</div>
+			<div><b>${__("Data de emissão")}:</b> ${esc(dt(today))}</div>
+		</div>
+		${content}
+		<div class="foot">
+			<div>${__("Valores em MZN.")} ${__("Documento emitido em {0}.", [esc(dt(today))])}</div>
+			<div class="sig">${__("A Tesouraria")}</div>
+		</div>`;
+
+		return shell({
+			school,
+			title: __("PREVISÃO FINANCEIRA DO ALUNO"),
+			doc_title: `${__("Previsão Financeira")} — ${st.full_name || ""}`,
+			body,
+			css: `
+	.cards { display: flex; gap: 10px; margin-bottom: 14px; }
+	.card { flex: 1; border: 1px solid #bbb; border-radius: 4px; padding: 6px 10px; }
+	.card .l { font-size: 9px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
+	.card .v { font-size: 14px; font-weight: 700; margin-top: 2px; }
+	.card.owed .v { color: #b45309; }
+	tr.overdue td { background: #fff1f1; }`,
+		});
+	}
+
+	// -----------------------------------------------------------------------
 	// Declaração de Matrícula
 	// -----------------------------------------------------------------------
 
@@ -358,6 +439,10 @@ escola.print = (function () {
 			});
 			d.show();
 		},
+		previsao: (student) => open(async () => {
+			const data = await call("escola.escola.billing_forecast.get_student_forecast_print", { student_name: student });
+			return data && previsao_html(data);
+		}),
 		declaracao: (student) => open(async () => {
 			const data = await call(DOC_API, { student });
 			return data && declaracao_html(data);

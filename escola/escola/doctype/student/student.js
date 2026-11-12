@@ -940,7 +940,7 @@ async function _show_forecast_modal(frm) {
 	d.$body.html(`<div style="padding:24px;color:#9ca3af;font-size:13px;">${__("A carregar previsão…")}</div>`);
 	d.set_secondary_action_label(__("Fechar"));
 	d.set_secondary_action(() => d.hide());
-	d.$wrapper.find(".btn-modal-primary").hide();
+	d.set_primary_action(`🖨 ${__("Imprimir")}`, () => escola.print.previsao(frm.doc.name));
 	d.show();
 
 	const r = await frappe.call({

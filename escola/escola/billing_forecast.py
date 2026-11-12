@@ -293,3 +293,25 @@ def get_student_forecast(student_name):
             "count_pago":        sum(1 for p in all_periods if p["status"] == "Pago"),
         },
     }
+
+
+@frappe.whitelist()
+def get_student_forecast_print(student_name):
+    """Forecast plus the letterhead and student header for the printed Previsão."""
+    out = get_student_forecast(student_name)
+    st = frappe.db.get_value(
+        "Student", student_name,
+        ["name", "full_name", "student_code", "current_status",
+         "current_school_class", "current_class_group", "primary_guardian"],
+        as_dict=True,
+    )
+    if st and st.current_class_group:
+        st.turma_name = frappe.db.get_value("Class Group", st.current_class_group, "group_name")
+    out["student"] = st
+    out["school"] = frappe.db.get_value(
+        "School Settings", "School Settings",
+        ["school_name", "school_logo", "school_nif", "school_phone",
+         "school_email", "school_address"],
+        as_dict=True,
+    )
+    return out
